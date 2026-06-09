@@ -1,0 +1,3438 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Introvert Player — OBS Overlay</title>
+    
+    <!-- CSS & Fonts -->
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..700&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Outfit:wght@200;300;400;600;700;900&family=Merriweather:ital,wght@0,300;0,400;0,700;0,900;1,300;1,400;1,700;1,900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            /* Theme dứa mặc định */
+            --theme-bg: linear-gradient(135deg, #FFFDF0 0%, #FFF5D0 100%);
+            --theme-border-color: var(--pineapple-text);
+            --theme-border-width: 4px;
+            --theme-border-radius: 24px;
+            --theme-box-shadow: 6px 6px 0px var(--pineapple-text);
+            --theme-text-color: var(--pineapple-text);
+            --theme-sub-text-color: #4B5563;
+            --theme-highlight-color: var(--pineapple-orange-dark);
+            --theme-progress-bg: var(--pineapple-white);
+            --theme-progress-fill: var(--pineapple-orange);
+            --theme-progress-thumb: var(--pineapple-yellow);
+            
+            --theme-alert-bg: linear-gradient(135deg, #FFFDF0 0%, #FFF5D0 100%);
+            --theme-alert-border-color: var(--pineapple-text);
+            --theme-alert-text-color: var(--pineapple-text);
+            --theme-alert-donor-color: var(--pineapple-orange-dark);
+            --theme-alert-action-text-color: var(--pineapple-text);
+            
+            /* Badge styles for Pineapple theme — Flat Brutalist style */
+            --badge-playing-bg: #4ADE80;
+            --badge-playing-border: var(--pineapple-text);
+            --badge-playing-text: var(--pineapple-text);
+            --badge-playing-shadow: 2px 2px 0px var(--pineapple-text);
+            
+            --badge-next-bg: #60A5FA;
+            --badge-next-border: var(--pineapple-text);
+            --badge-next-text: var(--pineapple-text);
+            --badge-next-shadow: 2px 2px 0px var(--pineapple-text);
+            
+            --badge-queue-bg: var(--pineapple-yellow);
+            --badge-queue-border: var(--pineapple-text);
+            --badge-queue-text: #000000;
+            --badge-queue-shadow: 2px 2px 0px var(--pineapple-text);
+            
+            --badge-radius: 8px;
+            --badge-border-width: 2px;
+            --badge-padding: 0.22rem 0.65rem;
+            --badge-font-size: 0.88rem;
+        }
+
+        body.theme-spacegods {
+            /* Theme TFT Spacegods - Bubbly, Cute, Kawaii Cosmic Style */
+            --theme-bg: #241A42; /* Fresh cosmic deep grape-purple background */
+            --theme-border-color: rgba(255, 255, 255, 0.15); /* Soft white border */
+            --theme-border-width: 2px;
+            --theme-border-radius: 28px; /* Extra rounded bubbly corners */
+            --theme-box-shadow: 0 16px 32px rgba(0, 0, 0, 0.45), 0 4px 12px rgba(0, 0, 0, 0.2);
+            
+            --theme-text-color: #FFFFFF; /* White text */
+            --theme-sub-text-color: #C0B7E1; /* Pastel cute lavender text */
+            --theme-highlight-color: #FFB3C1; /* Sweet strawberry pink for details */
+            
+            --theme-progress-bg: rgba(255, 255, 255, 0.08); /* Subtle dark track */
+            --theme-progress-fill: linear-gradient(90deg, #38BDF8 0%, #7DD3FC 100%); /* Fresh sky blue gradient */
+            --theme-progress-thumb: #FF758F; /* Cute pink thumb */
+            
+            --theme-alert-bg: #2D2050; /* Cute deep violet for alerts */
+            --theme-alert-border-color: rgba(255, 255, 255, 0.15);
+            --theme-alert-text-color: #FFFFFF;
+            --theme-alert-donor-color: #FFB3C1; /* Sweet pink */
+            --theme-alert-action-text-color: #C0B7E1;
+            --theme-box-shadow-alert: 0 16px 32px rgba(0, 0, 0, 0.45), 0 4px 12px rgba(0, 0, 0, 0.2);
+
+            /* Cute Badges (Solid backgrounds, soft rounded pill shape, bold text) */
+            --badge-playing-bg: linear-gradient(135deg, #38BDF8, #0EA5E9); /* Cute sky blue gradient */
+            --badge-playing-border: transparent;
+            --badge-playing-text: #FFFFFF;
+            --badge-playing-shadow: 0 4px 12px rgba(14, 165, 233, 0.35);
+            
+            --badge-next-bg: linear-gradient(135deg, #FF758F, #E11D48); /* Sweet pink gradient */
+            --badge-next-border: transparent;
+            --badge-next-text: #FFFFFF;
+            --badge-next-shadow: 0 4px 12px rgba(225, 29, 72, 0.35);
+            
+            --badge-queue-bg: #FFE169;
+            --badge-queue-border: transparent;
+            --badge-queue-text: #000000;
+            --badge-queue-shadow: 0 4px 12px rgba(255, 225, 105, 0.35);
+            
+            --badge-radius: 9999px;
+            --badge-border-width: 0px;
+            --badge-padding: 0.25rem 0.75rem;
+            --badge-font-size: 0.85rem;
+        }
+
+        /* Cute Bubble Cards styling for Spacegods Theme */
+        body.theme-spacegods .obs-compact-player,
+        body.theme-spacegods .obs-alert-box {
+            background-color: #241A42;
+            background-image: 
+                radial-gradient(rgba(255, 255, 255, 0.08) 1.5px, transparent 1.5px),
+                radial-gradient(rgba(255, 117, 143, 0.08) 2px, transparent 2px);
+            background-size: 24px 24px;
+            background-position: 0 0, 12px 12px;
+            border: 2.5px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 
+                0 20px 40px rgba(0, 0, 0, 0.45),
+                0 4px 12px rgba(0, 0, 0, 0.2),
+                inset 0 1.5px 2px rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(8px);
+            border-radius: 28px;
+        }
+
+        /* Drawer styling */
+        body.theme-spacegods .obs-next-song-drawer {
+            background-color: #1C1333;
+            background-image: 
+                radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+            background-size: 20px 20px;
+            border: 2px solid rgba(255, 255, 255, 0.12);
+            border-top: none;
+            box-shadow: 
+                0 16px 32px rgba(0, 0, 0, 0.35),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            border-radius: 0 0 24px 24px;
+        }
+
+        /* Empty Overlay styling for both themes */
+        .obs-empty-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--theme-bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 1.2rem 1.5rem;
+            font-family: var(--font-title);
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--theme-text-color);
+            z-index: 100;
+            box-sizing: border-box;
+            word-break: break-word;
+            white-space: normal;
+            line-height: 1.5;
+            border-radius: var(--theme-border-radius);
+            
+            /* Gentle fade transition */
+            transition: opacity 0.45s ease, visibility 0.45s ease;
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .obs-empty-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        body.theme-spacegods .obs-empty-overlay {
+            background-color: #241A42;
+            background-image: 
+                radial-gradient(rgba(255, 255, 255, 0.08) 1.5px, transparent 1.5px),
+                radial-gradient(rgba(255, 117, 143, 0.08) 2px, transparent 2px);
+            background-size: 24px 24px;
+            background-position: 0 0, 12px 12px;
+            color: #FFFFFF;
+        }
+
+        /* Next tag button style */
+        body.theme-spacegods .next-tag {
+            background: #FF758F;
+            border: none;
+            color: #FFFFFF;
+            box-shadow: 0 4px 10px rgba(255, 117, 143, 0.3);
+            border-radius: 9999px;
+            font-family: var(--font-title);
+            font-weight: 900;
+            letter-spacing: 0.5px;
+        }
+
+        /* Song detail font styling */
+        body.theme-spacegods .obs-song-title {
+            font-family: var(--font-title);
+            font-weight: 900;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        body.theme-spacegods .obs-donor-info {
+            color: #FF8FA3;
+            font-family: var(--font-title);
+            font-weight: 800;
+        }
+        body.theme-spacegods .obs-donor-name {
+            font-weight: 900;
+            color: #FFB3C1;
+        }
+        body.theme-spacegods .obs-donor-amount {
+            color: #FFE169;
+            font-weight: 900;
+            text-shadow: 0 1.5px 3px rgba(0, 0, 0, 0.2);
+        }
+        body.theme-spacegods .obs-alert-donor {
+            color: #FFB3C1;
+            font-family: var(--font-title);
+            font-weight: 900;
+        }
+        body.theme-spacegods .obs-alert-action-text {
+            color: #C0B7E1;
+            font-weight: 700;
+        }
+        body.theme-spacegods #alert-amount {
+            color: #FFE169 !important;
+            font-weight: 900;
+            text-shadow: 0 1.5px 3px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Cute speech dialogue bubble for messages */
+        body.theme-spacegods .obs-song-message {
+            background: rgba(255, 255, 255, 0.07);
+            border: 1.5px solid rgba(255, 255, 255, 0.12);
+            border-radius: 16px;
+            padding: 0.45rem 0.8rem;
+            color: #D8D2F8;
+            font-family: var(--font-primary);
+            font-weight: 600;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.25);
+        }
+
+        /* Badges base font */
+        body.theme-spacegods .obs-position-badge {
+            font-family: var(--font-title);
+            font-weight: 900;
+            border-radius: 9999px;
+            border: none;
+            letter-spacing: 0.5px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            text-transform: uppercase;
+        }
+
+        /* Spinning cover */
+        body.theme-spacegods .obs-cover-wrapper {
+            border: 3.5px solid #FF9EAE;
+            box-shadow: 
+                0 8px 20px rgba(0, 0, 0, 0.3),
+                0 0 0 4px rgba(255, 158, 174, 0.25),
+                inset 0 2px 4px rgba(255, 255, 255, 0.3);
+            background: #251B40;
+        }
+
+        /* Progress Bar */
+        body.theme-spacegods .obs-progress-bar-bg {
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.35);
+            height: 12px;
+            border-radius: 9999px;
+            border: none;
+        }
+        body.theme-spacegods .obs-progress-bar-fill {
+            background: linear-gradient(90deg, #38BDF8 0%, #7DD3FC 100%);
+            border-radius: 9999px;
+            box-shadow: 0 0 8px rgba(56, 189, 248, 0.4);
+        }
+        body.theme-spacegods .obs-progress-bar-thumb {
+            width: 22px;
+            height: 22px;
+            background: #FF758F;
+            border: 3.5px solid #FFFFFF;
+            box-shadow: 
+                0 4px 10px rgba(255, 117, 143, 0.45),
+                inset 0 1px 1px rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+        }
+
+        body.theme-cutepink {
+            /* Theme Hồng dễ thương - Cute Pinky Strawberry Style */
+            --theme-bg: #FFE5EC; /* Soft warm pink background */
+            --theme-border-color: #FF85A2; /* Sweet pink border */
+            --theme-border-width: 3px;
+            --theme-border-radius: 24px;
+            --theme-box-shadow: 0 12px 24px rgba(255, 133, 162, 0.25), 0 4px 8px rgba(0, 0, 0, 0.05);
+            
+            --theme-text-color: #4A1521; /* Dark strawberry/deep maroon for high contrast and readability */
+            --theme-sub-text-color: #6C2A3D; /* Deep reddish brown subtext */
+            --theme-highlight-color: #FF4D6D; /* Vibrant pink/red highlight */
+            
+            --theme-progress-bg: #FFF0F3; /* Milky white-pink track background */
+            --theme-progress-fill: linear-gradient(90deg, #FF758F 0%, #FF4D6D 100%); /* Strawberry pink gradient */
+            --theme-progress-thumb: #FF85A2; /* Sweet pink thumb */
+            
+            --theme-alert-bg: #FFE5EC;
+            --theme-alert-border-color: #FF85A2;
+            --theme-alert-text-color: #4A1521;
+            --theme-alert-donor-color: #FF4D6D; /* Highlight donor name */
+            --theme-alert-action-text-color: #6C2A3D;
+            --theme-box-shadow-alert: 0 12px 24px rgba(255, 133, 162, 0.25);
+
+            /* Badges styles for Cute Pink - High contrast and readable colors */
+            --badge-playing-bg: linear-gradient(135deg, #FF758F, #FF4D6D); /* Dark enough for white text */
+            --badge-playing-border: transparent;
+            --badge-playing-text: #FFFFFF;
+            --badge-playing-shadow: 0 4px 8px rgba(255, 77, 109, 0.25);
+            
+            --badge-next-bg: #FFC4D6; /* Light pink background */
+            --badge-next-border: #FF85A2;
+            --badge-next-text: #4A1521; /* Dark pink/red text for readability on light pink background! */
+            --badge-next-shadow: 0 4px 8px rgba(255, 133, 162, 0.15);
+            
+            --badge-queue-bg: #FFF0F3; /* Off-white pink */
+            --badge-queue-border: #FFB3C1;
+            --badge-queue-text: #6C2A3D;
+            --badge-queue-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+            
+            --badge-radius: 9999px;
+            --badge-border-width: 1.5px;
+            --badge-padding: 0.22rem 0.7rem;
+            --badge-font-size: 0.85rem;
+        }
+
+        /* Card background pattern for Cute Pink Theme */
+        body.theme-cutepink .obs-compact-player,
+        body.theme-cutepink .obs-alert-box {
+            background-color: #FFE5EC;
+            background-image: 
+                radial-gradient(rgba(255, 182, 193, 0.25) 1.5px, transparent 1.5px),
+                radial-gradient(rgba(255, 77, 109, 0.12) 2px, transparent 2px);
+            background-size: 20px 20px;
+            background-position: 0 0, 10px 10px;
+            border: 3px solid #FF85A2;
+            box-shadow: 
+                0 16px 32px rgba(255, 133, 162, 0.3),
+                inset 0 1.5px 2px rgba(255, 255, 255, 0.8);
+            border-radius: 24px;
+        }
+
+        /* Next Drawer for Cute Pink Theme */
+        body.theme-cutepink .obs-next-song-drawer {
+            background-color: #FFF0F3;
+            background-image: 
+                radial-gradient(rgba(255, 182, 193, 0.15) 1px, transparent 1px);
+            background-size: 16px 16px;
+            border: 2px solid #FF85A2;
+            border-top: none;
+            box-shadow: 
+                0 12px 24px rgba(255, 133, 162, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.5);
+            border-radius: 0 0 20px 20px;
+        }
+
+        body.theme-cutepink .obs-next-song-drawer * {
+            color: #4A1521; /* Dark text for readability on light background */
+        }
+
+        /* Empty Overlay styling for Cute Pink */
+        body.theme-cutepink .obs-empty-overlay {
+            background-color: #FFE5EC;
+            background-image: 
+                radial-gradient(rgba(255, 182, 193, 0.25) 1.5px, transparent 1.5px),
+                radial-gradient(rgba(255, 77, 109, 0.12) 2px, transparent 2px);
+            background-size: 20px 20px;
+            background-position: 0 0, 10px 10px;
+            color: #4A1521;
+        }
+
+        /* Next tag button style in Cute Pink */
+        body.theme-cutepink .next-tag {
+            background: #FF758F;
+            border: none;
+            color: #FFFFFF;
+            box-shadow: 0 4px 8px rgba(255, 117, 143, 0.3);
+            border-radius: 9999px;
+            font-family: var(--font-title);
+            font-weight: 900;
+        }
+
+        /* Song text styling in Cute Pink */
+        body.theme-cutepink .obs-song-title {
+            font-family: var(--font-title);
+            font-weight: 900;
+            color: #4A1521;
+            text-shadow: none; /* No shadow to keep it clean and legible */
+        }
+        body.theme-cutepink .obs-donor-info {
+            color: #6C2A3D;
+            font-family: var(--font-title);
+            font-weight: 800;
+        }
+        body.theme-cutepink .obs-donor-name {
+            font-weight: 900;
+            color: #FF4D6D;
+        }
+        body.theme-cutepink .obs-donor-amount {
+            color: #FF4D6D;
+            font-weight: 900;
+            text-shadow: none;
+        }
+        body.theme-cutepink .obs-alert-donor {
+            color: #FF4D6D;
+            font-family: var(--font-title);
+            font-weight: 900;
+        }
+        body.theme-cutepink .obs-alert-action-text {
+            color: #6C2A3D;
+            font-weight: 700;
+        }
+        body.theme-cutepink #alert-amount {
+            color: #FF4D6D !important;
+            font-weight: 900;
+            text-shadow: none;
+        }
+
+        /* Speech bubble message in Cute Pink */
+        body.theme-cutepink .obs-song-message {
+            background: rgba(255, 255, 255, 0.6); /* Semi-transparent white to pop on background */
+            border: 1.5px solid #FFB3C1;
+            border-radius: 16px;
+            padding: 0.45rem 0.8rem;
+            color: #6C2A3D;
+            font-family: var(--font-primary);
+            font-weight: 600;
+            box-shadow: inset 0 1px 3px rgba(255, 133, 162, 0.1);
+        }
+
+        /* Badges base font in Cute Pink */
+        body.theme-cutepink .obs-position-badge {
+            font-family: var(--font-title);
+            font-weight: 900;
+            border-radius: 9999px;
+            border: 1.5px solid #FF85A2;
+            letter-spacing: 0.5px;
+            box-shadow: 0 4px 8px rgba(255, 133, 162, 0.1);
+            text-transform: uppercase;
+        }
+
+        /* Spinning cover in Cute Pink */
+        body.theme-cutepink .obs-cover-wrapper {
+            border: 3px solid #FF85A2;
+            box-shadow: 
+                0 6px 12px rgba(255, 133, 162, 0.2),
+                0 0 0 3px rgba(255, 133, 162, 0.15),
+                inset 0 1px 2px rgba(255, 255, 255, 0.6);
+            background: #FFE5EC;
+        }
+
+        /* Progress Bar in Cute Pink */
+        body.theme-cutepink .obs-progress-bar-bg {
+            background: #FFF0F3;
+            box-shadow: inset 0 1.5px 3px rgba(255, 133, 162, 0.2);
+            height: 12px;
+            border-radius: 9999px;
+            border: 1px solid #FFE1E6;
+        }
+        body.theme-cutepink .obs-progress-bar-fill {
+            background: linear-gradient(90deg, #FF758F 0%, #FF4D6D 100%);
+            border-radius: 9999px;
+            box-shadow: 0 0 6px rgba(255, 77, 109, 0.3);
+        }
+        body.theme-cutepink .obs-progress-bar-thumb {
+            width: 20px;
+            height: 20px;
+            background: #FF85A2;
+            border: 3px solid #FFFFFF;
+            box-shadow: 
+                0 3px 6px rgba(255, 117, 143, 0.3),
+                inset 0 1px 1px rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+        }
+
+        /* ==================== THEME CỔ ĐIỂN (CLASSIC SQUARE) ==================== */
+        body.theme-classic {
+            --theme-bg: #F4EFE6;
+            --theme-border-color: #2B1810;
+            --theme-border-width: 4px;
+            --theme-border-radius: 16px;
+            --theme-box-shadow: 6px 6px 0px #2B1810;
+            --theme-text-color: #2B1810;
+            --theme-sub-text-color: #2B1810;
+            --theme-highlight-color: #2B1810;
+            --theme-progress-bg: #EADFC9;
+            --theme-progress-fill: #2B1810;
+            --theme-progress-thumb: #2B1810;
+            --theme-alert-bg: #F4EFE6;
+            --theme-alert-border-color: #2B1810;
+            --theme-alert-text-color: #2B1810;
+            --theme-alert-donor-color: #2B1810;
+            --theme-alert-action-text-color: #2B1810;
+        }
+
+        body.theme-classic .obs-compact-player {
+            width: 240px;
+            height: 265px;
+            min-height: 265px;
+            padding: 16px 12px 16px 12px; /* Cân đối đều trên dưới */
+            background: #F4EFE6;
+            border: 4px solid #2B1810;
+            border-radius: 16px;
+            box-shadow: 6px 6px 0px #2B1810;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            box-sizing: border-box;
+            position: relative;
+            z-index: 10;
+        }
+
+        body.theme-classic .obs-player-main {
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            position: relative;
+            margin-top: 0px; /* Căn chỉnh theo padding trên */
+            width: 100%;
+        }
+
+        /* Đĩa Than Retro kích thước lớn (110px) */
+        body.theme-classic .obs-cover-wrapper {
+            width: 110px;
+            height: 110px;
+            border: 3px solid #2B1810;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.25);
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(circle, #1a1a1a 35%, #121212 36%, #282828 40%, #121212 45%, #2c2c2c 50%, #121212 55%, #303030 60%, #121212 65%, #121212 100%);
+            border-radius: 50%;
+            overflow: visible;
+            flex-shrink: 0;
+        }
+
+        /* Nhãn đĩa tròn to hơn (54px) hiển thị ảnh album rõ nét */
+        body.theme-classic .obs-song-cover {
+            width: 54px;
+            height: 54px;
+            border-radius: 50%;
+            border: 2px solid #2B1810;
+            object-fit: cover;
+            z-index: 2;
+        }
+
+        /* Trục quay đĩa ở giữa nhãn */
+        body.theme-classic .obs-cover-wrapper::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 8px;
+            height: 8px;
+            background: #F4EFE6;
+            border: 2px solid #2B1810;
+            border-radius: 50%;
+            z-index: 3;
+        }
+
+        /* Cần đọc đĩa than cơ học (Tonearm) */
+        body.theme-classic .obs-tonearm {
+            display: block;
+            position: absolute;
+            top: -5px;
+            right: 25px;
+            width: 40px;
+            height: 100px;
+            z-index: 10;
+            pointer-events: none;
+            transform-origin: 20px 20px; /* Đế cần */
+            transform: rotate(-35deg); /* Trạng thái nghỉ: cần gạt ra ngoài */
+            transition: transform 1.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        /* Trạng thái phát nhạc: gạt cần chạm đĩa */
+        body.theme-classic .obs-compact-player.playing .obs-tonearm {
+            transform: rotate(18deg); /* Kim gạt vào chạm đĩa */
+        }
+
+        /* Đế xoay kim loại */
+        body.theme-classic .obs-tonearm::before {
+            content: '';
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            width: 20px;
+            height: 20px;
+            background: #C0C0C0;
+            border: 3px solid #2B1810;
+            border-radius: 50%;
+            box-shadow: 2px 2px 0px rgba(0,0,0,0.15);
+            z-index: 5;
+        }
+
+        /* Thanh kim cần dài */
+        body.theme-classic .obs-tonearm-needle {
+            position: absolute;
+            top: 20px;
+            left: 19px;
+            width: 3px;
+            height: 65px;
+            background: #E0E0E0;
+            border: 1px solid #2B1810;
+            border-radius: 2px;
+            transform-origin: top center;
+            transform: rotate(5deg);
+            z-index: 4;
+        }
+
+        /* Đầu kim đọc */
+        body.theme-classic .obs-tonearm-needle::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: -3px;
+            width: 8px;
+            height: 12px;
+            background: #2B1810;
+            border-radius: 1px 1px 3px 3px;
+            transform: rotate(25deg);
+        }
+
+        /* Chi tiết thông tin và chữ dưới đĩa */
+        body.theme-classic .obs-details {
+            text-align: center;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            gap: 2px;
+        }
+
+        body.theme-classic .obs-song-title {
+            font-size: 1.4rem;
+            color: #2B1810;
+            font-family: 'Merriweather', serif; /* Font Serif cổ điển và đẹp mắt, dễ đọc hơn trên màn hình nhỏ */
+            font-weight: 800;
+            text-shadow: none;
+            line-height: 1.55 !important;
+            padding-top: 4px !important;
+        }
+
+        body.theme-classic .obs-donor-info {
+            color: #2B1810;
+            font-size: 1.0rem;
+            font-family: 'Merriweather', serif; /* Font Serif cổ điển và đẹp mắt, dễ đọc hơn trên màn hình nhỏ */
+            font-weight: 700;
+            display: flex;
+            flex-direction: column !important; /* Xếp dọc số tiền xuống dưới tên */
+            align-items: center !important;
+            gap: 2px !important;
+            width: 100%;
+            line-height: 1.2;
+        }
+
+        body.theme-classic .obs-donor-name {
+            color: #2B1810;
+            font-weight: 900;
+            display: block !important;
+            max-width: 100% !important;
+            text-align: center !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+        }
+
+        body.theme-classic .obs-donor-amount {
+            color: #2B1810;
+            font-weight: 900;
+            display: block !important;
+            text-align: center !important;
+        }
+
+        /* Ẩn bong bóng tin nhắn trên theme cổ điển */
+        body.theme-classic .obs-song-message {
+            display: none !important;
+        }
+
+        /* Thanh tiến trình chạy mỏng & phẳng ở cạnh đáy */
+        body.theme-classic .obs-progress-container {
+            margin-top: 0px;
+            margin-bottom: 0px; /* Cân đối theo padding dưới */
+            gap: 0.4rem;
+        }
+
+        body.theme-classic .obs-time {
+            font-size: 0.8rem;
+            color: #2B1810;
+            font-family: 'Merriweather', serif;
+            font-weight: 800;
+            min-width: 32px;
+        }
+
+        body.theme-classic .obs-progress-bar-bg {
+            height: 8px;
+            border: 2px solid #2B1810;
+            background: #EADFC9;
+            border-radius: 4px;
+            box-shadow: none;
+        }
+
+        body.theme-classic .obs-progress-bar-fill {
+            background: #2B1810;
+        }
+
+        /* Ẩn nút chạy tròn */
+        body.theme-classic .obs-progress-bar-thumb {
+            display: none !important;
+        }
+
+        /* Ngăn kéo trượt sang bên phải đĩa nhạc (Bằng chiều cao 250px, chạy chữ dọc) */
+        body.theme-classic .obs-next-song-drawer {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            width: 220px;
+            height: 265px; /* Bằng chiều cao hộp phát chính */
+            margin: 0;
+            padding: 12px 12px 12px 45px; /* Lùi lề trái 45px để phần hiển thị nhô hẳn ra bên phải */
+            background: #F4EFE6;
+            border: 4px solid #2B1810;
+            border-radius: 12px;
+            box-shadow: 6px 6px 0px #2B1810;
+            display: flex;
+            flex-direction: column; /* Chạy chữ dọc xếp chồng */
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            z-index: 5; /* Nằm dưới alert box */
+            transform: translateX(0) scaleX(0.95);
+            opacity: 0;
+            pointer-events: none;
+            box-sizing: border-box;
+            transition: transform 0.6s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.6s ease;
+        }
+
+        body.theme-classic .obs-next-song-drawer.show {
+            transform: translateX(210px); /* Đẩy nhô sang bên phải */
+            opacity: 1;
+        }
+
+        body.theme-classic .obs-next-song-drawer * {
+            color: #2B1810;
+        }
+
+        body.theme-classic #obs-next-title-container {
+            display: block !important;
+            width: 100% !important;
+            text-align: center !important;
+            flex-grow: 0 !important;
+            flex-shrink: 0 !important;
+        }
+
+        body.theme-classic .next-tag {
+            background: #2B1810;
+            color: #F4EFE6;
+            border: 2px solid #2B1810;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            padding: 0.15rem 0.4rem;
+            font-family: 'Merriweather', serif;
+            box-shadow: none;
+        }
+
+        body.theme-classic .next-title {
+            display: -webkit-box !important;
+            -webkit-line-clamp: 3 !important;
+            -webkit-box-orient: vertical !important;
+            color: #2B1810;
+            font-size: 1.25rem;
+            font-weight: 750;
+            font-family: 'Merriweather', serif;
+            white-space: normal !important;
+            word-break: break-word !important;
+            text-align: center !important;
+            max-height: 110px !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+            line-height: 1.55 !important;
+            padding-top: 4px !important;
+        }
+
+        body.theme-classic .obs-next-donor-info {
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            gap: 2px !important;
+            font-family: 'Merriweather', serif !important;
+            font-size: 0.95rem !important;
+            color: #2B1810 !important;
+            flex-shrink: 0 !important;
+        }
+
+        body.theme-classic .obs-next-donor-name {
+            font-weight: 900 !important;
+            display: block !important;
+            max-width: 100% !important;
+            text-align: center !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+        }
+
+        body.theme-classic .obs-next-donor-amount {
+            font-weight: 900 !important;
+            display: block !important;
+            text-align: center !important;
+        }
+
+        /* Hộp thoại donate mới trượt sang phải 250px như ngăn kéo */
+        body.theme-classic .obs-alert-box {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            width: 220px;
+            height: 265px; /* Cao bằng hộp phát */
+            margin: 0;
+            padding: 12px 12px 12px 45px;
+            background: #F4EFE6;
+            border: 4px solid #2B1810;
+            border-radius: 12px;
+            box-shadow: 6px 6px 0px #2B1810;
+            display: flex;
+            flex-direction: column; /* Xếp dọc các chi tiết */
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            z-index: 6; /* Nằm đè lên next drawer khi cùng bật */
+            transform: translateX(0) scaleX(0.95);
+            opacity: 0;
+            pointer-events: none;
+            box-sizing: border-box;
+            transition: transform 0.6s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.6s ease;
+        }
+
+        body.theme-classic .obs-alert-box.active {
+            transform: translateX(210px); /* Trượt ra phải */
+            opacity: 1;
+        }
+
+        body.theme-classic .obs-alert-box * {
+            color: #2B1810;
+        }
+
+        body.theme-classic .obs-alert-content {
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            text-align: center !important;
+            gap: 6px !important;
+            width: 100% !important;
+        }
+
+        body.theme-classic .obs-alert-song {
+            display: -webkit-box !important;
+            -webkit-line-clamp: 3 !important;
+            -webkit-box-orient: vertical !important;
+            white-space: normal !important;
+            word-break: break-word !important;
+            text-align: center !important;
+            font-family: 'Merriweather', serif !important;
+            font-size: 1.35rem !important;
+            font-weight: 800 !important;
+            line-height: 1.55 !important;
+            max-height: 110px !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+            padding-top: 4px !important;
+        }
+
+        body.theme-classic .obs-alert-content > div {
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            text-align: center !important;
+            gap: 2px !important;
+            font-family: 'Merriweather', serif !important;
+            font-size: 0.95rem !important;
+            font-weight: 700 !important;
+        }
+
+        body.theme-classic .obs-alert-content span {
+            display: inline-block !important;
+            text-align: center !important;
+            white-space: normal !important;
+            word-break: break-word !important;
+        }
+
+        body.theme-classic .obs-alert-donor {
+            font-weight: 900 !important;
+        }
+
+        body.theme-classic .obs-alert-status-text {
+            margin-top: 4px !important;
+        }
+
+        body.theme-classic .obs-alert-status-text.badge-playing,
+        body.theme-classic .obs-alert-status-text.badge-next,
+        body.theme-classic .obs-alert-status-text.badge-queue {
+            background: #2B1810 !important;
+            color: #F4EFE6 !important;
+            border: 2px solid #2B1810 !important;
+            border-radius: 6px !important;
+            font-size: 0.75rem !important;
+            padding: 0.15rem 0.4rem !important;
+            font-family: 'Merriweather', serif !important;
+            box-shadow: none !important;
+        }
+
+        /* Overlay chờ không có nhạc */
+        body.theme-classic .obs-empty-overlay {
+            background: #F4EFE6;
+            color: #2B1810;
+            font-family: 'Merriweather', serif;
+            font-size: 2.0rem;
+            font-weight: 800;
+            border-radius: 12px;
+            line-height: 1.4;
+            border: none;
+        }
+
+        /* ==================== THEME CỔ ĐIỂN TỐI (CLASSIC DARK - PHONG CÁCH GỖ TỐI) ==================== */
+        body.theme-classic-dark {
+            --theme-bg: #24140E;
+            --theme-border-color: #EADFC9;
+            --theme-border-width: 0px;
+            --theme-border-radius: 16px;
+            --theme-box-shadow: 6px 6px 0px #120907;
+            --theme-text-color: #EADFC9;
+            --theme-sub-text-color: #EADFC9;
+            --theme-highlight-color: #EADFC9;
+            --theme-progress-bg: #3D251C;
+            --theme-progress-fill: #EADFC9;
+            --theme-progress-thumb: #EADFC9;
+            --theme-alert-bg: #24140E;
+            --theme-alert-border-color: transparent;
+            --theme-alert-text-color: #EADFC9;
+            --theme-alert-donor-color: #EADFC9;
+            --theme-alert-action-text-color: #EADFC9;
+        }
+
+        body.theme-classic-dark .obs-compact-player {
+            width: 240px;
+            height: 265px;
+            min-height: 265px;
+            padding: 16px 12px 16px 12px; /* Cân đối đều trên dưới */
+            background: #24140E; /* Màu gỗ Mahogany tối cổ điển */
+            border: none !important; /* Loại bỏ viền đối với chế độ classic dark */
+            border-radius: 16px;
+            box-shadow: 6px 6px 0px #120907; /* Đổ bóng tối gỗ sẫm */
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            box-sizing: border-box;
+            position: relative;
+            z-index: 10;
+        }
+
+        body.theme-classic-dark .obs-player-main {
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            position: relative;
+            margin-top: 0px; /* Căn chỉnh theo padding trên */
+            width: 100%;
+        }
+
+        /* Đĩa Than tối màu */
+        body.theme-classic-dark .obs-cover-wrapper {
+            width: 110px;
+            height: 110px;
+            border: 3px solid #EADFC9;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.55);
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(circle, #25252b 35%, #121215 36%, #3a3a42 40%, #121215 45%, #44444e 50%, #121215 55%, #4c4c58 60%, #121215 65%, #121215 100%);
+            border-radius: 50%;
+            overflow: visible;
+            flex-shrink: 0;
+        }
+
+        /* Nhãn đĩa tròn to hơn (54px) */
+        body.theme-classic-dark .obs-song-cover {
+            width: 54px;
+            height: 54px;
+            border-radius: 50%;
+            border: 2px solid #EADFC9;
+            object-fit: cover;
+            z-index: 2;
+        }
+
+        /* Trục đĩa sẫm màu */
+        body.theme-classic-dark .obs-cover-wrapper::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 8px;
+            height: 8px;
+            background: #24140E;
+            border: 2px solid #EADFC9;
+            border-radius: 50%;
+            z-index: 3;
+        }
+
+        /* Cần đọc đĩa (Tonearm) trên nền tối - Phong cách Đồng/Vàng Đồng */
+        body.theme-classic-dark .obs-tonearm {
+            display: block;
+            position: absolute;
+            top: -5px;
+            right: 25px;
+            width: 40px;
+            height: 100px;
+            z-index: 10;
+            pointer-events: none;
+            transform-origin: 20px 20px;
+            transform: rotate(-35deg);
+            transition: transform 1.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        body.theme-classic-dark .obs-compact-player.playing .obs-tonearm {
+            transform: rotate(18deg);
+        }
+
+        /* Trục cơ cần bằng đồng/vàng */
+        body.theme-classic-dark .obs-tonearm::before {
+            content: '';
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            width: 20px;
+            height: 20px;
+            background: #C5A059; /* Màu vàng đồng brass */
+            border: 3px solid #EADFC9;
+            border-radius: 50%;
+            box-shadow: 2px 2px 0px rgba(0,0,0,0.3);
+            z-index: 5;
+        }
+
+        /* Thanh kim cần đồng */
+        body.theme-classic-dark .obs-tonearm-needle {
+            position: absolute;
+            top: 20px;
+            left: 19px;
+            width: 3px;
+            height: 65px;
+            background: #D4AF37; /* Kim loại vàng */
+            border: 1px solid #EADFC9;
+            border-radius: 2px;
+            transform-origin: top center;
+            transform: rotate(5deg);
+            z-index: 4;
+        }
+
+        /* Đầu đọc */
+        body.theme-classic-dark .obs-tonearm-needle::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: -3px;
+            width: 8px;
+            height: 12px;
+            background: #EADFC9;
+            border-radius: 1px 1px 3px 3px;
+            transform: rotate(25deg);
+        }
+
+        /* Chi tiết thông tin và chữ dưới đĩa */
+        body.theme-classic-dark .obs-details {
+            text-align: center;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            gap: 2px;
+        }
+
+        body.theme-classic-dark .obs-song-title {
+            font-size: 1.4rem;
+            color: #FFFFFF; /* Tên bài hát trắng tinh tế */
+            font-family: 'Merriweather', serif; /* Thay bằng Merriweather dễ đọc hơn trên màn hình nhỏ */
+            font-weight: 800;
+            text-shadow: none;
+            line-height: 1.55 !important;
+            padding-top: 4px !important;
+        }
+
+        body.theme-classic-dark .obs-donor-info {
+            color: #EADFC9; /* Màu kem gỗ sẫm */
+            font-size: 1.0rem;
+            font-family: 'Merriweather', serif; /* Thay bằng Merriweather dễ đọc hơn trên màn hình nhỏ */
+            font-weight: 700;
+            display: flex;
+            flex-direction: column !important; /* Xếp dọc số tiền xuống dưới tên */
+            align-items: center !important;
+            gap: 2px !important;
+            width: 100%;
+            line-height: 1.2;
+        }
+
+        body.theme-classic-dark .obs-donor-name {
+            color: #EADFC9;
+            font-weight: 900;
+            display: block !important;
+            max-width: 100% !important;
+            text-align: center !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+        }
+
+        body.theme-classic-dark .obs-donor-amount {
+            color: #EADFC9;
+            font-weight: 900;
+            display: block !important;
+            text-align: center !important;
+        }
+
+        /* Ẩn bong bóng tin nhắn */
+        body.theme-classic-dark .obs-song-message {
+            display: none !important;
+        }
+
+        /* Thanh tiến trình chạy mỏng tối giản */
+        body.theme-classic-dark .obs-progress-container {
+            margin-top: 0px;
+            margin-bottom: 0px; /* Cân đối theo padding dưới */
+            gap: 0.4rem;
+        }
+
+        body.theme-classic-dark .obs-time {
+            font-size: 0.8rem;
+            color: #EADFC9;
+            font-family: 'Merriweather', serif;
+            font-weight: 800;
+            min-width: 32px;
+        }
+
+        body.theme-classic-dark .obs-progress-bar-bg {
+            height: 8px;
+            border: 2px solid #EADFC9;
+            background: #3D251C; /* Rãnh gỗ tối làm nền thanh tiến trình */
+            border-radius: 4px;
+            box-shadow: none;
+        }
+
+        body.theme-classic-dark .obs-progress-bar-fill {
+            background: #EADFC9;
+        }
+
+        /* Ẩn nút chạy tròn */
+        body.theme-classic-dark .obs-progress-bar-thumb {
+            display: none !important;
+        }
+
+        /* Ngăn kéo bài tiếp theo tối gỗ (Bằng chiều cao 250px, chạy chữ dọc) */
+        body.theme-classic-dark .obs-next-song-drawer {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            width: 220px;
+            height: 265px;
+            margin: 0;
+            padding: 12px 12px 12px 45px;
+            background: #24140E;
+            border: none !important; /* Loại bỏ viền đối với chế độ classic dark */
+            border-radius: 12px;
+            box-shadow: 6px 6px 0px #120907;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            z-index: 5;
+            transform: translateX(0) scaleX(0.95);
+            opacity: 0;
+            pointer-events: none;
+            box-sizing: border-box;
+            transition: transform 0.6s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.6s ease;
+        }
+
+        body.theme-classic-dark .obs-next-song-drawer.show {
+            transform: translateX(210px);
+            opacity: 1;
+        }
+
+        body.theme-classic-dark .obs-next-song-drawer * {
+            color: #EADFC9;
+        }
+
+        body.theme-classic-dark #obs-next-title-container {
+            display: block !important;
+            width: 100% !important;
+            text-align: center !important;
+            flex-grow: 0 !important;
+            flex-shrink: 0 !important;
+        }
+
+        body.theme-classic-dark .next-tag {
+            background: #EADFC9;
+            color: #24140E;
+            border: 2px solid #EADFC9;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            padding: 0.15rem 0.4rem;
+            font-family: 'Merriweather', serif;
+            box-shadow: none;
+        }
+
+        body.theme-classic-dark .next-title {
+            display: -webkit-box !important;
+            -webkit-line-clamp: 3 !important;
+            -webkit-box-orient: vertical !important;
+            color: #EADFC9;
+            font-size: 1.25rem;
+            font-weight: 750;
+            font-family: 'Merriweather', serif;
+            white-space: normal !important;
+            word-break: break-word !important;
+            text-align: center !important;
+            max-height: 110px !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+            line-height: 1.55 !important;
+            padding-top: 4px !important;
+        }
+
+        body.theme-classic-dark .obs-next-donor-info {
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            gap: 2px !important;
+            font-family: 'Merriweather', serif !important;
+            font-size: 0.95rem !important;
+            color: #EADFC9 !important;
+            flex-shrink: 0 !important;
+        }
+
+        body.theme-classic-dark .obs-next-donor-name {
+            font-weight: 900 !important;
+            display: block !important;
+            max-width: 100% !important;
+            text-align: center !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+        }
+
+        body.theme-classic-dark .obs-next-donor-amount {
+            font-weight: 900 !important;
+            display: block !important;
+            text-align: center !important;
+        }
+
+        /* Hộp thoại donate mới tối gỗ trượt sang phải */
+        body.theme-classic-dark .obs-alert-box {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            width: 220px;
+            height: 265px;
+            margin: 0;
+            padding: 12px 12px 12px 45px;
+            background: #24140E;
+            border: none !important; /* Loại bỏ viền đối với chế độ classic dark */
+            border-radius: 12px;
+            box-shadow: 6px 6px 0px #120907;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            z-index: 6;
+            transform: translateX(0) scaleX(0.95);
+            opacity: 0;
+            pointer-events: none;
+            box-sizing: border-box;
+            transition: transform 0.6s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.6s ease;
+        }
+
+        body.theme-classic-dark .obs-alert-box.active {
+            transform: translateX(210px);
+            opacity: 1;
+        }
+
+        body.theme-classic-dark .obs-alert-box * {
+            color: #EADFC9;
+        }
+
+        body.theme-classic-dark .obs-alert-content {
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            text-align: center !important;
+            gap: 6px !important;
+            width: 100% !important;
+        }
+
+        body.theme-classic-dark .obs-alert-song {
+            display: -webkit-box !important;
+            -webkit-line-clamp: 3 !important;
+            -webkit-box-orient: vertical !important;
+            white-space: normal !important;
+            word-break: break-word !important;
+            text-align: center !important;
+            font-family: 'Merriweather', serif !important;
+            font-size: 1.35rem !important;
+            font-weight: 800 !important;
+            line-height: 1.55 !important;
+            max-height: 110px !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+            padding-top: 4px !important;
+        }
+
+        body.theme-classic-dark .obs-alert-content > div {
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            text-align: center !important;
+            gap: 2px !important;
+            font-family: 'Merriweather', serif !important;
+            font-size: 0.95rem !important;
+            font-weight: 700 !important;
+        }
+
+        body.theme-classic-dark .obs-alert-content span {
+            display: inline-block !important;
+            text-align: center !important;
+            white-space: normal !important;
+            word-break: break-word !important;
+        }
+
+        body.theme-classic-dark .obs-alert-donor {
+            font-weight: 900 !important;
+        }
+
+        body.theme-classic-dark .obs-alert-status-text {
+            margin-top: 4px !important;
+        }
+
+        body.theme-classic-dark .obs-alert-status-text.badge-playing,
+        body.theme-classic-dark .obs-alert-status-text.badge-next,
+        body.theme-classic-dark .obs-alert-status-text.badge-queue {
+            background: #EADFC9 !important;
+            color: #24140E !important;
+            border: 2px solid #EADFC9 !important;
+            border-radius: 6px !important;
+            font-size: 0.75rem !important;
+            padding: 0.15rem 0.4rem !important;
+            font-family: 'Merriweather', serif !important;
+            box-shadow: none !important;
+        }
+
+        /* Overlay chờ tối gỗ */
+        body.theme-classic-dark .obs-empty-overlay {
+            background: #24140E;
+            color: #EADFC9;
+            font-family: 'Merriweather', serif;
+            font-size: 2.0rem;
+            font-weight: 800;
+            border-radius: 12px;
+            line-height: 1.4;
+            border: none;
+        }
+
+        /* Micro animations */
+        @keyframes cute-pop-in {
+            0% { opacity: 0; transform: scale(0.97); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+
+        .song-pop-animation {
+            animation: cute-pop-in 0.4s ease-out forwards;
+        }
+
+        /* Tối ưu hóa tuyệt đối cho OBS Browser Source */
+        html, body {
+            background: transparent !important;
+            background-image: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            justify-content: flex-start;
+        }
+
+        /* Khung chứa Video phát YouTube - Kích thước 1x1 để ẩn hoàn toàn mà không dùng opacity (tránh lỗi màn đen OBS) */
+        .obs-youtube-area {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 1px;
+            height: 1px;
+            z-index: -1;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .obs-youtube-area iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        /* Thẻ Player thu gọn tối đa */
+        .obs-compact-player {
+            margin: 10px;
+            position: relative;
+            z-index: 10; /* Đảm bảo đè lên khung phát youtube ẩn */
+            background: var(--theme-bg);
+            border: var(--theme-border-width) solid var(--theme-border-color);
+            border-radius: var(--theme-border-radius);
+            padding: 0.6rem 0.9rem;
+            box-shadow: var(--theme-box-shadow);
+            width: 420px;
+            min-height: 140px;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+            overflow: hidden;
+            transition: opacity 0.5s ease, transform 0.5s ease-out;
+            opacity: 0;
+            transform: scale(0.95);
+        }
+
+        .obs-compact-player.active {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .obs-player-main {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            width: 100%;
+        }
+
+        /* Đĩa nhạc xoay */
+        .obs-cover-wrapper {
+            width: 66px;
+            height: 66px;
+            border-radius: 50%;
+            border: 3px solid var(--theme-border-color);
+            overflow: hidden;
+            flex-shrink: 0;
+            background: #000;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        /* consolidated in main spacegods block */
+
+        .obs-cover-wrapper.spinning {
+            animation: spin 8s linear infinite;
+        }
+
+        .obs-song-cover {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* Thông tin bài hát */
+        .obs-details {
+            flex-grow: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.15rem;
+        }
+
+        .obs-song-title-container {
+            width: 100%;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .obs-song-title {
+            font-family: var(--font-title);
+            font-size: 1.75rem;
+            font-weight: 950;
+            color: var(--theme-text-color);
+            white-space: nowrap;
+            line-height: 1.2;
+            display: inline-block;
+            transition: color 0.3s ease;
+        }
+
+        .obs-song-title.marquee,
+        .next-title.marquee,
+        .obs-alert-song.marquee {
+            animation: obs-marquee 10s linear infinite;
+            display: inline-flex;
+            white-space: nowrap;
+            text-overflow: clip;
+            overflow: visible;
+        }
+
+        @keyframes obs-marquee {
+            0% { transform: translate3d(0, 0, 0); }
+            100% { transform: translate3d(-50%, 0, 0); }
+        }
+
+        .obs-donor-info {
+            font-size: 1.3rem;
+            font-weight: 800;
+            color: var(--theme-highlight-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            line-height: 1.2;
+            transition: color 0.3s ease;
+        }
+
+        .obs-donor-name {
+            font-weight: 800;
+            max-width: 180px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        .obs-donor-amount {
+            font-weight: 800;
+            color: var(--theme-highlight-color);
+            transition: color 0.3s ease;
+        }
+
+        .obs-song-message {
+            background: var(--theme-progress-bg);
+            border: 1.5px solid var(--theme-border-color);
+            border-radius: 8px;
+            padding: 0.3rem 0.6rem;
+            font-size: 1.05rem;
+            color: var(--theme-sub-text-color);
+            margin-top: 0.1rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 300px;
+            transition: all 0.3s ease;
+        }
+
+        /* Thanh tiến trình phát nhạc flat & compact */
+        .obs-progress-container {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            width: 100%;
+            margin-top: 0.2rem;
+        }
+
+        .obs-time {
+            font-size: 1.05rem;
+            font-weight: 850;
+            color: var(--theme-text-color);
+            min-width: 42px;
+            transition: color 0.3s ease;
+        }
+
+        .obs-progress-bar-bg {
+            flex-grow: 1;
+            height: 16px;
+            border: 3px solid var(--theme-border-color);
+            background: var(--theme-progress-bg);
+            border-radius: 6px;
+            position: relative;
+            box-shadow: 2px 2px 0px var(--theme-border-color);
+            transition: all 0.3s ease;
+        }
+
+        /* consolidated in main spacegods block */
+
+        .obs-progress-bar-fill {
+            height: 100%;
+            background: var(--theme-progress-fill);
+            width: 0%;
+            transition: background-color 0.3s ease;
+        }
+
+        .obs-progress-bar-thumb {
+            position: absolute;
+            top: 50%;
+            left: 0%;
+            transform: translate(-50%, -50%);
+            width: 24px;
+            height: 24px;
+            border: 3px solid var(--theme-border-color);
+            background: var(--theme-progress-thumb);
+            border-radius: 50%;
+            box-shadow: 1px 1px 0px var(--theme-border-color);
+            transition: all 0.3s ease;
+        }
+
+        /* consolidated in main spacegods block */
+
+        /* Popup thông báo Donate Mới */
+        .obs-alert-box {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: var(--theme-alert-bg);
+            border: var(--theme-border-width) solid var(--theme-alert-border-color);
+            border-radius: var(--theme-border-radius);
+            padding: 0.7rem 1rem;
+            box-shadow: var(--theme-box-shadow-alert, var(--theme-box-shadow));
+            width: 420px;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            transform: translateY(-50px);
+            transition: transform 0.5s ease-out, opacity 0.5s ease, border-color 0.3s ease, background 0.3s ease, box-shadow 0.3s ease;
+            opacity: 0;
+            z-index: 10000;
+        }
+
+        .obs-alert-box.active {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .obs-alert-icon {
+            font-size: 2.6rem;
+            animation: bounce 1s infinite alternate;
+            flex-shrink: 0;
+        }
+
+        .obs-alert-content {
+            flex-grow: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.15rem;
+        }
+
+        .obs-alert-donor {
+            color: var(--theme-alert-donor-color);
+            font-weight: 800;
+            max-width: 160px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            display: inline-block;
+            vertical-align: bottom;
+            transition: color 0.3s ease;
+        }
+
+        .obs-alert-action-text {
+            color: var(--theme-alert-action-text-color);
+            transition: color 0.3s ease;
+        }
+
+        .obs-alert-status-text {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            margin-top: 0.35rem;
+            font-family: var(--font-title);
+            letter-spacing: 0.02em;
+            width: fit-content;
+        }
+
+        .obs-alert-status-text.badge-playing {
+            background: var(--badge-playing-bg);
+            border: var(--badge-border-width) solid var(--badge-playing-border);
+            color: var(--badge-playing-text);
+            box-shadow: var(--badge-playing-shadow, none);
+            border-radius: var(--badge-radius);
+            padding: var(--badge-padding);
+            font-size: var(--badge-font-size);
+            font-weight: 900;
+            transition: all 0.3s ease;
+        }
+        
+        .obs-alert-status-text.badge-next {
+            background: var(--badge-next-bg);
+            border: var(--badge-border-width) solid var(--badge-next-border);
+            color: var(--badge-next-text);
+            box-shadow: var(--badge-next-shadow, none);
+            border-radius: var(--badge-radius);
+            padding: var(--badge-padding);
+            font-size: var(--badge-font-size);
+            font-weight: 900;
+            transition: all 0.3s ease;
+        }
+        
+        .obs-alert-status-text.badge-queue {
+            background: var(--badge-queue-bg);
+            border: var(--badge-border-width) solid var(--badge-queue-border);
+            color: var(--badge-queue-text);
+            box-shadow: var(--badge-queue-shadow, none);
+            border-radius: var(--badge-radius);
+            padding: var(--badge-padding);
+            font-size: var(--badge-font-size);
+            font-weight: 900;
+            transition: all 0.3s ease;
+        }
+
+        /* Ngăn kéo chứa thông tin bài hát tiếp theo */
+        .obs-next-song-drawer {
+            position: relative;
+            margin-left: 20px;
+            margin-top: -14px; /* đè nhẹ lên viền hộp phát phía trên */
+            background: var(--theme-bg);
+            border: var(--theme-border-width) solid var(--theme-border-color);
+            border-top: none; /* bỏ viền trên để gắn khít vào hộp trên */
+            border-radius: 0 0 var(--theme-border-radius) var(--theme-border-radius);
+            padding: 0.9rem 0.8rem 0.4rem 0.8rem;
+            box-shadow: var(--theme-box-shadow);
+            width: 400px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            z-index: 5;
+            transition: transform 0.4s ease-out, opacity 0.4s ease, background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+            transform: translateY(-100%);
+            opacity: 0;
+            pointer-events: none;
+            font-family: var(--font-title);
+        }
+
+        .obs-next-song-drawer.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .next-tag {
+            font-family: var(--font-title);
+            font-size: 0.95rem;
+            font-weight: 850;
+            color: #ffffff;
+            background: var(--theme-border-color);
+            padding: 0.2rem 0.55rem;
+            border: 2px solid var(--theme-border-color);
+            border-radius: 8px;
+            box-shadow: 1px 1px 0px var(--theme-border-color);
+            white-space: nowrap;
+            transition: all 0.3s ease;
+        }
+
+        /* consolidated in main spacegods block */
+
+        .next-title {
+            font-family: var(--font-title);
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: var(--theme-text-color);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            flex-grow: 1;
+            line-height: 1.4;
+            transition: opacity 0.25s ease-in-out, color 0.3s ease;
+            opacity: 1;
+        }
+
+        .next-title.fade-out {
+            opacity: 0;
+        }
+
+        .obs-alert-song {
+            font-family: var(--font-title);
+            font-size: 1.5rem;
+            font-weight: 850;
+            color: var(--theme-alert-text-color);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-top: 0.1rem;
+            transition: color 0.3s ease;
+        }
+
+        /* CSS classes cho Badge vị trí động */
+        .obs-position-badge {
+            display: inline-flex;
+            align-items: center;
+            font-weight: 900;
+            line-height: 1.2;
+            border-width: var(--badge-border-width);
+            border-style: solid;
+            border-radius: var(--badge-radius);
+            padding: var(--badge-padding);
+            font-size: var(--badge-font-size);
+            transition: all 0.3s ease;
+        }
+        
+        .obs-position-badge.state-playing {
+            background: var(--badge-playing-bg);
+            border-color: var(--badge-playing-border);
+            color: var(--badge-playing-text);
+            box-shadow: var(--badge-playing-shadow, none);
+        }
+
+        .obs-position-badge.state-next {
+            background: var(--badge-next-bg);
+            border-color: var(--badge-next-border);
+            color: var(--badge-next-text);
+            box-shadow: var(--badge-next-shadow, none);
+        }
+
+        .obs-position-badge.state-queue {
+            background: var(--badge-queue-bg);
+            border-color: var(--badge-queue-border);
+            color: var(--badge-queue-text);
+            box-shadow: var(--badge-queue-shadow, none);
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes bounce {
+            from { transform: translateY(0); }
+            to { transform: translateY(-5px); }
+        }
+
+        /* Animation thay đĩa cho theme Classic / Classic Dark */
+        @keyframes vinyl-change {
+            0% {
+                transform: translateX(0) rotate(0deg);
+                opacity: 1;
+            }
+            35% {
+                transform: translateX(-150px) rotate(-180deg);
+                opacity: 0;
+            }
+            40% {
+                transform: translateX(150px) rotate(180deg);
+                opacity: 0;
+            }
+            100% {
+                transform: translateX(0) rotate(360deg);
+                opacity: 1;
+            }
+        }
+
+        body.theme-classic .obs-cover-wrapper.changing-disc,
+        body.theme-classic-dark .obs-cover-wrapper.changing-disc {
+            animation: vinyl-change 1.5s cubic-bezier(0.25, 0.8, 0.25, 1) forwards !important;
+        }
+
+        body.theme-classic .obs-compact-player.changing-disc-active .obs-tonearm,
+        body.theme-classic-dark .obs-compact-player.changing-disc-active .obs-tonearm {
+            transform: rotate(-35deg) !important;
+            transition: transform 0.6s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="overlay-content">
+        <!-- Popup thông báo Donate Mới -->
+        <div id="obs-alert-box" class="obs-alert-box">
+            <!-- <div class="obs-alert-icon">
+                <img src="asset/10.png" style="width: 45px; height: 45px; object-fit: contain; vertical-align: middle;">
+            </div> -->
+            <div class="obs-alert-content" style="font-family: var(--font-title);">
+                <div id="obs-alert-song-container" style="width: 100%; overflow: hidden; position: relative;">
+                    <div id="alert-song" class="obs-alert-song" style="display: inline-block; white-space: nowrap; font-size: 1.5rem; font-weight: 900; margin-bottom: 0.2rem;">Tên bài hát</div>
+                </div>
+                <div style="font-size: 1.15rem; font-weight: 800; display: flex; align-items: center; gap: 0.4rem;">
+                    <div>
+                        <span id="alert-donor" class="obs-alert-donor">Người donate</span> 
+                        <span style="font-weight: 600;" class="obs-alert-action-text">gửi một quả dứa</span> 
+                        <span id="alert-amount" style="color: var(--theme-text-color);">0 VNĐ</span>
+                    </div>
+                </div>
+                <!-- Hàng 3: Trạng thái vị trí rõ ràng -->
+                <div id="alert-status-text" class="obs-alert-status-text"></div>
+            </div>
+        </div>
+
+        <!-- Khung thông tin bài hát đang phát thu gọn -->
+        <div id="obs-player-widget" class="obs-compact-player">
+            <!-- Overlay thông báo khi không có nhạc (hiển thị nhiều dòng đè lên player) -->
+            <div id="obs-empty-overlay" class="obs-empty-overlay">
+                Order nhạc tự động Zypage 50k
+            </div>
+            <div id="obs-player-main" class="obs-player-main">
+                <!-- Ảnh đĩa xoay bên trái -->
+                <div class="obs-cover-wrapper" id="obs-cover-wrapper">
+                    <img id="obs-song-cover" class="obs-song-cover" src="" alt="Cover">
+                </div>
+                <!-- Cần đọc đĩa than (chỉ hiển thị trong theme classic) -->
+                <div class="obs-tonearm" id="obs-tonearm">
+                    <div class="obs-tonearm-needle"></div>
+                </div>
+                
+                <!-- Chi tiết bài hát bên phải -->
+                <div class="obs-details">
+                    <div id="obs-song-title-container" class="obs-song-title-container">
+                        <div id="obs-song-title" class="obs-song-title">Tên bài hát</div>
+                    </div>
+                    <div id="obs-donor-container" class="obs-donor-info" style="display: none;">
+                        <span id="obs-donor-name" class="obs-donor-name">Khách</span>
+                        <span id="obs-donor-amount" class="obs-donor-amount">0 VNĐ</span>
+                    </div>
+                    <div id="obs-song-message" class="obs-song-message" style="display: none;">
+                        Lời nhắn ở đây...
+                    </div>
+                </div>
+            </div>
+
+            <!-- Thanh tiến trình phát nhạc thu gọn -->
+            <div class="obs-progress-container">
+                <span id="obs-current-time" class="obs-time">0:00</span>
+                <div class="obs-progress-bar-bg">
+                    <div id="obs-progress-fill" class="obs-progress-bar-fill"></div>
+                    <div id="obs-progress-thumb" class="obs-progress-bar-thumb"></div>
+                </div>
+                <span id="obs-total-time" class="obs-time">0:00</span>
+            </div>
+        </div>
+
+        <!-- Khung thông báo bài tiếp theo dạng ngăn kéo trượt xuống -->
+        <div id="obs-next-song-drawer" class="obs-next-song-drawer">
+            <span class="next-tag" id="obs-next-tag">TIẾP THEO</span>
+            <div id="obs-next-title-container" style="flex-grow: 1; overflow: hidden; min-width: 0; position: relative; display: flex; align-items: center;">
+                <span id="obs-next-text" class="next-title" style="display: inline-block; white-space: nowrap;"></span>
+            </div>
+            <!-- Hàng 2 và Hàng 3 cho Theme Cổ Điển -->
+            <div id="obs-next-donor-info" class="obs-next-donor-info" style="display: none;">
+                <span id="obs-next-donor-name" class="obs-next-donor-name"></span>
+                <span id="obs-next-donor-amount" class="obs-next-donor-amount"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Khung video YouTube (chỉ phát ngầm trên overlay) -->
+    <div id="obs-youtube-area" style="position: absolute; top: -9999px; left: -9999px; width: 300px; height: 300px; z-index: -1; overflow: hidden; pointer-events: none;">
+        <div id="obs-youtube-placeholder"></div>
+    </div>
+    
+    <!-- Khung Spotify (chỉ phát ngầm) -->
+    <div id="obs-spotify-area" style="position: absolute; top: -9999px; left: -9999px; width: 300px; height: 300px; z-index: -1; overflow: hidden; pointer-events: none;">
+        <div id="obs-spotify-placeholder"></div>
+    </div>
+
+    <!-- Khung SoundCloud (chỉ phát ngầm) -->
+    <div id="obs-soundcloud-area" style="position: absolute; top: -9999px; left: -9999px; width: 300px; height: 300px; z-index: -1; overflow: hidden; pointer-events: none;">
+        <iframe id="obs-soundcloud-player" src="about:blank" style="width: 100%; height: 100%; border: none;" allow="autoplay"></iframe>
+    </div>
+
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <script>
+        // Tự động chuyển hướng từ 127.0.0.1 sang localhost để tránh lệch origin localStorage
+        if (window.location.hostname === '127.0.0.1') {
+            window.location.replace(window.location.href.replace('127.0.0.1', 'localhost'));
+        }
+
+        // Phân tích tham số URL
+        const urlParams = new URLSearchParams(window.location.search);
+
+        // Hàm áp dụng theme
+        function applyTheme(theme) {
+            document.body.className = '';
+            if (theme === 'spacegods') {
+                document.body.classList.add('theme-spacegods');
+            } else if (theme === 'cutepink') {
+                document.body.classList.add('theme-cutepink');
+            } else if (theme === 'classic') {
+                document.body.classList.add('theme-classic');
+            } else if (theme === 'classic-dark') {
+                document.body.classList.add('theme-classic-dark');
+            }
+        }
+        function applyOpacity(opacityVal) {
+            const overlayContent = document.getElementById('overlay-content');
+            if (overlayContent) {
+                const opacity = (opacityVal === null || opacityVal === undefined || isNaN(opacityVal)) 
+                    ? 1.0 
+                    : parseFloat(opacityVal) / 100;
+                overlayContent.style.opacity = opacity;
+            }
+        }
+        const initialTheme = urlParams.get('theme') || localStorage.getItem('dua_theme') || 'pineapple';
+        applyTheme(initialTheme);
+
+        const initialOpacity = urlParams.get('opacity') || localStorage.getItem('dua_opacity') || '100';
+        applyOpacity(initialOpacity);
+
+        function updateAlertActionTextDisplay() {
+            const val = urlParams.get('alert_action') || localStorage.getItem('dua_alert_action_text') || 'gửi một quả dứa';
+            const actionSpans = document.querySelectorAll('.obs-alert-action-text');
+            actionSpans.forEach(span => {
+                span.textContent = val;
+            });
+        }
+        updateAlertActionTextDisplay();
+
+        // Logic đồng bộ hóa thời gian thực qua localStorage
+        const widget = document.getElementById('obs-player-widget');
+        const cover = document.getElementById('obs-song-cover');
+        const coverWrapper = document.getElementById('obs-cover-wrapper');
+        const title = document.getElementById('obs-song-title');
+        const donorContainer = document.getElementById('obs-donor-container');
+        const donorName = document.getElementById('obs-donor-name');
+        const donorAmount = document.getElementById('obs-donor-amount');
+        const songMessage = document.getElementById('obs-song-message');
+        const currentTimeDisplay = document.getElementById('obs-current-time');
+        const totalTimeDisplay = document.getElementById('obs-total-time');
+        const progressFill = document.getElementById('obs-progress-fill');
+        const progressThumb = document.getElementById('obs-progress-thumb');
+
+        let overlayPlayer = null;
+        let isPlayerReady = false;
+        let currentVideoId = null;
+        let lastSongId = null;
+        let alertTimeout = null;
+        let playbackMonitorInterval = null;
+        let lastCommandTimestamp = 0;
+        let lastCommandType = 'play';
+        let destroyTimeout = null;
+        let mqttClient = null;
+        let mqttTopic = null;
+        let syncInterval = null;
+        let isSponsorBlockNotificationActive = false;
+        let sbToastTimeout = null;
+
+        // Biến lưu mức âm lượng mục tiêu — đây là nguồn sự thật duy nhất cho âm lượng
+        let targetVolume = localStorage.getItem('dua_volume') !== null ? parseInt(localStorage.getItem('dua_volume')) : 80;
+        // Interval liên tục ép âm lượng trong giai đoạn chuyển bài (chống YouTube reset async)
+        let volumeEnforcerInterval = null;
+        let volumeEnforcerStartTime = 0;
+
+        let skipSegments = [];
+        let sponsorBlockCategories = {};
+        let lastSBSeekTimestamp = 0;
+        let lastSBSeekTarget = 0;
+        let lastSkippedSegmentKey = null;
+
+        let currentPlayback = {
+            currentTime: 0,
+            duration: 0,
+            isPlaying: false
+        };
+        let spotifyEmbedController = null;
+        let currentSpotifyId = null;
+        let isSpotifySdkLoaded = false;
+        let pendingSpotifyTrackId = null;
+        let soundCloudWidget = null;
+        let currentSoundCloudUrl = null;
+        let isSoundCloudSdkLoaded = false;
+        let soundCloudDuration = 0;
+
+        // Biến quản lý phase ngăn kéo "Tiếp theo"
+        let currentDrawerText = "";
+
+        function applyMarquee(containerEl, textEl, text, baseSpeed = 30) {
+            if (!containerEl || !textEl) return;
+            
+            textEl.classList.remove('marquee');
+            textEl.style.animationDuration = '0s';
+            textEl.style.display = 'inline-block';
+            textEl.style.overflow = 'hidden';
+            textEl.textContent = text;
+            
+            setTimeout(() => {
+                const containerWidth = containerEl.offsetWidth;
+                const textWidth = textEl.scrollWidth;
+                if (textWidth > containerWidth) {
+                    textEl.innerHTML = `<span style="padding-right: 2rem;">${text}</span><span style="padding-right: 2rem;">${text}</span>`;
+                    textEl.classList.add('marquee');
+                    textEl.style.animationDuration = `${Math.max(5, textWidth / baseSpeed)}s`;
+                    textEl.style.display = 'inline-flex';
+                    textEl.style.overflow = 'visible';
+                } else {
+                    textEl.style.display = 'inline-block';
+                    textEl.style.overflow = 'hidden';
+                }
+            }, 50);
+        }
+
+        function updateNextSongDrawer(remainingTime, song) {
+            const nextSongDrawer = document.getElementById('obs-next-song-drawer');
+            const nextTextEl = document.getElementById('obs-next-text');
+            const nextTagEl = document.getElementById('obs-next-tag');
+            const nextDonorInfo = document.getElementById('obs-next-donor-info');
+            const nextDonorName = document.getElementById('obs-next-donor-name');
+            const nextDonorAmount = document.getElementById('obs-next-donor-amount');
+            
+            if (!nextSongDrawer || !nextTextEl) return;
+            
+            const alertBox = document.getElementById('obs-alert-box');
+            if (alertBox && alertBox.classList.contains('active')) {
+                nextSongDrawer.classList.remove('show');
+                return;
+            }
+            
+            if (isSponsorBlockNotificationActive) {
+                return;
+            }
+            
+            if (remainingTime <= 15 && remainingTime > 0.5 && song.nextSongTitle) {
+                if (nextTagEl && nextTagEl.textContent !== 'TIẾP THEO') {
+                    nextTagEl.textContent = 'TIẾP THEO';
+                }
+                
+                const currentTheme = localStorage.getItem('dua_theme') || 'pineapple';
+                if (currentTheme === 'classic' || currentTheme === 'classic-dark') {
+                    if (nextDonorInfo) nextDonorInfo.style.setProperty('display', 'flex', 'important');
+                    
+                    if (nextTextEl.textContent !== song.nextSongTitle) {
+                        nextTextEl.textContent = song.nextSongTitle;
+                        nextTextEl.classList.remove('marquee');
+                        nextTextEl.style.animationDuration = '0s';
+                    }
+                    
+                    // Áp dụng inline style line-clamp cho classic
+                    nextTextEl.style.display = '-webkit-box';
+                    nextTextEl.style.webkitLineClamp = '3';
+                    nextTextEl.style.webkitBoxOrient = 'vertical';
+                    nextTextEl.style.whiteSpace = 'normal';
+                    nextTextEl.style.wordBreak = 'break-word';
+                    nextTextEl.style.overflow = 'hidden';
+                    if (nextDonorName) nextDonorName.textContent = song.nextSongDonor || 'Introvert';
+                    if (nextDonorAmount) {
+                        nextDonorAmount.textContent = (song.nextSongAmount && Number(song.nextSongAmount) > 0) 
+                            ? Number(song.nextSongAmount).toLocaleString('vi-VN') + ' VNĐ' 
+                            : '0 VNĐ';
+                    }
+                } else {
+                    if (nextDonorInfo) nextDonorInfo.style.setProperty('display', 'none', 'important');
+                    
+                    const elapsed = 15 - remainingTime;
+                    if (elapsed < 5) {
+                        const donorPart = song.nextSongDonor || 'Introvert';
+                        const amountPart = (song.nextSongAmount && Number(song.nextSongAmount) > 0) ? ` · ${Number(song.nextSongAmount).toLocaleString('vi-VN')} VNĐ` : '';
+                        updateDrawerTextWithFade(donorPart + amountPart, true);
+                    } else {
+                        updateDrawerTextWithFade(song.nextSongTitle, false);
+                    }
+                }
+                
+                nextSongDrawer.classList.add('show');
+            } else {
+                if (nextSongDrawer.classList.contains('show')) {
+                    nextSongDrawer.classList.remove('show');
+                    currentDrawerText = "";
+                    nextTextEl.textContent = "";
+                    if (nextDonorInfo) nextDonorInfo.style.setProperty('display', 'none', 'important');
+                }
+            }
+        }
+
+        function updateDrawerTextWithFade(newText, forceStatic = false) {
+            const textEl = document.getElementById('obs-next-text');
+            if (!textEl) return;
+            if (currentDrawerText === newText) return;
+            currentDrawerText = newText;
+            textEl.classList.add('fade-out');
+            setTimeout(() => {
+                const containerEl = document.getElementById('obs-next-title-container');
+                const currentTheme = localStorage.getItem('dua_theme') || 'pineapple';
+                const isClassic = (currentTheme === 'classic' || currentTheme === 'classic-dark');
+                
+                if (forceStatic || isClassic) {
+                    textEl.classList.remove('marquee');
+                    textEl.style.animationDuration = '0s';
+                    textEl.textContent = newText;
+                    
+                    if (isClassic) {
+                        textEl.style.display = '-webkit-box';
+                        textEl.style.webkitLineClamp = '3';
+                        textEl.style.webkitBoxOrient = 'vertical';
+                        textEl.style.whiteSpace = 'normal';
+                        textEl.style.wordBreak = 'break-word';
+                        textEl.style.overflow = 'hidden';
+                    } else {
+                        textEl.style.display = 'inline-block';
+                        textEl.style.webkitLineClamp = '';
+                        textEl.style.webkitBoxOrient = '';
+                        textEl.style.whiteSpace = 'nowrap';
+                        textEl.style.wordBreak = '';
+                        textEl.style.overflow = 'hidden';
+                    }
+                } else {
+                    // Trả lại marquee cho các theme khác
+                    textEl.style.display = '';
+                    textEl.style.webkitLineClamp = '';
+                    textEl.style.webkitBoxOrient = '';
+                    textEl.style.whiteSpace = '';
+                    textEl.style.wordBreak = '';
+                    textEl.style.overflow = '';
+                    applyMarquee(containerEl, textEl, newText, 45);
+                }
+                
+                textEl.classList.remove('fade-out');
+            }, 250);
+        }
+
+        function triggerSponsorBlockToast() {
+            const nextSongDrawer = document.getElementById('obs-next-song-drawer');
+            const nextTextEl = document.getElementById('obs-next-text');
+            const nextTagEl = document.getElementById('obs-next-tag');
+            const nextDonorInfo = document.getElementById('obs-next-donor-info');
+            
+            if (!nextSongDrawer || !nextTextEl || !nextTagEl) return;
+            
+            isSponsorBlockNotificationActive = true;
+            
+            // Clear any active transitions/text
+            nextSongDrawer.classList.remove('show');
+            
+            setTimeout(() => {
+                nextTagEl.style.display = 'none';
+                if (nextDonorInfo) nextDonorInfo.style.setProperty('display', 'none', 'important');
+                nextTextEl.textContent = 'SponsorBlocks đã bỏ qua nhà tài trợ';
+                nextTextEl.classList.remove('marquee');
+                nextTextEl.style.animationDuration = '0s';
+                
+                nextSongDrawer.classList.add('show');
+            }, 100);
+            
+            if (sbToastTimeout) clearTimeout(sbToastTimeout);
+            sbToastTimeout = setTimeout(() => {
+                nextSongDrawer.classList.remove('show');
+                
+                setTimeout(() => {
+                    nextTagEl.style.display = '';
+                    nextTagEl.textContent = 'TIẾP THEO';
+                    nextTextEl.textContent = '';
+                    isSponsorBlockNotificationActive = false;
+                }, 400); // Wait for slide up transition to finish
+            }, 4000); // Display for 4 seconds
+        }
+
+        // Hàm định dạng thời gian (MM:SS)
+        function formatTime(seconds) {
+            if (isNaN(seconds) || seconds === null || seconds === undefined) {
+                return "0:00";
+            }
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+        }
+
+        // Khởi tạo trạng thái YouTube API
+        window.onYouTubeIframeAPIReady = function() {
+            isPlayerReady = true;
+            updateOverlayUI(); // Chạy đồng bộ ngay sau khi API sẵn sàng
+        };
+
+        // Nạp động file script YouTube API để đảm bảo sự kiện onYouTubeIframeAPIReady luôn kích hoạt đúng thứ tự
+        const tag = document.createElement('script');
+        tag.src = "https://www.youtube.com/iframe_api";
+        const firstScriptTag = document.getElementsByTagName('script')[0];
+        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+        // Hàm đọc cài đặt SponsorBlock từ dashboard qua localStorage
+        function loadSponsorBlockCategories() {
+            try {
+                const sbRaw = localStorage.getItem('dua_sb_categories');
+                if (sbRaw) {
+                    sponsorBlockCategories = JSON.parse(sbRaw);
+                } else {
+                    sponsorBlockCategories = {
+                        sponsor: true,
+                        intro: true,
+                        outro: true,
+                        selfpromo: true,
+                        interaction: false,
+                        offtopic: true
+                    };
+                }
+            } catch (e) {
+                console.error("Error loading SB categories:", e);
+            }
+        }
+
+        // Hàm áp dụng âm lượng mục tiêu vào player (dùng nhiều nơi)
+        function applyTargetVolume() {
+            if (overlayPlayer && typeof overlayPlayer.setVolume === 'function') {
+                overlayPlayer.setVolume(targetVolume);
+            }
+        }
+
+        // Bộ ép âm lượng liên tục — chạy mỗi 150ms trong tối đa 5 giây sau khi chuyển bài
+        // Đây là cách duy nhất đảm bảo YouTube API không thể reset volume ở bất kỳ thời điểm nào
+        function startVolumeEnforcer() {
+            stopVolumeEnforcer(); // Dọn cái cũ
+            volumeEnforcerStartTime = Date.now();
+            console.log(`[Volume Enforcer] BẮT ĐẦU — mục tiêu: ${targetVolume}%`);
+            applyTargetVolume(); // Áp dụng ngay lập tức
+            volumeEnforcerInterval = setInterval(() => {
+                applyTargetVolume();
+                // Dừng sau 5 giây (đủ cho YouTube hoàn tất mọi async reset)
+                if (Date.now() - volumeEnforcerStartTime > 5000) {
+                    console.log(`[Volume Enforcer] KẾT THÚC sau 5s — volume hiện tại: ${overlayPlayer ? overlayPlayer.getVolume() : '?'}%`);
+                    stopVolumeEnforcer();
+                }
+            }, 150);
+        }
+
+        function stopVolumeEnforcer() {
+            if (volumeEnforcerInterval) {
+                clearInterval(volumeEnforcerInterval);
+                volumeEnforcerInterval = null;
+            }
+        }
+
+        function loadSpotifySdk() {
+            if (isSpotifySdkLoaded) return;
+            isSpotifySdkLoaded = true;
+            
+            window.onSpotifyIframeApiReady = (IFrameAPI) => {
+                window.SpotifyIframeAPI = IFrameAPI;
+                if (pendingSpotifyTrackId) {
+                    playSpotifyTrack(pendingSpotifyTrackId);
+                    pendingSpotifyTrackId = null;
+                }
+            };
+            
+            const script = document.createElement('script');
+            script.src = 'https://open.spotify.com/embed/iframe-api/v1';
+            script.async = true;
+            document.body.appendChild(script);
+        }
+
+        function playSpotifyTrack(trackId) {
+            if (!window.SpotifyIframeAPI) {
+                pendingSpotifyTrackId = trackId;
+                loadSpotifySdk();
+                return;
+            }
+            
+            if (spotifyEmbedController) {
+                if (currentSpotifyId !== trackId) {
+                    currentSpotifyId = trackId;
+                    spotifyEmbedController.loadUri(`spotify:track:${trackId}`);
+                    setTimeout(() => {
+                        try { spotifyEmbedController.play(); } catch(e){}
+                    }, 500);
+                } else {
+                    try { spotifyEmbedController.play(); } catch(e){}
+                }
+            } else {
+                currentSpotifyId = trackId;
+                const options = {
+                    width: '100%',
+                    height: '100%',
+                    uri: `spotify:track:${trackId}`
+                };
+                window.SpotifyIframeAPI.createController(document.getElementById('obs-spotify-placeholder'), options, (EmbedController) => {
+                    spotifyEmbedController = EmbedController;
+                    
+                    spotifyEmbedController.addListener('playback_update', (e) => {
+                        if (!e.data) return;
+                        
+                        let isSongActive = false;
+                        try {
+                            const songRaw = localStorage.getItem('dua_current_song');
+                            if (songRaw) {
+                                const song = JSON.parse(songRaw);
+                                isSongActive = song.type === 'spotify';
+                            }
+                        } catch(err){}
+                        if (!isSongActive) return;
+                        
+                        const currentTime = e.data.position / 1000;
+                        const duration = e.data.duration / 1000;
+                        const isPlaying = !e.data.isPaused;
+                        
+                        currentPlayback.currentTime = currentTime;
+                        currentPlayback.duration = duration;
+                        currentPlayback.isPlaying = isPlaying;
+                        
+                        updateTrackProgress(currentTime, duration, isPlaying);
+                        
+                        if (isPlaying && duration > 0 && e.data.position >= e.data.duration - 500) {
+                            console.log("Spotify: Kết thúc bài hát.");
+                            triggerEndedEvent();
+                            return;
+                        }
+
+                        // Tự động chuyển bài khi kết thúc 30s preview của Spotify (nếu không có Premium)
+                        if (e.data.isPaused && e.data.position >= 29000 && lastCommandType !== 'pause' && lastCommandType !== 'stop') {
+                            console.log("Spotify: Đã phát hết 30s preview (chưa đăng nhập Premium). Chuyển bài...");
+                            triggerEndedEvent();
+                        }
+                    });
+                    
+                    setTimeout(() => {
+                        try { spotifyEmbedController.play(); } catch(e){}
+                    }, 1000);
+                });
+            }
+        }
+
+        function loadSoundCloudSdk(callback) {
+            if (isSoundCloudSdkLoaded) {
+                if (callback) callback();
+                return;
+            }
+            const script = document.createElement('script');
+            script.src = 'https://w.soundcloud.com/player/api.js';
+            script.onload = () => {
+                isSoundCloudSdkLoaded = true;
+                if (callback) callback();
+            };
+            document.body.appendChild(script);
+        }
+
+        function playSoundCloudTrack(trackUrl) {
+            loadSoundCloudSdk(() => {
+                const iframe = document.getElementById('obs-soundcloud-player');
+                if (!iframe) return;
+                
+                if (!soundCloudWidget) {
+                    currentSoundCloudUrl = trackUrl;
+                    soundCloudDuration = 0;
+                    iframe.src = `https://w.soundcloud.com/player/?url=${encodeURIComponent(trackUrl)}&auto_play=true&show_artwork=false&show_comments=false&show_playcount=false&sharing=false&download=false&buying=false`;
+                    
+                    soundCloudWidget = SC.Widget(iframe);
+                    
+                    soundCloudWidget.bind(SC.Widget.Events.READY, () => {
+                        soundCloudWidget.setVolume(targetVolume);
+                        
+                        soundCloudWidget.bind(SC.Widget.Events.PLAY_PROGRESS, (e) => {
+                            let isSongActive = false;
+                            try {
+                                const songRaw = localStorage.getItem('dua_current_song');
+                                if (songRaw) {
+                                    const song = JSON.parse(songRaw);
+                                    isSongActive = song.type === 'soundcloud';
+                                }
+                            } catch(err){}
+                            if (!isSongActive) return;
+                            
+                            const currentTime = e.currentPosition / 1000;
+                            if (!soundCloudDuration || isNaN(soundCloudDuration) || soundCloudDuration <= 0) {
+                                soundCloudWidget.getDuration((ms) => {
+                                    const gotDuration = ms / 1000;
+                                    if (gotDuration && !isNaN(gotDuration) && gotDuration > 0) {
+                                        soundCloudDuration = gotDuration;
+                                        currentPlayback.currentTime = currentTime;
+                                        currentPlayback.duration = soundCloudDuration;
+                                        currentPlayback.isPlaying = true;
+                                        updateTrackProgress(currentTime, soundCloudDuration, true);
+                                    }
+                                });
+                            } else {
+                                currentPlayback.currentTime = currentTime;
+                                currentPlayback.duration = soundCloudDuration;
+                                currentPlayback.isPlaying = true;
+                                updateTrackProgress(currentTime, soundCloudDuration, true);
+                            }
+                        });
+                        
+                        soundCloudWidget.bind(SC.Widget.Events.PLAY, () => {
+                            currentPlayback.isPlaying = true;
+                            soundCloudWidget.setVolume(targetVolume);
+                            soundCloudWidget.getDuration((ms) => {
+                                const gotDuration = ms / 1000;
+                                if (gotDuration && !isNaN(gotDuration) && gotDuration > 0) {
+                                    soundCloudDuration = gotDuration;
+                                }
+                            });
+                        });
+                        
+                        soundCloudWidget.bind(SC.Widget.Events.PAUSE, () => {
+                            currentPlayback.isPlaying = false;
+                        });
+                        
+                        soundCloudWidget.bind(SC.Widget.Events.FINISH, () => {
+                            console.log("SoundCloud: Kết thúc bài hát.");
+                            triggerEndedEvent();
+                        });
+                    });
+                } else {
+                    if (currentSoundCloudUrl !== trackUrl) {
+                        currentSoundCloudUrl = trackUrl;
+                        soundCloudDuration = 0;
+                        soundCloudWidget.load(trackUrl, {
+                            auto_play: true,
+                            show_artwork: false,
+                            show_comments: false,
+                            show_playcount: false,
+                            sharing: false,
+                            download: false,
+                            buying: false
+                        }, () => {
+                            soundCloudWidget.getDuration((ms) => {
+                                const gotDuration = ms / 1000;
+                                if (gotDuration && !isNaN(gotDuration) && gotDuration > 0) {
+                                    soundCloudDuration = gotDuration;
+                                }
+                            });
+                        });
+                    } else {
+                        soundCloudWidget.play();
+                    }
+                }
+            });
+        }
+
+        function updateTrackProgress(currentTime, duration, isPlaying) {
+            if (!duration || isNaN(duration) || duration <= 0) return;
+            
+            localStorage.setItem('dua_overlay_state', JSON.stringify({
+                currentTime: currentTime,
+                duration: duration,
+                isPlaying: isPlaying,
+                timestamp: Date.now()
+            }));
+
+            if (!window.lastMqttPublishTime || Date.now() - window.lastMqttPublishTime >= 1000) {
+                publishMqtt('overlay_state', {
+                    currentTime: currentTime,
+                    duration: duration,
+                    isPlaying: isPlaying
+                });
+                window.lastMqttPublishTime = Date.now();
+            }
+
+            const currentSongRaw = localStorage.getItem('dua_current_song');
+            if (currentSongRaw) {
+                try {
+                    const song = JSON.parse(currentSongRaw);
+                    
+                    let startPoint = song.start || 0;
+                    let limitDuration = duration;
+                    if (song.end && song.end > startPoint) {
+                        limitDuration = Math.min(limitDuration, song.end);
+                    }
+                    const maxDurRaw = localStorage.getItem('dua_max_duration');
+                    if (maxDurRaw) {
+                        const maxDur = parseInt(maxDurRaw);
+                        if (maxDur > 0) {
+                            limitDuration = Math.min(limitDuration, startPoint + maxDur);
+                        }
+                    }
+                    const actualPlayDuration = Math.max(1, limitDuration - startPoint);
+                    const elapsedTime = currentTime - startPoint;
+                    const remainingTime = actualPlayDuration - elapsedTime;
+                    
+                    if (remainingTime <= 15 && remainingTime >= -1) {
+                        if (!window.lastDebugTime || Date.now() - window.lastDebugTime >= 1000) {
+                            console.log(`[DEBUG DRAWER] Remaining Time: ${remainingTime.toFixed(1)}s, Next Song: "${song.nextSongTitle || 'null'}"`);
+                            window.lastDebugTime = Date.now();
+                        }
+                    }
+                    
+                    updateNextSongDrawer(remainingTime, song);
+
+                    if (song.end && currentTime >= song.end) {
+                        triggerEndedEvent();
+                        return;
+                    }
+
+                    if (maxDurRaw) {
+                        const maxDur = parseInt(maxDurRaw);
+                        if (maxDur > 0) {
+                            if (elapsedTime >= maxDur) {
+                                console.log(`Overlay: Đã phát đạt giới hạn thời gian tối đa cấu hình (${maxDur}s). Chuyển bài tiếp theo...`);
+                                triggerEndedEvent();
+                                return;
+                            }
+                        }
+                    }
+                } catch (e) {}
+            }
+        }
+
+        // Hàm khởi tạo iframe trình phát YouTube
+        function initOverlayPlayer(videoId, startTime) {
+            lastCommandType = 'play'; // Đặt lệnh mặc định về play khi khởi tạo mới
+            if (overlayPlayer) {
+                try {
+                    overlayPlayer.destroy();
+                } catch (e) {
+                    console.error("Error destroying player:", e);
+                }
+                overlayPlayer = null;
+            }
+
+            overlayPlayer = new YT.Player('obs-youtube-placeholder', {
+                height: '100%',
+                width: '100%',
+                videoId: videoId,
+                playerVars: {
+                    'autoplay': 1,
+                    'controls': 1,
+                    'modestbranding': 1,
+                    'rel': 0,
+                    'allowfullscreen': 1
+                },
+                events: {
+                    'onReady': (event) => {
+                        // Cập nhật targetVolume từ localStorage (phòng trường hợp thay đổi trong lúc chờ)
+                        targetVolume = localStorage.getItem('dua_volume') !== null ? parseInt(localStorage.getItem('dua_volume')) : targetVolume;
+                        event.target.setVolume(targetVolume);
+                        event.target.seekTo(startTime || 0, true);
+                        event.target.playVideo();
+                        startVolumeEnforcer(); // Bắt đầu ép volume liên tục
+                        startPlaybackMonitor();
+                    },
+                    'onStateChange': onPlayerStateChange,
+                    'onError': (event) => {
+                        console.error("Overlay Player: Lỗi tải video YouTube (Mã lỗi: " + event.data + "). Tự động chuyển bài tiếp theo...");
+                        stopVolumeEnforcer();
+                        triggerEndedEvent();
+                    }
+                }
+            });
+        }
+
+        function executeControlCommand(command) {
+            if (command.type === 'volume') {
+                targetVolume = (command.value !== null && !isNaN(parseInt(command.value))) ? parseInt(command.value) : 80;
+                localStorage.setItem('dua_volume', targetVolume);
+                applyTargetVolume();
+                
+                // Đồng bộ âm lượng sang SoundCloud widget
+                if (soundCloudWidget) {
+                    try { soundCloudWidget.setVolume(targetVolume); } catch(e){}
+                }
+                return;
+            } else if (command.type === 'reload') {
+                console.log("Overlay: Nhận lệnh tải lại trang (reload)...");
+                localStorage.removeItem('dua_control_command');
+                window.location.reload();
+                return;
+            }
+
+            // Định cấu hình định tuyến lệnh theo nguồn nhạc
+            let songType = 'youtube';
+            try {
+                const songRaw = localStorage.getItem('dua_current_song');
+                if (songRaw) {
+                    const song = JSON.parse(songRaw);
+                    songType = song.type || 'youtube';
+                }
+            } catch(e){}
+
+            if (songType === 'spotify') {
+                if (!spotifyEmbedController) return;
+                if (command.type === 'play') {
+                    if (!currentPlayback.isPlaying) {
+                        try { spotifyEmbedController.play(); } catch(e){}
+                    }
+                } else if (command.type === 'pause') {
+                    if (currentPlayback.isPlaying) {
+                        try { spotifyEmbedController.pause(); } catch(e){}
+                    }
+                } else if (command.type === 'seek') {
+                    try { spotifyEmbedController.seek(command.value); } catch(e){}
+                } else if (command.type === 'stop') {
+                    try { spotifyEmbedController.pause(); } catch(e){}
+                }
+            } else if (songType === 'soundcloud') {
+                if (!soundCloudWidget) return;
+                if (command.type === 'play') {
+                    if (!currentPlayback.isPlaying) {
+                        try { soundCloudWidget.play(); } catch(e){}
+                    }
+                } else if (command.type === 'pause') {
+                    if (currentPlayback.isPlaying) {
+                        try { soundCloudWidget.pause(); } catch(e){}
+                    }
+                } else if (command.type === 'seek') {
+                    try { soundCloudWidget.seekTo(command.value * 1000); } catch(e){} // SoundCloud nhận mili giây
+                } else if (command.type === 'stop') {
+                    try { soundCloudWidget.pause(); } catch(e){}
+                }
+            } else {
+                // YouTube
+                if (!overlayPlayer || typeof overlayPlayer.getPlayerState !== 'function') return;
+                const playerState = overlayPlayer.getPlayerState();
+                if (command.type === 'play') {
+                    if (playerState !== YT.PlayerState.PLAYING) {
+                        overlayPlayer.playVideo();
+                    }
+                    lastCommandType = 'play';
+                } else if (command.type === 'pause') {
+                    if (playerState !== YT.PlayerState.PAUSED) {
+                        overlayPlayer.pauseVideo();
+                    }
+                    lastCommandType = 'pause';
+                } else if (command.type === 'seek') {
+                    overlayPlayer.seekTo(command.value, true);
+                    lastCommandType = 'seek';
+                } else if (command.type === 'stop') {
+                    try { overlayPlayer.stopVideo(); } catch (e) {}
+                    lastCommandType = 'stop';
+                }
+            }
+        }
+
+        // Kiểm tra lệnh điều khiển từ dashboard gửi sang
+        function checkControlCommands() {
+            try {
+                const cmdRaw = localStorage.getItem('dua_control_command');
+                if (!cmdRaw) return;
+
+                const command = JSON.parse(cmdRaw);
+                if (command.timestamp === lastCommandTimestamp) return;
+                lastCommandTimestamp = command.timestamp;
+
+                executeControlCommand(command);
+            } catch (err) {
+                console.error("Error reading control commands:", err);
+            }
+        }
+
+        // Hàm giám sát tiến trình phát và gửi ngược dữ liệu về Dashboard
+        function startPlaybackMonitor() {
+            if (playbackMonitorInterval) clearInterval(playbackMonitorInterval);
+
+            playbackMonitorInterval = setInterval(() => {
+                if (!overlayPlayer || typeof overlayPlayer.getCurrentTime !== 'function') return;
+
+                try {
+                    const playerState = overlayPlayer.getPlayerState();
+                    if (playerState === YT.PlayerState.PLAYING || playerState === YT.PlayerState.PAUSED) {
+                        const currentTime = overlayPlayer.getCurrentTime();
+                        const duration = overlayPlayer.getDuration();
+                        if (!duration) return;
+
+                        // An toàn: kiểm tra volume thực tế, sửa nếu lệch khỏi targetVolume
+                        if (typeof overlayPlayer.getVolume === 'function') {
+                            const actualVol = overlayPlayer.getVolume();
+                            if (Math.abs(actualVol - targetVolume) > 1) {
+                                console.warn(`[Volume Guard] Phát hiện volume lệch: thực tế=${actualVol}%, mục tiêu=${targetVolume}% → sửa lại`);
+                                overlayPlayer.setVolume(targetVolume);
+                            }
+                        }
+
+                        const isPlaying = playerState === YT.PlayerState.PLAYING;
+
+                        // 1. Đồng bộ ngược trạng thái phát về Dashboard qua localStorage
+                        localStorage.setItem('dua_overlay_state', JSON.stringify({
+                            currentTime: currentTime,
+                            duration: duration,
+                            isPlaying: isPlaying,
+                            timestamp: Date.now()
+                        }));
+
+                        // Đồng bộ trạng thái qua MQTT giãn cách 1 giây để tiết kiệm băng thông
+                        if (!window.lastMqttPublishTime || Date.now() - window.lastMqttPublishTime >= 1000) {
+                            publishMqtt('overlay_state', {
+                                currentTime: currentTime,
+                                duration: duration,
+                                isPlaying: isPlaying
+                            });
+                            window.lastMqttPublishTime = Date.now();
+                        }
+
+                        // 2. Kiểm tra mốc kết thúc bài do cấu hình hoặc giới hạn thời gian phát tối đa
+                        const currentSongRaw = localStorage.getItem('dua_current_song');
+                        if (currentSongRaw) {
+                            try {
+                                const song = JSON.parse(currentSongRaw);
+                                
+                                // Tính toán thời lượng phát thực tế và thời gian còn lại
+                                let startPoint = song.start || 0;
+                                let limitDuration = duration;
+                                if (song.end && song.end > startPoint) {
+                                    limitDuration = Math.min(limitDuration, song.end);
+                                }
+                                const maxDurRaw = localStorage.getItem('dua_max_duration');
+                                if (maxDurRaw) {
+                                    const maxDur = parseInt(maxDurRaw);
+                                    if (maxDur > 0) {
+                                        limitDuration = Math.min(limitDuration, startPoint + maxDur);
+                                    }
+                                }
+                                const actualPlayDuration = Math.max(1, limitDuration - startPoint);
+                                const elapsedTime = currentTime - startPoint;
+                                const remainingTime = actualPlayDuration - elapsedTime;
+                                
+                                // Gỡ lỗi thời gian thực (in ra console để dễ debug)
+                                if (remainingTime <= 15 && remainingTime >= -1) {
+                                    if (!window.lastDebugTime || Date.now() - window.lastDebugTime >= 1000) {
+                                        console.log(`[DEBUG DRAWER] Time limit: ${maxDurRaw || 'none'}, Song End: ${song.end || 'none'}, Duration: ${duration.toFixed(1)}s, Remaining Time: ${remainingTime.toFixed(1)}s, Next Song Title: "${song.nextSongTitle || 'null'}"`);
+                                        window.lastDebugTime = Date.now();
+                                    }
+                                }
+                                
+                                updateNextSongDrawer(remainingTime, song);
+
+                                // Kiểm tra mốc kết thúc tùy chỉnh của bài hát
+                                if (song.end && currentTime >= song.end) {
+                                    triggerEndedEvent();
+                                    return;
+                                }
+
+                                // Kiểm tra giới hạn thời gian phát tối đa toàn cục
+                                if (maxDurRaw) {
+                                    const maxDur = parseInt(maxDurRaw);
+                                    if (maxDur > 0) {
+                                        if (elapsedTime >= maxDur) {
+                                            console.log(`Overlay: Đã phát đạt giới hạn thời gian tối đa cấu hình (${maxDur}s). Chuyển bài tiếp theo...`);
+                                            triggerEndedEvent();
+                                            return;
+                                        }
+                                    }
+                                }
+                            } catch (e) {}
+                        }
+
+                        // 3. Xử lý SponsorBlock tự động bỏ qua phân đoạn
+                        loadSponsorBlockCategories();
+                        if (skipSegments && skipSegments.length > 0) {
+                            const now = Date.now();
+                            for (const segment of skipSegments) {
+                                if (sponsorBlockCategories[segment.category] === true) {
+                                    const segmentKey = segment.start + '-' + segment.end;
+                                    if (currentTime >= segment.start && currentTime < segment.end) {
+                                        // Tránh gọi seek liên tục nếu vừa mới seek tới phân đoạn này
+                                        if (lastSkippedSegmentKey === segmentKey) {
+                                            break;
+                                        }
+                                        console.log(`SponsorBlock Overlay: Nhảy phân đoạn [${segment.category}] (${currentTime.toFixed(1)}s -> ${segment.end.toFixed(1)}s)`);
+                                        lastSBSeekTimestamp = now;
+                                        lastSBSeekTarget = segment.end;
+                                        lastSkippedSegmentKey = segmentKey;
+                                        overlayPlayer.seekTo(segment.end, true);
+                                        triggerSponsorBlockToast();
+                                        break;
+                                    } else {
+                                        // Giải phóng khóa khi đã phát qua khỏi phân đoạn hoặc tua lại phía trước phân đoạn
+                                        if (lastSkippedSegmentKey === segmentKey) {
+                                            lastSkippedSegmentKey = null;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.warn("Thử đọc trạng thái player khi đang tải:", e);
+                }
+
+            }, 250);
+        }
+
+        function triggerEndedEvent() {
+            if (playbackMonitorInterval) {
+                clearInterval(playbackMonitorInterval);
+                playbackMonitorInterval = null;
+            }
+            // Phát tín hiệu kết thúc bài về Dashboard
+            localStorage.setItem('dua_overlay_event', JSON.stringify({
+                type: 'ended',
+                timestamp: Date.now()
+            }));
+
+            // Đồng bộ tín hiệu kết thúc qua MQTT
+            publishMqtt('overlay_event', {
+                type: 'ended'
+            });
+        }
+
+        function onPlayerStateChange(event) {
+            // Luôn áp dụng targetVolume ở mọi sự kiện trạng thái
+            if (typeof event.target.setVolume === 'function') {
+                event.target.setVolume(targetVolume);
+            }
+
+            if (event.data === YT.PlayerState.ENDED) {
+                stopVolumeEnforcer();
+                triggerEndedEvent();
+            } else if (event.data === YT.PlayerState.PLAYING) {
+                // Video đang phát — ép volume ngay (YouTube hay reset đúng lúc này)
+                applyTargetVolume();
+                console.log(`[onStateChange] PLAYING — ép volume: ${targetVolume}%`);
+            } else if (event.data === YT.PlayerState.BUFFERING) {
+                // Buffering — khởi động lại enforcer vì YouTube có thể reset volume
+                startVolumeEnforcer();
+            } else if (event.data === YT.PlayerState.PAUSED) {
+                // Nếu bị tạm dừng ngoài ý muốn (không phải do lệnh pause/stop từ dashboard), tự động phát tiếp
+                if (lastCommandType !== 'pause' && lastCommandType !== 'stop') {
+                    console.log("Overlay Player: Phát hiện trình phát bị tạm dừng ngoài ý muốn. Đang tự động phát lại...");
+                    event.target.playVideo();
+                }
+            }
+        }
+
+        // Cập nhật Giao diện Overlay
+        function updateOverlayUI() {
+            try {
+                // Kiểm tra lệnh điều khiển trước
+                checkControlCommands();
+
+                // Đồng bộ theme định kỳ từ localStorage
+                const storedTheme = localStorage.getItem('dua_theme') || 'pineapple';
+                if (!document.body.classList.contains('theme-' + storedTheme) && !(storedTheme === 'pineapple' && document.body.className === '')) {
+                    applyTheme(storedTheme);
+                }
+
+                const dataRaw = localStorage.getItem('dua_current_song');
+                if (!dataRaw) {
+                    if (destroyTimeout) {
+                        clearTimeout(destroyTimeout);
+                        destroyTimeout = null;
+                    }
+                    
+                    widget.classList.add('active'); // Luôn hiển thị overlay
+                    widget.classList.remove('playing');
+                    
+                    // Hiện empty overlay đè lên player
+                    const emptyOverlay = document.getElementById('obs-empty-overlay');
+                    if (emptyOverlay) {
+                        emptyOverlay.classList.add('active');
+                        const storedMsg = localStorage.getItem('dua_empty_queue_message');
+                        emptyOverlay.textContent = storedMsg || 'Order nhạc tự động Zypage 50k';
+                    }
+                    
+                    const nextSongDrawer = document.getElementById('obs-next-song-drawer');
+                    if (nextSongDrawer) nextSongDrawer.classList.remove('show');
+                    
+                    if (overlayPlayer) {
+                        try { overlayPlayer.destroy(); } catch (e) {}
+                        overlayPlayer = null;
+                        document.getElementById('obs-youtube-area').innerHTML = '<div id="obs-youtube-placeholder"></div>';
+                    }
+                    if (spotifyEmbedController) {
+                        try { spotifyEmbedController.pause(); } catch(e){}
+                    }
+                    if (soundCloudWidget) {
+                        try { soundCloudWidget.pause(); } catch(e){}
+                    }
+                    
+                    lastSongId = 'no_song';
+                    currentVideoId = null;
+                    return;
+                } else {
+                    if (destroyTimeout) {
+                        clearTimeout(destroyTimeout);
+                        destroyTimeout = null;
+                    }
+                    // Ẩn empty overlay khi có bài hát mới
+                    const emptyOverlay = document.getElementById('obs-empty-overlay');
+                    if (emptyOverlay) emptyOverlay.classList.remove('active');
+                }
+
+                const data = JSON.parse(dataRaw);
+                skipSegments = data.skipSegments || [];
+                
+                const isNewSong = (lastSongId !== data.id);
+                // Cập nhật thông tin bài hát
+                if (isNewSong) {
+                    lastSkippedSegmentKey = null;
+                    const playerMain = document.getElementById('obs-player-main');
+                    if (playerMain) {
+                        playerMain.classList.remove('song-pop-animation');
+                        void playerMain.offsetWidth; // Trigger reflow
+                        playerMain.classList.add('song-pop-animation');
+                    }
+                    
+                    // Kích hoạt hiệu ứng thay đĩa cho theme classic và classic-dark
+                    const currentTheme = localStorage.getItem('dua_theme') || 'pineapple';
+                    if (currentTheme === 'classic' || currentTheme === 'classic-dark') {
+                        const obsCoverWrapper = document.getElementById('obs-cover-wrapper');
+                        const widget = document.getElementById('obs-player-widget');
+                        if (obsCoverWrapper && widget) {
+                            widget.classList.add('changing-disc-active');
+                            obsCoverWrapper.classList.add('changing-disc');
+                            
+                            // Cập nhật ảnh đĩa mới khi đĩa cũ đã trượt ra ngoài (sau 500ms)
+                            setTimeout(() => {
+                                cover.src = data.thumbnail || "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=200&auto=format&fit=crop";
+                            }, 500);
+                            
+                            // Kết thúc và dọn dẹp class sau 1.5s
+                            setTimeout(() => {
+                                widget.classList.remove('changing-disc-active');
+                                obsCoverWrapper.classList.remove('changing-disc');
+                            }, 1500);
+                        } else {
+                            cover.src = data.thumbnail || "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=200&auto=format&fit=crop";
+                        }
+                    } else {
+                        cover.src = data.thumbnail || "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=200&auto=format&fit=crop";
+                    }
+                    title.textContent = data.title || "Chưa có tên bài hát";
+                    donorName.textContent = data.donorName || "Khách";
+                    donorAmount.textContent = data.amount ? data.amount.toLocaleString('vi-VN') + ' VNĐ' : '0 VNĐ';
+                    donorContainer.style.display = 'flex';
+                    
+                    if (data.message) {
+                        songMessage.textContent = `"${data.message}"`;
+                        songMessage.style.display = 'block';
+                    } else {
+                        songMessage.style.display = 'none';
+                    }
+
+                    // Tự động kiểm tra độ rộng chữ của tiêu đề để kích hoạt animation chạy dòng (marquee)
+                    const titleContainer = document.getElementById('obs-song-title-container');
+                    applyMarquee(titleContainer, title, data.title || "Chưa có tên bài hát", 30);
+                    
+                    lastSongId = data.id;
+                }
+
+                // Đồng bộ hóa các Player (YouTube, Spotify, SoundCloud) trên overlay
+                const currentType = data.type || 'youtube';
+                
+                if (currentType === 'spotify') {
+                    // Tạm dừng các player khác
+                    if (overlayPlayer && typeof overlayPlayer.pauseVideo === 'function') {
+                        try { overlayPlayer.pauseVideo(); } catch(e){}
+                    }
+                    if (soundCloudWidget) {
+                        try { soundCloudWidget.pause(); } catch(e){}
+                    }
+                    
+                    // Phát Spotify
+                    if (isNewSong || currentVideoId !== data.spotifyId) {
+                        currentVideoId = data.spotifyId;
+                        playSpotifyTrack(data.spotifyId);
+                    }
+                } else if (currentType === 'soundcloud') {
+                    // Tạm dừng các player khác
+                    if (overlayPlayer && typeof overlayPlayer.pauseVideo === 'function') {
+                        try { overlayPlayer.pauseVideo(); } catch(e){}
+                    }
+                    if (spotifyEmbedController) {
+                        try { spotifyEmbedController.pause(); } catch(e){}
+                    }
+                    
+                    // Phát SoundCloud
+                    if (isNewSong || currentVideoId !== data.soundcloudUrl) {
+                        currentVideoId = data.soundcloudUrl;
+                        playSoundCloudTrack(data.soundcloudUrl);
+                    }
+                } else {
+                    // Mặc định: YouTube
+                    if (spotifyEmbedController) {
+                        try { spotifyEmbedController.pause(); } catch(e){}
+                    }
+                    if (soundCloudWidget) {
+                        try { soundCloudWidget.pause(); } catch(e){}
+                    }
+                    
+                    if (isPlayerReady) {
+                        if (currentVideoId !== data.videoId || isNewSong) {
+                            currentVideoId = data.videoId;
+                            targetVolume = localStorage.getItem('dua_volume') !== null ? parseInt(localStorage.getItem('dua_volume')) : targetVolume;
+                            if (overlayPlayer && typeof overlayPlayer.loadVideoById === 'function') {
+                                try {
+                                    console.log("Overlay Player: Chuyển bài bằng loadVideoById:", data.videoId, "| Volume mục tiêu:", targetVolume);
+                                    lastCommandType = 'play';
+                                    overlayPlayer.loadVideoById({
+                                        videoId: data.videoId,
+                                        startSeconds: data.start || 0
+                                    });
+                                    startVolumeEnforcer();
+                                    startPlaybackMonitor();
+                                } catch (e) {
+                                    console.error("Error calling loadVideoById, falling back to full init:", e);
+                                    document.getElementById('obs-youtube-area').innerHTML = '<div id="obs-youtube-placeholder"></div>';
+                                    initOverlayPlayer(data.videoId, data.start || 0);
+                                }
+                            } else {
+                                console.log("Overlay Player: Khởi tạo mới vì chưa có player:", data.videoId);
+                                document.getElementById('obs-youtube-area').innerHTML = '<div id="obs-youtube-placeholder"></div>';
+                                initOverlayPlayer(data.videoId, data.start || 0);
+                            }
+                        }
+                    }
+                }
+ 
+                // Cập nhật thanh tiến trình chạy và thời lượng từ chính local Player
+                try {
+                    let currentTime = 0;
+                    let duration = 0;
+                    let isPlaying = false;
+                    
+                    if (currentType === 'spotify') {
+                        currentTime = currentPlayback.currentTime;
+                        duration = currentPlayback.duration;
+                        isPlaying = currentPlayback.isPlaying;
+                    } else if (currentType === 'soundcloud') {
+                        currentTime = currentPlayback.currentTime;
+                        duration = currentPlayback.duration;
+                        isPlaying = currentPlayback.isPlaying;
+                    } else {
+                        // YouTube
+                        if (overlayPlayer && typeof overlayPlayer.getCurrentTime === 'function' && typeof overlayPlayer.getPlayerState === 'function') {
+                            const playerState = overlayPlayer.getPlayerState();
+                            if (playerState === YT.PlayerState.PLAYING || playerState === YT.PlayerState.PAUSED) {
+                                currentTime = overlayPlayer.getCurrentTime();
+                                duration = overlayPlayer.getDuration();
+                                isPlaying = playerState === YT.PlayerState.PLAYING;
+                            }
+                        }
+                    }
+                    
+                    if (duration && duration > 0) {
+                        let startPoint = 0;
+                        let limitDuration = duration;
+                        
+                        const currentSongRaw = localStorage.getItem('dua_current_song');
+                        if (currentSongRaw) {
+                            const song = JSON.parse(currentSongRaw);
+                            startPoint = song.start || 0;
+                            let endPoint = duration;
+                            
+                            if (song.end && song.end > startPoint) {
+                                endPoint = Math.min(endPoint, song.end);
+                            }
+                            
+                            const maxDurRaw = localStorage.getItem('dua_max_duration');
+                            if (maxDurRaw) {
+                                const maxDur = parseInt(maxDurRaw);
+                                if (maxDur > 0) {
+                                    endPoint = Math.min(endPoint, startPoint + maxDur);
+                                }
+                            }
+                            limitDuration = Math.max(1, endPoint - startPoint);
+                        }
+                        
+                        const elapsedTime = Math.min(limitDuration, Math.max(0, currentTime - startPoint));
+                        const pct = (elapsedTime / limitDuration) * 100;
+                        const safePct = Math.min(100, Math.max(0, pct)) + '%';
+                        progressFill.style.width = safePct;
+                        if (progressThumb) {
+                            progressThumb.style.left = safePct;
+                        }
+                        currentTimeDisplay.textContent = formatTime(elapsedTime);
+                        totalTimeDisplay.textContent = formatTime(limitDuration);
+                    }
+                    
+                    // Đồng bộ hoạt ảnh xoay đĩa theo trạng thái phát thực tế
+                    if (isPlaying) {
+                        coverWrapper.classList.add('spinning');
+                        coverWrapper.style.animationPlayState = 'running';
+                        widget.classList.add('playing');
+                    } else {
+                        coverWrapper.style.animationPlayState = 'paused';
+                        widget.classList.remove('playing');
+                    }
+                } catch (e) {
+                    // Thầm lặng bỏ qua
+                }
+
+                // Hiển thị widget
+                widget.classList.add('active');
+
+            } catch (err) {
+                console.error("Error reading storage:", err);
+            }
+        }
+
+        // Hàm kích hoạt popup thông báo donate mới
+        function triggerNewDonationAlert(alertData) {
+            const alertBox = document.getElementById('obs-alert-box');
+            const alertDonor = document.getElementById('alert-donor');
+            const alertAmount = document.getElementById('alert-amount');
+            const alertSong = document.getElementById('alert-song');
+            const alertPosition = document.getElementById('alert-position');
+
+            const nextSongDrawer = document.getElementById('obs-next-song-drawer');
+            if (nextSongDrawer) {
+                nextSongDrawer.classList.remove('show');
+            }
+
+            alertDonor.textContent = alertData.donorName || 'Khách';
+            alertAmount.textContent = alertData.amount ? alertData.amount.toLocaleString('vi-VN') + ' VNĐ' : '0 VNĐ';
+            
+            const alertSongContainer = document.getElementById('obs-alert-song-container');
+            const alertTitle = alertData.title || 'Không rõ';
+            
+            // Áp dụng inline style cho alertSong dựa theo theme
+            const currentTheme = localStorage.getItem('dua_theme') || 'pineapple';
+            if (currentTheme === 'classic' || currentTheme === 'classic-dark') {
+                alertSong.classList.remove('marquee');
+                alertSong.style.animationDuration = '0s';
+                alertSong.textContent = alertTitle;
+                
+                alertSong.style.display = '-webkit-box';
+                alertSong.style.webkitLineClamp = '3';
+                alertSong.style.webkitBoxOrient = 'vertical';
+                alertSong.style.whiteSpace = 'normal';
+                alertSong.style.wordBreak = 'break-word';
+                alertSong.style.overflow = 'hidden';
+            } else {
+                alertSong.style.display = '';
+                alertSong.style.webkitLineClamp = '';
+                alertSong.style.webkitBoxOrient = '';
+                alertSong.style.whiteSpace = '';
+                alertSong.style.wordBreak = '';
+                alertSong.style.overflow = '';
+                applyMarquee(alertSongContainer, alertSong, alertTitle, 45);
+            }
+            const alertStatusText = document.getElementById('alert-status-text');
+            if (alertStatusText) {
+                const pos = alertData.position || '';
+                
+                // Thiết lập class động dựa theo theme và vị trí
+                alertStatusText.className = 'obs-alert-status-text';
+
+                if (pos === 'Đang phát') {
+                    alertStatusText.classList.add('badge-playing');
+                    alertStatusText.textContent = 'Đang phát';
+                } else if (pos === 'Tiếp theo') {
+                    alertStatusText.classList.add('badge-next');
+                    alertStatusText.textContent = 'Tiếp theo';
+                } else {
+                    alertStatusText.classList.add('badge-queue');
+                    const posNum = String(pos).replace('#', '');
+                    alertStatusText.textContent = `Hàng đợi số ${posNum}`;
+                }
+            }
+
+            // Reset hoạt ảnh bằng cách xóa và thêm lại class active
+            alertBox.classList.remove('active');
+            void alertBox.offsetWidth; // Trigger reflow để reset transition
+            alertBox.classList.add('active');
+
+            // Ẩn thông báo sau 6 giây
+            if (alertTimeout) clearTimeout(alertTimeout);
+            alertTimeout = setTimeout(() => {
+                alertBox.classList.remove('active');
+            }, 6000);
+        }
+
+        // Kiểm tra thay đổi liên tục bằng vòng lặp hoạt ảnh (200ms một lần là đủ mượt và nhẹ)
+        setInterval(updateOverlayUI, 200);
+
+        // Lắng nghe cả sự kiện Storage của trình duyệt (giúp phản ứng ngay lập tức)
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'dua_current_song') {
+                updateOverlayUI();
+            } else if (e.key === 'dua_control_command') {
+                checkControlCommands();
+            } else if (e.key === 'dua_new_donation_alert') {
+                try {
+                    const alertData = JSON.parse(e.newValue);
+                    if (alertData) {
+                        triggerNewDonationAlert(alertData);
+                    }
+                } catch (err) {
+                    console.error("Error parsing alert data:", err);
+                }
+            } else if (e.key === 'dua_theme') {
+                applyTheme(e.newValue || 'pineapple');
+            } else if (e.key === 'dua_opacity') {
+                applyOpacity(e.newValue || '100');
+            } else if (e.key === 'dua_alert_action_text') {
+                updateAlertActionTextDisplay();
+            }
+        });
+
+        // =========================================================================
+        // --- ĐỒNG BỘ MQTT XUYÊN TRÌNH DUYỆT (OBS OVERLAY SIDE) ---
+        // =========================================================================
+
+        // Phân tích tham số URL để tìm key hoặc token đồng bộ
+        const zypageToken = urlParams.get('token');
+        const localKey = urlParams.get('key');
+        const channelId = zypageToken || localKey;
+
+        function initMqtt() {
+            if (!channelId) {
+                console.warn("Overlay: Không tìm thấy tham số token hoặc key trên URL. Không thể kết nối MQTT.");
+                return;
+            }
+
+            mqttTopic = `dua_corner/player/${channelId}`;
+            console.log(`Overlay: Đang kết nối MQTT cho kênh: ${channelId}...`);
+
+            try {
+                mqttClient = mqtt.connect('wss://broker.hivemq.com:8884/mqtt', {
+                    keepalive: 60,
+                    clientId: 'dua_overlay_' + Math.random().toString(16).substr(2, 8),
+                    clean: true
+                });
+
+                mqttClient.on('connect', () => {
+                    console.log("Overlay: Kết nối MQTT thành công!");
+                    
+                    const commandTopic = `${mqttTopic}/command`;
+                    mqttClient.subscribe(commandTopic, (err) => {
+                        if (err) {
+                            console.error("Overlay MQTT Subscribe error:", err);
+                        } else {
+                            console.log("Overlay subscribed to:", commandTopic);
+                            // Yêu cầu đồng bộ cấu hình hiện tại từ Dashboard
+                            publishMqtt('request_sync', {});
+                            
+                            // Dò tìm kết nối liên tục từ Dashboard (gửi yêu cầu mỗi 5 giây)
+                            if (syncInterval) clearInterval(syncInterval);
+                            syncInterval = setInterval(() => {
+                                if (mqttClient && mqttClient.connected) {
+                                    publishMqtt('request_sync', {});
+                                }
+                            }, 5000);
+                        }
+                    });
+                });
+
+                mqttClient.on('message', (topic, message) => {
+                    handleMqttMessage(topic, message.toString());
+                });
+
+                mqttClient.on('error', (err) => {
+                    console.error("Overlay MQTT error:", err);
+                });
+
+            } catch (e) {
+                console.error("Overlay MQTT connection failed:", e);
+            }
+        }
+
+        function publishMqtt(type, payload) {
+            if (!mqttClient || !mqttClient.connected) return;
+            
+            const topic = `${mqttTopic}/status`;
+            const messageObj = { type: type };
+            if (type === 'overlay_state') {
+                messageObj.state = payload;
+            } else if (type === 'overlay_event') {
+                messageObj.event = payload;
+            }
+            
+            mqttClient.publish(topic, JSON.stringify(messageObj), { qos: 1 }, (err) => {
+                if (err) {
+                    console.error("Overlay MQTT publish error:", err);
+                }
+            });
+        }
+
+        function handleMqttMessage(topic, messageStr) {
+            try {
+                const payload = JSON.parse(messageStr);
+                if (!payload) return;
+
+                console.log("Overlay nhận lệnh MQTT:", payload.type);
+
+                if (payload.type === 'current_song') {
+                    const song = payload.data;
+                    if (!song) {
+                        localStorage.removeItem('dua_current_song');
+                    } else {
+                        localStorage.setItem('dua_current_song', JSON.stringify(song));
+                        // Đồng bộ giới hạn thời gian từ bài hát
+                        if (song.maxDuration !== undefined) {
+                            localStorage.setItem('dua_max_duration', song.maxDuration);
+                        }
+                    }
+                    updateOverlayUI();
+                } else if (payload.type === 'control_command') {
+                    const cmd = payload.data;
+                    if (!cmd) return;
+                    
+                    if (cmd.timestamp === lastCommandTimestamp) return;
+                    lastCommandTimestamp = cmd.timestamp;
+                    
+                    localStorage.setItem('dua_control_command', JSON.stringify(cmd));
+                    executeControlCommand(cmd);
+                } else if (payload.type === 'max_duration') {
+                    const maxDurVal = payload.data?.value;
+                    if (maxDurVal !== undefined) {
+                        localStorage.setItem('dua_max_duration', maxDurVal);
+                    }
+                } else if (payload.type === 'empty_queue_message') {
+                    const text = payload.data?.text;
+                    if (text !== undefined) {
+                        localStorage.setItem('dua_empty_queue_message', text);
+                    }
+                    updateOverlayUI();
+                } else if (payload.type === 'new_donation_alert') {
+                    const alertData = payload.data;
+                    if (alertData) {
+                        localStorage.setItem('dua_new_donation_alert', JSON.stringify(alertData));
+                        triggerNewDonationAlert(alertData);
+                    }
+                } else if (payload.type === 'theme_change') {
+                    const theme = payload.data?.theme || 'pineapple';
+                    localStorage.setItem('dua_theme', theme);
+                    applyTheme(theme);
+                } else if (payload.type === 'opacity_change') {
+                    const opacity = payload.data?.opacity || '100';
+                    localStorage.setItem('dua_opacity', opacity);
+                    applyOpacity(opacity);
+                } else if (payload.type === 'alert_action_text') {
+                    const text = payload.data?.text;
+                    if (text !== undefined) {
+                        localStorage.setItem('dua_alert_action_text', text);
+                        updateAlertActionTextDisplay();
+                    }
+                } else if (payload.type === 'sb_categories') {
+                    const cats = payload.data;
+                    if (cats) {
+                        localStorage.setItem('dua_sb_categories', JSON.stringify(cats));
+                        sponsorBlockCategories = cats;
+                    }
+                }
+            } catch (e) {
+                console.error("Overlay: Lỗi xử lý tin nhắn MQTT:", e);
+            }
+        }
+
+        // Khởi động kết nối MQTT khi tải trang
+        initMqtt();
+
+        // Áp dụng tỉ lệ thu phóng (zoom/scale) cho các widget overlay nếu được truyền từ URL
+        const scaleVal = parseFloat(urlParams.get('scale')) || 1.0;
+        if (scaleVal !== 1.0) {
+            const overlayContent = document.getElementById('overlay-content');
+            if (overlayContent) {
+                overlayContent.style.transform = `scale(${scaleVal})`;
+                overlayContent.style.transformOrigin = 'top left';
+            }
+        }
+
+        // Bắt tương tác click vào trang để giải phóng chính sách chặn âm thanh tự động phát của trình duyệt
+        document.body.addEventListener('click', () => {
+            console.log("Overlay: Người dùng đã tương tác click. Kích hoạt phát lại các trình phát...");
+            // Giải phóng Spotify
+            if (spotifyEmbedController) {
+                try { spotifyEmbedController.play(); } catch(e){}
+            }
+            // Giải phóng SoundCloud
+            if (soundCloudWidget) {
+                try { soundCloudWidget.play(); } catch(e){}
+            }
+        });
+
+        // Chạy kiểm tra ngay khi load
+        updateOverlayUI();
+    </script>
+</body>
+</html>

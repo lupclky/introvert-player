@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Introvert Player</title>
+    
+    <!-- CSS & Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&family=Outfit:wght@200;300;400;600;700;900&family=Dancing+Script:wght@600;700&family=Playfair+Display:wght@700;900&family=Lora:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+
+
+    <!-- Custom Frameless Titlebar -->
+    <div class="app-titlebar">
+        <div class="titlebar-brand-menu-wrapper" style="display: flex; align-items: center; gap: 1.5rem; -webkit-app-region: no-drag;">
+            <div class="titlebar-brand">
+                <span class="titlebar-introvert">introvert</span>
+            </div>
+            <!-- Titlebar Navigation Menu -->
+            <div class="titlebar-menu">
+                <button id="menu-btn-player" class="titlebar-menu-btn active" onclick="switchTab('player')" title="Bàn điều khiển">
+                    <i class="fa-solid fa-play"></i>
+                </button>
+                <button id="menu-btn-settings" class="titlebar-menu-btn" onclick="switchTab('settings')" title="Cấu hình">
+                    <i class="fa-solid fa-gear"></i>
+                </button>
+            </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <!-- Update Info Widget / Version Display -->
+            <div id="app-update-widget" title="Bấm để tải bản cập nhật mới nhất từ GitHub Release">
+                <i class="fa-solid fa-circle-down"></i>
+                <span id="app-update-text">Đã có phiên bản mới</span>
+            </div>
+            <!-- Dark Mode Toggle Switch -->
+            <div class="theme-switch-wrapper">
+                <span>Dark Mode</span>
+                <label class="theme-switch">
+                    <input type="checkbox" id="dark-mode-toggle-switch" onchange="toggleDarkMode(this.checked)">
+                    <span class="slider-round"></span>
+                </label>
+            </div>
+            <!-- Window Controls -->
+            <div class="titlebar-controls">
+                <button class="titlebar-btn btn-minimize" onclick="window.electronAPI.minimize()"><i class="fa-solid fa-minus"></i></button>
+                <button class="titlebar-btn btn-maximize" onclick="window.electronAPI.maximize()"><i class="fa-regular fa-square"></i></button>
+                <button class="titlebar-btn btn-close" onclick="window.electronAPI.close()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 1. GIAO DIỆN CHÍNH (STREAMER DASHBOARD) -->
+    <div class="app-layout">
+
+        <!-- Main Content Area -->
+        <main class="app-content">
+            <!-- Tab 1: Bàn điều khiển (Dashboard) -->
+            <div id="tab-player" class="tab-content active">
+                <div class="left-column">
+                    <!-- Card 2: Trình phát hiện tại (Now Playing Widget) -->
+                    <div class="player-widget">
+                        <div class="player-header">
+                            <span class="dua-card-title" style="border-bottom: none; padding-bottom: 0;">
+                                <i class="fa-solid fa-compact-disc"></i> Đang Phát
+                            </span>
+                            <div id="playing-live-badge" class="live-badge" style="display: none;">
+                                <span></span> LIVE
+                            </div>
+                        </div>
+
+                        <div class="song-info-container">
+                            <div id="song-cover-wrapper" class="song-cover-wrapper">
+                                <img id="current-song-cover" class="song-cover-img" src="https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=200&auto=format&fit=crop" alt="Cover">
+                            </div>
+                            <div class="song-details">
+                                <h2 id="current-song-title" class="song-title">Chưa có bài hát nào</h2>
+                                <div id="current-song-donor" class="song-donor" style="display: none;">
+                                    <i class="fa-solid fa-heart"></i> <span id="current-donor-name">Khách</span>
+                                    <span style="color: var(--pineapple-text);">đã tặng</span> 
+                                    <span id="current-donor-amount">$0</span>
+                                </div>
+                                <div id="current-song-message" class="song-message" style="display: none;">
+                                    Không có tin nhắn.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Thanh tiến trình phát nhạc -->
+                        <div class="player-controls">
+                            <div class="progress-container">
+                                <span id="current-time-display" class="progress-time">0:00</span>
+                                <input id="progress-slider" class="progress-bar-slider" type="range" min="0" max="100" value="0" oninput="onSeekSliderChange(this.value)">
+                                <span id="total-time-display" class="progress-time">0:00</span>
+                            </div>
+
+                            <div class="control-buttons-row">
+                                <div class="control-playback">
+                                    <button id="btn-play-pause" class="dua-btn dua-btn-primary" onclick="togglePlayPause()">
+                                        <i class="fa-solid fa-play"></i> Phát
+                                    </button>
+                                    <button class="dua-btn dua-btn-secondary" onclick="skipSong()">
+                                        <i class="fa-solid fa-forward"></i> Bỏ qua
+                                    </button>
+                                    <!-- Nút Vô Cùng (Bypass Limit) -->
+                                    <button id="btn-bypass-limit" class="dua-btn dua-btn-secondary" onclick="bypassCurrentSongLimit()" title="Phát hết bài hát này (bỏ qua giới hạn thời gian)" style="display: none;">
+                                        <i class="fa-solid fa-infinity"></i> Vô cùng
+                                    </button>
+                                </div>
+
+                                <!-- Sóng nhạc và âm lượng -->
+                                <div class="control-volume">
+                                    <div id="music-waves" class="music-waves paused">
+                                        <span></span><span></span><span></span><span></span><span></span>
+                                    </div>
+                                    <i id="mute-btn" class="fa-solid fa-volume-high" onclick="toggleMute()" title="Tắt/Bật tiếng" style="cursor: pointer; transition: transform 0.1s; min-width: 20px; text-align: center;"></i>
+                                    <input id="volume-slider" class="volume-slider" type="range" min="0" max="100" value="80" oninput="onVolumeChange(this.value)">
+                                    <span id="volume-val-display" style="min-width: 30px;">80%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 1: Cấu hình Giới hạn Thời gian -->
+                    <div class="dua-card" id="card-time-limit" style="padding: 1.2rem;">
+                        <h3 class="dua-card-title" style="justify-content: space-between; border-bottom: none; padding-bottom: 0; margin-bottom: 0;">
+                            <span><i class="fa-solid fa-hourglass-half"></i> Giới hạn thời gian</span>
+                            <label class="sb-checkbox-label" style="font-size: 0.85rem; cursor: pointer; margin-bottom: 0; user-select: none;">
+                                <input type="checkbox" class="sb-checkbox" id="max-duration-toggle">
+                                <span>Kích hoạt</span>
+                            </label>
+                        </h3>
+
+                        <!-- Chọn chế độ giới hạn -->
+                        <div style="display: flex; gap: 1rem; align-items: center; margin-top: 0.5rem; font-size: 0.85rem; font-weight: 700;">
+                            <label style="cursor: pointer; display: inline-flex; align-items: center; gap: 0.25rem;">
+                                <input type="radio" name="limit-mode" value="fixed" checked id="limit-mode-fixed"> Cố định
+                            </label>
+                            <label style="cursor: pointer; display: inline-flex; align-items: center; gap: 0.25rem;">
+                                <input type="radio" name="limit-mode" value="milestone" id="limit-mode-milestone"> Theo mốc donate
+                            </label>
+                        </div>
+
+                        <!-- Chế độ 1: Cố định -->
+                        <div class="form-group" id="max-duration-form-group" style="display: none; margin-top: 0.8rem;">
+                            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                <label for="max-duration-input" style="font-size: 0.9rem; font-weight: 700; white-space: nowrap; margin-bottom: 0; display: inline-flex; align-items: center; gap: 0.2rem;"><i class="fa-solid fa-clock"></i> Phát tối đa:</label>
+                                <input id="max-duration-input" class="dua-input" style="width: 110px; padding: 0.35rem 0.6rem; border-radius: 8px; font-size: 0.85rem; box-shadow: none;" type="number" min="1" placeholder="180">
+                                <span style="font-weight: 800; font-size: 0.85rem; color: var(--pineapple-text);">giây</span>
+                                <button id="btn-max-duration-apply" class="dua-btn" style="padding: 0.3rem 0.6rem; border-radius: 8px; font-size: 0.8rem; box-shadow: 2px 2px 0px var(--pineapple-text); background: var(--pineapple-yellow); border-width: 2px;">OK</button>
+                            </div>
+                        </div>
+
+                        <!-- Chế độ 2: Theo mốc donate -->
+                        <div id="milestone-form-group" style="display: none; margin-top: 0.8rem; flex-direction: column; gap: 0.6rem;">
+                            <!-- Danh sách các mốc được render động bằng JavaScript -->
+                            <div id="milestone-list-container" style="display: flex; flex-direction: column; gap: 0.6rem;"></div>
+                            
+                            <!-- Nút thêm mốc mới -->
+                            <button id="btn-add-milestone" class="dua-btn" type="button" style="align-self: flex-start; padding: 0.25rem 0.6rem; border-radius: 8px; font-size: 0.75rem; border-width: 2px; box-shadow: 1px 1px 0px var(--pineapple-text); display: inline-flex; align-items: center; gap: 0.25rem; margin-bottom: 0.2rem; cursor: pointer;">
+                                <i class="fa-solid fa-plus"></i> Thêm mốc mới
+                            </button>
+
+                            <div style="display: flex; gap: 0.4rem; align-items: center; font-size: 0.85rem; font-weight: 700; flex-wrap: wrap; border-top: 2px dashed var(--pineapple-text); padding-top: 0.6rem;">
+                                <span>Còn lại (≥ mốc cao nhất) phát tối đa</span>
+                                <input id="ms-dur-default" class="dua-input" style="width: 110px; padding: 0.25rem 0.5rem; border-radius: 8px; font-size: 0.8rem; box-shadow: none;" type="number" placeholder="30">
+                                <span>phút (0 = hết bài)</span>
+                            </div>
+                            <button id="btn-milestone-apply" class="dua-btn" style="align-self: flex-start; padding: 0.3rem 0.8rem; border-radius: 8px; font-size: 0.8rem; background: var(--pineapple-yellow); border-width: 2px; box-shadow: 2px 2px 0px var(--pineapple-text); margin-top: 0.2rem;">Áp dụng mốc</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="right-column">
+                    <!-- Card 4: Form thêm nhạc bằng Link nhanh -->
+                    <div class="dua-card" id="card-quick-add" style="padding: 0.65rem 1rem; position: relative; overflow: visible !important;">
+                        <form id="quick-add-form" onsubmit="handleQuickAddSubmit(event)" style="display: flex; flex-direction: column; gap: 0.6rem; width: 100%; overflow: visible;">
+                            <!-- Hàng 1: Từ khóa/Link -->
+                            <div style="display: flex; gap: 0.5rem; width: 100%; align-items: center;">
+                                <label for="donor-url" style="font-size: 0.85rem; font-weight: 800; color: var(--pineapple-text); white-space: nowrap; margin-bottom: 0; display: inline-flex; align-items: center; gap: 0.3rem;"><i class="fa-solid fa-plus-circle"></i> Thêm nhanh:</label>
+                                <input id="donor-url" class="dua-input" style="flex-grow: 1; font-size: 0.85rem; padding: 0.35rem 0.6rem;" type="text" placeholder="Nhập từ khóa tìm kiếm hoặc dán link YouTube/SoundCloud..." required autocomplete="off">
+                            </div>
+                            <!-- Hàng 2: Tên người gửi, Số tiền, Nút thêm -->
+                            <div style="display: flex; gap: 0.5rem; width: 100%; align-items: center; justify-content: flex-end; flex-wrap: wrap;">
+                                <input id="quick-donor-name" class="dua-input" style="width: 170px; font-size: 0.85rem; padding: 0.35rem 0.6rem;" type="text" placeholder="Tên người gửi (Introvert)...">
+                                <input id="quick-donor-amount" class="dua-input" style="width: 180px; font-size: 0.85rem; padding: 0.35rem 0.6rem;" type="number" placeholder="Số tiền VNĐ (mặc định: 100M)..." min="0">
+                                <button type="submit" class="dua-btn dua-btn-primary" style="padding: 0.35rem 0.8rem; font-size: 0.85rem; white-space: nowrap; display: inline-flex; align-items: center; gap: 0.3rem; margin-left: auto;"><i class="fa-solid fa-play"></i> Thêm & Phát</button>
+                            </div>
+                        </form>
+                        <div id="quick-add-search-results" class="quick-add-search-results" style="display: none;"></div>
+                    </div>
+
+                    <!-- Card 3: Danh sách hàng đợi phát nhạc (Queue) -->
+                    <div class="dua-card" id="card-queue">
+                        <div class="queue-header-actions" style="flex-wrap: wrap; gap: 0.5rem;">
+                            <span class="dua-card-title" style="border-bottom: none; padding-bottom: 0; white-space: nowrap;">
+                                <i class="fa-solid fa-list-ol"></i> Hàng đợi Nhạc (<span id="queue-count">0</span>)
+                            </span>
+                            <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: nowrap;">
+                                <button id="btn-test-mode" class="dua-btn" style="padding: 0.25rem 0.6rem; font-size: 0.8rem; border-radius: 10px; border-width: 2px; box-shadow: 2px 2px 0px var(--pineapple-text); white-space: nowrap;" onclick="toggleTestMode()" title="Giữ hàng đợi: TẮT">
+                                    <i class="fa-solid fa-lock-open"></i>
+                                </button>
+                                <div class="form-group" style="flex-direction: row; align-items: center; gap: 0.3rem; flex-wrap: nowrap;">
+                                    <label for="queue-sort-select" style="font-size: 0.85rem; white-space: nowrap; margin-bottom: 0;"><i class="fa-solid fa-sort"></i> Ưu tiên:</label>
+                                    <select id="queue-sort-select" class="dua-select" style="padding: 0.2rem 0.5rem; border-radius: 8px; font-size: 0.85rem; box-shadow: none;" onchange="onSortConfigChange(this.value)">
+                                        <option value="time">Thời gian</option>
+                                        <option value="amount">Số tiền</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="queue-list-container" class="queue-list">
+                            <!-- Danh sách các bài hát trong hàng đợi sẽ được tạo bằng Javascript -->
+                            <div class="empty-queue-notice">Hàng đợi đang trống. Hãy dán link YouTube bài hát đầu tiên!</div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Tab 2: Cấu hình (Settings) -->
+            <div id="tab-settings" class="tab-content">
+                <!-- Card 5: Cấu hình đồng bộ Live ZyPage -->
+                <div class="dua-card zypage-sync-card disconnected" id="zypage-sync-card" style="padding: 1.5rem; width: 100%;">
+                    <h3 class="dua-card-title" style="margin-bottom: 0.6rem; padding-bottom: 0.4rem;"><i class="fa-solid fa-arrows-rotate"></i> Đồng bộ ZyPage</h3>
+                    
+                    <div style="display: flex; gap: 0.5rem; align-items: center; width: 100%;">
+                        <input id="zypage-url" class="dua-input" style="flex-grow: 1; font-size: 0.85rem;" type="url" placeholder="Nhập Link ZyPage..." required>
+                        <button id="btn-zypage-connect" class="dua-btn dua-btn-primary" style="padding: 0.35rem 0.8rem; font-size: 0.85rem;" onclick="connectZyPageLive()">Kết nối</button>
+                        <button id="btn-zypage-disconnect" class="dua-btn dua-btn-danger" style="display: none; padding: 0.35rem 0.8rem; font-size: 0.85rem;" onclick="disconnectZyPageLive()">Ngắt</button>
+                    </div>
+
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 0.6rem; gap: 0.8rem; flex-wrap: wrap;">
+                        <div id="zypage-manual-fields" style="display: none; gap: 0.3rem; align-items: center;">
+                            <label for="zypage-shop-id" style="font-size: 0.8rem; font-weight: 700; white-space: nowrap; color: var(--pineapple-text);">Shop ID:</label>
+                            <input id="zypage-shop-id" class="dua-input" style="padding: 0.25rem 0.5rem; border-radius: 8px; font-size: 0.8rem; width: 60px; box-shadow: none;" type="text" placeholder="7006">
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.3rem; font-size: 0.8rem; font-weight: 700; color: #6B7280;">
+                            <span>Trạng thái:</span>
+                            <span id="zypage-status-badge" class="status-badge disconnected" style="padding: 0.15rem 0.45rem; font-size: 0.75rem;">Chưa kết nối</span>
+                        </div>
+                    </div>
+
+                    <!-- Link nhúng vào OBS Browser Source -->
+                    <div id="obs-url-container" style="margin-top: 0.6rem; border-top: 2px dashed #E5E7EB; padding-top: 0.5rem;">
+                        <div style="display: flex; gap: 0.4rem; align-items: center; width: 100%;">
+                            <label style="font-size: 0.8rem; font-weight: 800; color: var(--pineapple-text); white-space: nowrap; margin-bottom: 0;">Link OBS:</label>
+                            <input id="obs-url-input" class="dua-input" readonly style="flex-grow: 1; font-size: 0.75rem; background: var(--pineapple-gray); cursor: pointer; padding: 0.25rem 0.4rem;" onclick="this.select(); document.execCommand('copy'); alert('Đã sao chép link OBS!');">
+                            <button class="dua-btn" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; background: var(--pineapple-yellow); border-width: 2px; box-shadow: 2px 2px 0px var(--pineapple-text);" onclick="const input = document.getElementById('obs-url-input'); input.select(); document.execCommand('copy'); alert('Đã sao chép link OBS!');">Copy</button>
+                        </div>
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 0.4rem; gap: 0.5rem; flex-wrap: wrap;">
+                            <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
+                                <div style="display: flex; align-items: center; gap: 0.3rem;">
+                                    <span style="font-size: 0.75rem; font-weight: 700; color: #6B7280;">Zoom:</span>
+                                    <select id="obs-scale-select" class="dua-select" style="padding: 0.15rem 0.3rem; font-size: 0.75rem; border-radius: 6px; box-shadow: none;" onchange="updateObsUrlDisplay()">
+                                        <option value="1" selected>100%</option>
+                                        <option value="1.25">125%</option>
+                                        <option value="1.5">150%</option>
+                                        <option value="1.75">175%</option>
+                                        <option value="2">200%</option>
+                                    </select>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 0.3rem;">
+                                    <span style="font-size: 0.75rem; font-weight: 700; color: #6B7280;">Giao diện:</span>
+                                    <select id="obs-theme-select" class="dua-select" style="padding: 0.15rem 0.3rem; font-size: 0.75rem; border-radius: 6px; box-shadow: none;" onchange="onThemeChange(this.value)">
+                                        <option value="pineapple" selected>Dứa mặc định</option>
+                                        <option value="spacegods">TFT Spacegods</option>
+                                        <option value="cutepink">Hồng dễ thương</option>
+                                        <option value="classic">Cổ điển (Classic Square)</option>
+                                        <option value="classic-dark">Cổ điển Tối (Classic Dark)</option>
+                                    </select>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 0.3rem;">
+                                    <span style="font-size: 0.75rem; font-weight: 700; color: #6B7280;">Opacity:</span>
+                                    <input id="obs-opacity-range" type="range" min="0" max="100" value="100" style="width: 80px; height: 6px; cursor: pointer; accent-color: var(--pineapple-orange);" oninput="onOpacityChange(this.value)">
+                                    <span id="obs-opacity-val" style="font-size: 0.75rem; font-weight: 800; color: var(--pineapple-text); min-width: 32px; text-align: right;">100%</span>
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 0.4rem;">
+                                <button class="dua-btn dua-btn-danger" style="padding: 0.2rem 0.5rem; font-size: 0.72rem; box-shadow: 2px 2px 0px var(--pineapple-text);" onclick="triggerResetOverlay()">
+                                    <i class="fa-solid fa-arrows-rotate"></i> Reset Overlay
+                                </button>
+                                <button class="dua-btn dua-btn-secondary" style="padding: 0.2rem 0.5rem; font-size: 0.72rem; box-shadow: 2px 2px 0px var(--pineapple-text);" onclick="window.open('overlay.html', '_blank', 'width=460,height=240')">
+                                    <i class="fa-solid fa-desktop"></i> Mở Overlay
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 6: Cấu hình SponsorBlock -->
+                <div class="dua-card" id="card-sponsorblock" style="width: 100%;">
+                    <h3 class="dua-card-title"><i class="fa-solid fa-shield-halved"></i> Cấu hình SponsorBlock</h3>
+                    
+                    <div class="sponsorblock-options">
+                        <label class="sb-checkbox-label">
+                            <input type="checkbox" class="sb-checkbox" id="sb-sponsor" checked>
+                            <span>Tài trợ (Sponsor)</span>
+                        </label>
+                        <label class="sb-checkbox-label">
+                            <input type="checkbox" class="sb-checkbox" id="sb-intro" checked>
+                            <span>Nhạc mở đầu (Intro)</span>
+                        </label>
+                        <label class="sb-checkbox-label">
+                            <input type="checkbox" class="sb-checkbox" id="sb-outro" checked>
+                            <span>Đoạn kết (Outro)</span>
+                        </label>
+                        <label class="sb-checkbox-label">
+                            <input type="checkbox" class="sb-checkbox" id="sb-selfpromo" checked>
+                            <span>Quảng cáo cá nhân (Self-Promo)</span>
+                        </label>
+                        <label class="sb-checkbox-label">
+                            <input type="checkbox" class="sb-checkbox" id="sb-interaction">
+                            <span>Kêu gọi đăng ký (Interaction)</span>
+                        </label>
+                        <label class="sb-checkbox-label">
+                            <input type="checkbox" class="sb-checkbox" id="sb-offtopic" checked>
+                            <span>Đoạn đối thoại phụ (Off-topic)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Card: Cấu hình hiển thị Overlay -->
+                <div class="dua-card" id="card-overlay-settings" style="width: 100%;">
+                    <h3 class="dua-card-title"><i class="fa-solid fa-desktop"></i> Cấu hình hiển thị Overlay</h3>
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 0.35rem;">
+                            <label style="font-weight: 700; font-size: 0.95rem; color: var(--pineapple-text); margin: 0;">Lời hiển thị khi hết nhạc:</label>
+                            <span id="overlay-empty-msg-counter" style="font-size: 0.8rem; font-weight: 700; color: #6B7280; transition: color 0.2s ease;">0/50</span>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem; align-items: center; width: 100%;">
+                            <input id="overlay-empty-msg-input" class="dua-input" type="text" maxlength="50" placeholder="Order nhạc tự động Zypage 50k" style="font-size: 0.85rem; flex-grow: 1; transition: border-color 0.2s ease;">
+                            <button id="btn-overlay-empty-msg-apply" class="dua-btn" style="padding: 0.35rem 0.8rem; font-size: 0.85rem; background: var(--pineapple-yellow); border-width: 2px; box-shadow: 2px 2px 0px var(--pineapple-text); white-space: nowrap;">Áp dụng</button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 0.35rem;">
+                            <label style="font-weight: 700; font-size: 0.95rem; color: var(--pineapple-text); margin: 0;">Chữ hành động ở thông báo Donate mới:</label>
+                            <span id="overlay-donate-action-counter" style="font-size: 0.8rem; font-weight: 700; color: #6B7280; transition: color 0.2s ease;">0/50</span>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem; align-items: center; width: 100%;">
+                            <input id="overlay-donate-action-input" class="dua-input" type="text" maxlength="50" placeholder="gửi một quả dứa" style="font-size: 0.85rem; flex-grow: 1; transition: border-color 0.2s ease;">
+                            <button id="btn-overlay-donate-action-apply" class="dua-btn" style="padding: 0.35rem 0.8rem; font-size: 0.85rem; background: var(--pineapple-yellow); border-width: 2px; box-shadow: 2px 2px 0px var(--pineapple-text); white-space: nowrap;">Áp dụng</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 7: Nhật ký Hoạt động (Logs) -->
+                <div class="dua-card" id="card-logs" style="width: 100%; margin-top: 1rem;">
+                    <h3 class="dua-card-title"><i class="fa-solid fa-clock-rotate-left"></i> Nhật ký hoạt động</h3>
+                    <div id="log-box" class="log-box-inner">
+                        <div class="log-entry log-system">
+                            <span class="log-tag log-tag-system">System</span> Khởi động hệ thống Introvert Player thành công.
+                        </div>
+                    </div>
+                </div>
+                <!-- Settings Footer -->
+                <div class="settings-footer" style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; padding-top: 1rem; border-top: 2px dashed var(--pineapple-border-color); font-size: 0.8rem; font-weight: 700; color: #6B7280;">
+                    <span>Sản phẩm mã nguồn mở bởi Introvert</span>
+                    <span id="app-version-display" style="font-weight: 800; color: var(--pineapple-text);">v1.9.2</span>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- YouTube Video Embed Area (Ẩn hoàn toàn trong Dashboard) -->
+    <div class="dua-card" style="display: none;">
+        <div class="dua-card-title" style="justify-content: space-between;">
+            <span><i class="fa-brands fa-youtube"></i> Khung hình Youtube</span>
+            <button class="dua-btn dua-btn-secondary" style="padding: 0.3rem 0.8rem; font-size: 0.8rem;" onclick="togglePlayerVisibility()">
+                <i class="fa-solid fa-eye-slash"></i> Ẩn/Hiện Video
+            </button>
+        </div>
+        <div id="youtube-player-container-wrapper" class="youtube-player-area" style="display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 2rem; color: #FFF; background: #1a1a1a; box-sizing: border-box; min-height: 200px;">
+            <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">📺</div>
+            <div style="font-weight: 800; font-size: 1.05rem; color: var(--pineapple-yellow);">Trình phát hoạt động trên OBS Overlay</div>
+            <div style="font-size: 0.85rem; color: #aaa; max-width: 320px; margin-top: 0.3rem; line-height: 1.4; font-weight: 600;">
+                Hình ảnh và âm thanh của YouTube đang được đồng bộ phát trực tiếp trên cửa sổ <strong>OBS Overlay</strong> để đưa lên livestream của bạn.
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. MÀN HÌNH CHẶN TỰ ĐỘNG PHÁT CỦA TRÌNH DUYỆT (Autoplay Blocked Modal) -->
+    <div id="autoplay-blocker" class="browser-blocked-overlay" style="display: none;" onclick="resumeAutoplay()">
+        <div class="blocked-card">
+            <div class="blocked-icon">🔊</div>
+            <h2 class="blocked-title">Trình duyệt chặn âm thanh</h2>
+            <p class="blocked-desc">
+                Nhấp chuột vào bất cứ vị trí nào trên màn hình này để bắt đầu kích hoạt trình phát nhạc donate!
+            </p>
+        </div>
+    </div>
+
+    <!-- Popup thông báo donate mới trên dashboard -->
+    <div id="db-alert-box" class="db-alert-box">
+        <div class="db-alert-header">
+            <span class="db-alert-badge"><i class="fa-solid fa-circle-exclamation"></i> DONATE MỚI</span>
+            <button class="db-alert-close" onclick="closeDashboardAlert()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="db-alert-body">
+            <div id="db-alert-song" class="db-alert-song">Tên bài hát</div>
+            <div class="db-alert-donor-info">
+                <span id="db-alert-donor" class="db-alert-donor">Người donate</span>
+                <span>gửi tặng</span>
+                <span id="db-alert-amount" class="db-alert-amount">0 VNĐ</span>
+            </div>
+            <div id="db-alert-status" class="db-alert-status">Đang phát</div>
+        </div>
+    </div>
+
+    <!-- Popup thông báo hệ thống trên dashboard -->
+    <div id="db-system-alert-box" class="db-alert-box" style="background: var(--pineapple-yellow);">
+        <div class="db-alert-header" style="border-bottom-color: #000000;">
+            <span class="db-alert-badge" id="db-sys-alert-badge" style="background: #000000; color: var(--pineapple-yellow);"><i class="fa-solid fa-circle-exclamation"></i> HỆ THỐNG</span>
+            <button class="db-alert-close" onclick="closeDashboardSystemAlert()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="db-alert-body">
+            <div id="db-sys-alert-title" class="db-alert-song">Tiêu đề</div>
+            <div id="db-sys-alert-message" style="font-size: 0.85rem; font-weight: 600; line-height: 1.4; color: #1E293B; margin-top: 0.2rem;">Nội dung thông báo...</div>
+        </div>
+    </div>
+
+    <!-- 4. LOGIC JAVASCRIPT -->
+    <script src="https://www.gstatic.com/firebasejs/8.8.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.8.1/firebase-database.js"></script>
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

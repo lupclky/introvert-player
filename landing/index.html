@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dứa Corner Player — Trình Phát Nhạc Donate Chuyên Nghiệp Cho Streamer</title>
+    <meta name="description" content="Ứng dụng Desktop tự động hóa phát nhạc yêu cầu từ cổng donate ZyPage. Tích hợp OBS Overlay trong suốt đẹp mắt, lọc quảng cáo SponsorBlock thông minh và nhiều giao diện (themes) độc đáo.">
+    
+    <!-- Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Quicksand:wght@300..700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Styling -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- Header Navigation -->
+    <header class="header">
+        <div class="header-container">
+            <a href="#" class="logo-link">
+                <div class="logo-circle"><i class="fa-solid fa-music"></i></div>
+                <span class="logo-text">Dứa Corner Player</span>
+            </a>
+            <nav class="nav-links">
+                <a href="#features" class="nav-item">Tính năng</a>
+                <a href="#themes" class="nav-item">Giao diện OBS</a>
+                <a href="#guide" class="nav-item">Hướng dẫn</a>
+                <a href="https://github.com/lupclky/dua-corner-player" target="_blank" class="nav-item nav-github"><i class="fa-brands fa-github"></i> GitHub</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="hero-container">
+            <h1 class="hero-title">Trình Quản Lý Nhạc Donate <span class="highlight-text">Tự Động</span> Cho Streamer</h1>
+            <p class="hero-subtitle">Tự động bắt nhạc từ cổng donate ZyPage, hiển thị Overlay chạy chữ cực đẹp trên OBS, tích hợp bộ lọc quảng cáo SponsorBlock thông minh giúp buổi phát sóng luôn mượt mà.</p>
+            <div class="hero-actions">
+                <a href="https://github.com/lupclky/dua-corner-player/releases" target="_blank" class="btn btn-primary" id="btn-hero-download">
+                    <i class="fa-solid fa-download"></i> Tải Bản v1.8.11 (Windows)
+                </a>
+                <a href="#themes" class="btn btn-secondary" id="btn-hero-preview">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> Xem Theme OBS
+                </a>
+            </div>
+            
+            <!-- Hero Mockup Window -->
+            <div class="app-mockup-wrapper">
+                <div class="app-mockup-header">
+                    <div class="app-mockup-dots">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                    <span class="app-mockup-title">DuaCornerPlayer — Bàn Điều Khiển Dashboard</span>
+                </div>
+                <div class="app-mockup-body">
+                    <!-- Giả lập Dashboard thu nhỏ -->
+                    <div class="mock-dashboard">
+                        <div class="mock-db-left">
+                            <div class="mock-db-card">
+                                <h4><i class="fa-solid fa-circle-play"></i> Đang Phát</h4>
+                                <div class="mock-db-song">
+                                    <div class="mock-vinyl-disc rotating">
+                                        <div class="mock-vinyl-label"><i class="fa-solid fa-music"></i></div>
+                                    </div>
+                                    <div class="mock-db-song-info">
+                                        <strong>Ngày Ấy (Lâm)</strong>
+                                        <span>Người tặng: Lâm · 50.000 VNĐ</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mock-db-right">
+                            <div class="mock-db-card">
+                                <h4><i class="fa-solid fa-list-ol"></i> Hàng đợi Nhạc</h4>
+                                <div class="mock-db-queue-item"><strong>1. Faded (Alan Walker)</strong><span>Khách · 20.000 VNĐ</span></div>
+                                <div class="mock-db-queue-item"><strong>2. Alone (Marshmello)</strong><span>Linh · 10.000 VNĐ</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Core Features Section -->
+    <section id="features" class="section features-section">
+        <div class="container">
+            <h2 class="section-title"><i class="fa-solid fa-star"></i> Tính Năng Nổi Bật</h2>
+            <div class="features-grid">
+                
+                <!-- Feature 1 -->
+                <div class="feature-card">
+                    <div class="feature-icon bg-yellow"><i class="fa-solid fa-bolt"></i></div>
+                    <h3>Đồng Bộ Realtime</h3>
+                    <p>Lắng nghe sự kiện donate bài hát mới từ Firebase ZyPage tức thì, tự động nạp vào hàng đợi và đồng bộ sang OBS Studio bằng giao thức MQTT thời gian thực.</p>
+                </div>
+                
+                <!-- Feature 2 -->
+                <div class="feature-card">
+                    <div class="feature-icon bg-blue"><i class="fa-solid fa-shield-halved"></i></div>
+                    <h3>Bỏ Qua Quảng Cáo</h3>
+                    <p>Nhờ tích hợp SponsorBlock API, trình phát tự động nhận diện và tua nhanh qua các phân đoạn quảng cáo, intro, outro dài dòng để giữ mạch stream mượt mà.</p>
+                </div>
+                
+                <!-- Feature 3 -->
+                <div class="feature-card">
+                    <div class="feature-icon bg-pink"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+                    <h3>Multi-Theme OBS</h3>
+                    <p>Hỗ trợ đa dạng phong cách thiết kế từ Dứa Brunch Brutalism tươi sáng, Spacegods huyền ảo, Cute Pink ngọt ngào đến Classic cổ điển sang trọng.</p>
+                </div>
+                
+                <!-- Feature 4 -->
+                <div class="feature-card">
+                    <div class="feature-icon bg-green"><i class="fa-solid fa-clock"></i></div>
+                    <h3>Giới Hạn Thời Gian</h3>
+                    <p>Đặt giới hạn thời lượng phát cố định cho mỗi bài hát hoặc cấu hình thông minh tăng thời gian phát tương ứng với từng mốc tiền donate.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Live Theme Showroom Section -->
+    <section id="themes" class="section themes-section">
+        <div class="container">
+            <h2 class="section-title"><i class="fa-solid fa-palette"></i> Giả Lập OBS Overlay Theo Theme</h2>
+            <p class="section-subtitle">Nhấp chọn các theme dưới đây để xem giao diện OBS Overlay tương tác đổi phong cách live tức thì!</p>
+            
+            <div class="theme-showcase-container">
+                <!-- Theme Tabs Selector -->
+                <div class="theme-tabs" id="theme-tabs-selector">
+                    <button class="theme-tab active" data-theme="pineapple" id="tab-pineapple">Theme Dứa</button>
+                    <button class="theme-tab" data-theme="spacegods" id="tab-spacegods">Cosmic Lavender</button>
+                    <button class="theme-tab" data-theme="cutepink" id="tab-cutepink">Cute Pink</button>
+                    <button class="theme-tab" data-theme="classic" id="tab-classic">Classic Cổ Điển</button>
+                    <button class="theme-tab" data-theme="classic-dark" id="tab-classic-dark">Classic Dark</button>
+                </div>
+
+                <!-- Simulated OBS Screen viewport (16:9 box with green screen background) -->
+                <div class="obs-screen-preview" id="obs-screen">
+                    <div class="chroma-key-badge">OBS Browser Source (100% Transparent)</div>
+                    
+                    <div id="theme-preview-container" class="theme-pineapple">
+                        <!-- Khung trình phát chính -->
+                        <div id="obs-player-main-container" class="obs-compact-player active">
+                            <div id="obs-player-main" class="obs-player-main">
+                                <!-- Ảnh đĩa xoay bên trái -->
+                                <div class="obs-cover-wrapper" id="obs-cover-wrapper">
+                                    <img id="obs-song-cover" class="obs-song-cover" src="https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=200&auto=format&fit=crop" alt="Cover">
+                                </div>
+                                <!-- Cần đọc đĩa than (chỉ hiển thị trong theme classic) -->
+                                <div class="obs-tonearm" id="obs-tonearm">
+                                    <div class="obs-tonearm-needle"></div>
+                                </div>
+                                
+                                <!-- Chi tiết bài hát bên phải -->
+                                <div class="obs-details">
+                                    <div id="obs-song-title-container" class="obs-song-title-container">
+                                        <div id="obs-song-title" class="obs-song-title marquee">Ngày Ấy — Lâm</div>
+                                    </div>
+                                    <div id="obs-donor-container" class="obs-donor-info" style="display: flex;">
+                                        <span id="obs-donor-name" class="obs-donor-name">Lâm</span>
+                                        <span id="obs-donor-amount" class="obs-donor-amount">50.000 VNĐ</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Thanh tiến trình phát nhạc thu gọn -->
+                            <div class="obs-progress-container">
+                                <span id="obs-current-time" class="obs-time">1:15</span>
+                                <div class="obs-progress-bar-bg">
+                                    <div id="obs-progress-fill" class="obs-progress-bar-fill" style="width: 45%;"></div>
+                                    <div id="obs-progress-thumb" class="obs-progress-bar-thumb"></div>
+                                </div>
+                                <span id="obs-total-time" class="obs-time">3:24</span>
+                            </div>
+                        </div>
+
+                        <!-- Khung thông báo bài tiếp theo dạng ngăn kéo trượt xuống -->
+                        <div id="obs-next-song-drawer" class="obs-next-song-drawer show">
+                            <span class="next-tag" id="obs-next-tag">TIẾP THEO</span>
+                            <div id="obs-next-title-container">
+                                <span id="obs-next-text" class="next-title">Faded — Alan Walker</span>
+                            </div>
+                            <!-- Hàng 2 và Hàng 3 cho Theme Cổ Điển -->
+                            <div id="obs-next-donor-info" class="obs-next-donor-info" style="display: none;">
+                                <span id="obs-next-donor-name" class="obs-next-donor-name">Khách</span>
+                                <span id="obs-next-donor-amount" class="obs-next-donor-amount">20.000 VNĐ</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Usage Guide Section -->
+    <section id="guide" class="section guide-section">
+        <div class="container">
+            <h2 class="section-title"><i class="fa-solid fa-circle-info"></i> Hướng Dẫn Cấu Hình 3 Bước</h2>
+            <div class="guide-steps">
+                
+                <!-- Step 1 -->
+                <div class="guide-step-card">
+                    <div class="step-badge">01</div>
+                    <h3>Kết nối live ZyPage</h3>
+                    <p>Khởi động ứng dụng, chuyển sang tab **Cấu hình**, dán liên kết hiển thị nhạc donate ZyPage (hoặc nhập thủ công Shop ID) rồi ấn **Kết nối** để bật đồng bộ realtime.</p>
+                </div>
+                
+                <!-- Step 2 -->
+                <div class="guide-step-card">
+                    <div class="step-badge">02</div>
+                    <h3>Thêm vào OBS Studio</h3>
+                    <p>Sao chép **Link OBS** cung cấp trên Dashboard. Tạo một nguồn **Browser Source** mới trong OBS, dán liên kết vào, đặt độ phân giải là `1920x1080` (hoặc scale zoom tùy thích).</p>
+                </div>
+                
+                <!-- Step 3 -->
+                <div class="guide-step-card">
+                    <div class="step-badge">03</div>
+                    <h3>Cấu hình nâng cao</h3>
+                    <p>Tùy chọn kích hoạt SponsorBlock để tự động bỏ qua quảng cáo, thiết lập giới hạn thời gian phát theo mốc donate, chọn theme yêu thích và bắt đầu buổi stream!</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-container">
+            <div class="footer-left">
+                <span class="footer-brand">Dứa Corner Player</span>
+                <p>Giải pháp phát nhạc donate tối ưu, thông minh và tinh tế nhất dành cho Streamer.</p>
+            </div>
+            <div class="footer-right">
+                <a href="https://github.com/lupclky/dua-corner-player" target="_blank" class="footer-link"><i class="fa-brands fa-github"></i> GitHub</a>
+                <a href="https://zypage.com" target="_blank" class="footer-link"><i class="fa-solid fa-link"></i> Cổng ZyPage</a>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            &copy; 2026 Dứa Corner. Bản quyền được bảo lưu. Thiết kế theo phong cách Cute Anime Brutalism.
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="script.js"></script>
+</body>
+</html>
