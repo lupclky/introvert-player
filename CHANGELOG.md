@@ -1,5 +1,9 @@
 # Nhật ký thay đổi (Changelog) - Introvert Player
 
+## [2.0.5] - 2026-06-09
+### Added
+- Thêm hiệu ứng đổi bài hạt ngầu & dễ thương cho giao diện Dứa mặc định (Pineapple Theme): Đĩa album co giãn/xoay tròn nảy động, chữ thông tin trượt đàn hồi, và lắc nhẹ toàn bộ widget.
+
 ## [2.0.4] - 2026-06-09
 ### Added
 - Phát hành phiên bản 2.0.4 phục vụ thử nghiệm tính năng tự động kiểm tra và nâng cấp.
