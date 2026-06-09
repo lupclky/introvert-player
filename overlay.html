@@ -2972,7 +2972,46 @@
                     
                     // Hiện empty overlay đè lên player
                     const emptyOverlay = document.getElementById('obs-empty-overlay');
-                           // Định nghĩa hàm cập nhật nội dung chữ và marquee
+                    if (emptyOverlay) {
+                        emptyOverlay.classList.add('active');
+                        const storedMsg = localStorage.getItem('dua_empty_queue_message');
+                        emptyOverlay.textContent = storedMsg || 'Order nhạc tự động Zypage 50k';
+                    }
+                    
+                    const nextSongDrawer = document.getElementById('obs-next-song-drawer');
+                    if (nextSongDrawer) nextSongDrawer.classList.remove('show');
+                    
+                    if (overlayPlayer) {
+                        try { overlayPlayer.destroy(); } catch (e) {}
+                        overlayPlayer = null;
+                        document.getElementById('obs-youtube-area').innerHTML = '<div id="obs-youtube-placeholder"></div>';
+                    }
+                    if (spotifyEmbedController) {
+                        try { spotifyEmbedController.pause(); } catch(e){}
+                    }
+                    if (soundCloudWidget) {
+                        try { soundCloudWidget.pause(); } catch(e){}
+                    }
+                    
+                    lastSongId = 'no_song';
+                    currentVideoId = null;
+                    return;
+                } else {
+                    if (destroyTimeout) {
+                        clearTimeout(destroyTimeout);
+                        destroyTimeout = null;
+                    }
+                    // Ẩn empty overlay khi có bài hát mới
+                    const emptyOverlay = document.getElementById('obs-empty-overlay');
+                    if (emptyOverlay) emptyOverlay.classList.remove('active');
+                }
+
+                const data = JSON.parse(dataRaw);
+                skipSegments = data.skipSegments || [];
+                
+                const isNewSong = (lastSongId !== data.id);
+
+                // Định nghĩa hàm cập nhật nội dung chữ và marquee
                 const updateTextContent = (songData) => {
                     title.textContent = songData.title || "Chưa có tên bài hát";
                     if (songData.isOwnerAdd) {
