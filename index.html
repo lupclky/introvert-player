@@ -185,6 +185,10 @@
                             </div>
                             <!-- Hàng 2: Tên người gửi, Số tiền, Nút thêm -->
                             <div style="display: flex; gap: 0.5rem; width: 100%; align-items: center; justify-content: flex-end; flex-wrap: wrap;">
+                                <label class="sb-checkbox-label" style="font-size: 0.85rem; cursor: pointer; margin-bottom: 0; user-select: none; display: inline-flex; align-items: center; gap: 0.25rem; margin-right: auto;">
+                                    <input type="checkbox" class="sb-checkbox" id="quick-owner-add">
+                                    <span>Chủ kênh thêm nhạc</span>
+                                </label>
                                 <input id="quick-donor-name" class="dua-input" style="width: 170px; font-size: 0.85rem; padding: 0.35rem 0.6rem;" type="text" placeholder="Tên người gửi (Introvert)...">
                                 <input id="quick-donor-amount" class="dua-input" style="width: 180px; font-size: 0.85rem; padding: 0.35rem 0.6rem;" type="number" placeholder="Số tiền VNĐ (mặc định: 100M)..." min="0">
                                 <button type="submit" class="dua-btn dua-btn-primary" style="padding: 0.35rem 0.8rem; font-size: 0.85rem; white-space: nowrap; display: inline-flex; align-items: center; gap: 0.3rem; margin-left: auto;"><i class="fa-solid fa-play"></i> Thêm & Phát</button>
@@ -345,17 +349,6 @@
                         <div style="display: flex; gap: 0.5rem; align-items: center; width: 100%;">
                             <input id="overlay-donate-action-input" class="dua-input" type="text" maxlength="50" placeholder="gửi một quả dứa" style="font-size: 0.85rem; flex-grow: 1; transition: border-color 0.2s ease;">
                             <button id="btn-overlay-donate-action-apply" class="dua-btn" style="padding: 0.35rem 0.8rem; font-size: 0.85rem; background: var(--pineapple-yellow); border-width: 2px; box-shadow: 2px 2px 0px var(--pineapple-text); white-space: nowrap;">Áp dụng</button>
-                        </div>
-                    </div>
-                    <div class="form-group" style="margin-top: 1rem; border-top: 2px dashed var(--pineapple-border-color); padding-top: 0.8rem;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                            <label style="font-weight: 700; font-size: 0.95rem; color: var(--pineapple-text); margin: 0; cursor: pointer; display: flex; align-items: center; gap: 0.4rem;" for="overlay-self-donate-toggle">
-                                <input id="overlay-self-donate-toggle" type="checkbox" style="width: 1.15rem; height: 1.15rem; cursor: pointer; accent-color: var(--pineapple-orange); margin: 0;">
-                                Chủ kênh tự donate (ẩn tên/tiền donate)
-                            </label>
-                        </div>
-                        <div style="font-size: 0.8rem; color: #6B7280; margin-top: 0.25rem; font-weight: 600; padding-left: 1.55rem;">
-                            Khi bật, phần hiển thị tên và số tiền của người donate dưới tên bài hát sẽ được thay thế bằng dòng thông báo mặc định (VD: Order nhạc tự động Zypage 50k).
                         </div>
                     </div>
                 </div>

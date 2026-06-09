@@ -180,7 +180,6 @@ const state = {
     opacity: localStorage.getItem('dua_opacity') || '100',
     emptyQueueMessage: localStorage.getItem('dua_empty_queue_message') || 'Order nhạc tự động Zypage 50k',
     alertActionText: localStorage.getItem('dua_alert_action_text') || 'gửi một quả dứa',
-    selfDonateEnabled: localStorage.getItem('dua_self_donate') === 'true',
 
     // Cờ tạm thời: bỏ qua giới hạn thời gian cho bài hát hiện tại
     bypassCurrentSongDuration: false,
@@ -480,48 +479,22 @@ document.addEventListener("DOMContentLoaded", () => {
                 alert("Đã áp dụng và đồng bộ chữ hiển thị Donate mới lên OBS Overlay!");
             });
         }
-    // Thiết lập bật/tắt chủ kênh tự donate (ẩn tên/tiền donate)
-    const selfDonateToggle = document.getElementById('overlay-self-donate-toggle');
-    if (selfDonateToggle) {
-        selfDonateToggle.checked = state.selfDonateEnabled;
-        selfDonateToggle.addEventListener('change', () => {
-            const isChecked = selfDonateToggle.checked;
-            state.selfDonateEnabled = isChecked;
-            localStorage.setItem('dua_self_donate', isChecked ? 'true' : 'false');
-            updateObsUrlDisplay();
-            publishMqtt('self_donate_change', { enabled: isChecked });
-            logSystem(`Đã ${isChecked ? 'BẬT' : 'TẮT'} chế độ chủ kênh tự donate (ẩn tên/tiền donate trên overlay)`, 'system');
-            
-            // Nếu có bài hát đang phát, chúng ta publish lại bài hát để kích hoạt updateOverlayUI
-            if (state.currentSong) {
-                const nextSong = state.queue.find(s => String(s.id) !== String(state.currentSong.id));
-                const payloadSong = {
-                    id: state.currentSong.id,
-                    type: state.currentSong.type || 'youtube',
-                    videoId: state.currentSong.videoId || null,
-                    soundcloudUrl: state.currentSong.soundcloudUrl || null,
-                    spotifyId: state.currentSong.spotifyId || null,
-                    title: state.currentSong.title,
-                    thumbnail: state.currentSong.thumbnail,
-                    donorName: state.currentSong.donorName,
-                    amount: state.currentSong.amount,
-                    message: state.currentSong.message,
-                    start: state.currentSong.start || 0,
-                    end: state.currentSong.end || null,
-                    skipSegments: state.skipSegments || [],
-                    maxDuration: state.bypassCurrentSongDuration ? 0 : calculateMaxDurationForSong(state.currentSong.amount),
-                    nextSongTitle: nextSong ? nextSong.title : null,
-                    nextSongDonor: nextSong ? nextSong.donorName : null,
-                    nextSongAmount: nextSong ? nextSong.amount : null
-                };
-                publishMqtt('current_song', payloadSong);
-            }
-        });
     }
 
     // Khôi phục trạng thái Dark Mode
     const isDark = localStorage.getItem('dua_dark_mode') === 'true';
     toggleDarkMode(isDark);
+
+    // Thiết lập cài đặt checkbox Chủ kênh thêm nhạc
+    const quickOwnerAddCheckbox = document.getElementById('quick-owner-add');
+    if (quickOwnerAddCheckbox) {
+        const isQuickOwnerAdd = localStorage.getItem('dua_quick_owner_add') === 'true';
+        quickOwnerAddCheckbox.checked = isQuickOwnerAdd;
+        quickOwnerAddCheckbox.addEventListener('change', (e) => {
+            localStorage.setItem('dua_quick_owner_add', e.target.checked ? 'true' : 'false');
+            logSystem(`Cập nhật chế độ Chủ kênh thêm nhạc: ${e.target.checked ? 'BẬT' : 'TẮT'}`, 'system');
+        });
+    }
 
     // Thiết lập input Giới hạn thời gian phát tối đa
     const maxDurToggle = document.getElementById('max-duration-toggle');
@@ -1098,6 +1071,9 @@ async function handleQuickAddSubmit(event) {
         const amountInput = document.getElementById('quick-donor-amount');
         const donorAmount = (amountInput && amountInput.value.trim() !== '') ? Number(amountInput.value) : 100000000;
 
+        const ownerAddCheckbox = document.getElementById('quick-owner-add');
+        const isOwnerAdd = ownerAddCheckbox ? ownerAddCheckbox.checked : false;
+
         const newSong = {
             id: Date.now() + Math.random().toString(36).substr(2, 5),
             type: type,
@@ -1112,7 +1088,8 @@ async function handleQuickAddSubmit(event) {
             start: 0,
             end: null,
             timestamp: Date.now(),
-            localAddedAt: Date.now()
+            localAddedAt: Date.now(),
+            isOwnerAdd: isOwnerAdd
         };
 
         insertSongSmartly(newSong);
@@ -1290,6 +1267,7 @@ function sortAndRefreshQueue(forceSort = false) {
                 payload.nextSongTitle = nextSong ? nextSong.title : null;
                 payload.nextSongDonor = nextSong ? nextSong.donorName : null;
                 payload.nextSongAmount = nextSong ? nextSong.amount : null;
+                payload.nextSongIsOwnerAdd = nextSong ? (nextSong.isOwnerAdd || false) : false;
                 // Giữ bypass: nếu đang bypass giới hạn, giữ maxDuration = 0 trong payload
                 if (state.bypassCurrentSongDuration) {
                     payload.maxDuration = 0;
@@ -1565,13 +1543,15 @@ async function playSong(song) {
         donorName: song.donorName,
         amount: song.amount,
         message: song.message,
+        isOwnerAdd: song.isOwnerAdd || false,
         start: song.start || 0,
         end: song.end || null,
         skipSegments: state.skipSegments || [],
         maxDuration: calculateMaxDurationForSong(song.amount),
         nextSongTitle: nextSong ? nextSong.title : null,
         nextSongDonor: nextSong ? nextSong.donorName : null,
-        nextSongAmount: nextSong ? nextSong.amount : null
+        nextSongAmount: nextSong ? nextSong.amount : null,
+        nextSongIsOwnerAdd: nextSong ? (nextSong.isOwnerAdd || false) : false
     };
 
     localStorage.setItem('dua_current_song', JSON.stringify(payload));
@@ -1898,6 +1878,7 @@ function removeSongFromQueue(songId, refreshUI = true) {
                     payload.nextSongTitle = nextSong ? nextSong.title : null;
                     payload.nextSongDonor = nextSong ? nextSong.donorName : null;
                     payload.nextSongAmount = nextSong ? nextSong.amount : null;
+                    payload.nextSongIsOwnerAdd = nextSong ? (nextSong.isOwnerAdd || false) : false;
                     localStorage.setItem('dua_current_song', JSON.stringify(payload));
                     publishMqtt('current_song', payload);
                 } catch (e) {
@@ -1965,6 +1946,7 @@ function moveQueueItemUp(songId) {
                     payload.nextSongTitle = nextSong ? nextSong.title : null;
                     payload.nextSongDonor = nextSong ? nextSong.donorName : null;
                     payload.nextSongAmount = nextSong ? nextSong.amount : null;
+                    payload.nextSongIsOwnerAdd = nextSong ? (nextSong.isOwnerAdd || false) : false;
                     localStorage.setItem('dua_current_song', JSON.stringify(payload));
                     publishMqtt('current_song', payload);
                 } catch (e) {
@@ -2003,6 +1985,7 @@ function moveQueueItemDown(songId) {
                     payload.nextSongTitle = nextSong ? nextSong.title : null;
                     payload.nextSongDonor = nextSong ? nextSong.donorName : null;
                     payload.nextSongAmount = nextSong ? nextSong.amount : null;
+                    payload.nextSongIsOwnerAdd = nextSong ? (nextSong.isOwnerAdd || false) : false;
                     localStorage.setItem('dua_current_song', JSON.stringify(payload));
                     publishMqtt('current_song', payload);
                 } catch (e) {
@@ -2872,9 +2855,6 @@ function updateObsUrlDisplay() {
     if (state.alertActionText && state.alertActionText !== 'gửi một quả dứa') {
         url += `&alert_action=${encodeURIComponent(state.alertActionText)}`;
     }
-    if (state.selfDonateEnabled) {
-        url += `&self_donate=true`;
-    }
     
     obsUrlInput.value = url;
 }
@@ -3015,8 +2995,6 @@ function handleMqttMessage(topic, messageStr) {
             publishMqtt('max_duration', { value: currentDur });
             // Gửi alert action text
             publishMqtt('alert_action_text', { text: state.alertActionText });
-            // Gửi cấu hình self_donate
-            publishMqtt('self_donate_change', { enabled: state.selfDonateEnabled });
             // Gửi bài hát hiện tại (nếu có)
             if (state.currentSong) {
                 // Gửi lời hiển thị khi hết nhạc
@@ -3252,6 +3230,9 @@ function addSearchResultToQueue(video) {
     const amountInput = document.getElementById('quick-donor-amount');
     const donorAmount = (amountInput && amountInput.value.trim() !== '') ? Number(amountInput.value) : 100000000;
 
+    const ownerAddCheckbox = document.getElementById('quick-owner-add');
+    const isOwnerAdd = ownerAddCheckbox ? ownerAddCheckbox.checked : false;
+
     const newSong = {
         id: Date.now() + Math.random().toString(36).substr(2, 5),
         type: 'youtube',
@@ -3267,7 +3248,8 @@ function addSearchResultToQueue(video) {
         end: null,
         timestamp: Date.now(),
         localAddedAt: Date.now(),
-        views: video.views || ''
+        views: video.views || '',
+        isOwnerAdd: isOwnerAdd
     };
     
     insertSongSmartly(newSong);
