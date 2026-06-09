@@ -2127,17 +2127,25 @@
                     nextTextEl.style.overflow = 'hidden';
                     if (song.nextSongIsOwnerAdd) {
                         const storedMsg = localStorage.getItem('dua_empty_queue_message') || 'Order nhạc tự động Zypage 50k';
-                        if (nextDonorName) nextDonorName.textContent = storedMsg;
-                        if (nextDonorName) nextDonorName.style.maxWidth = 'none';
-                        if (nextDonorAmount) nextDonorAmount.style.display = 'none';
+                        if (nextDonorName) {
+                            nextDonorName.textContent = storedMsg;
+                            nextDonorName.style.setProperty('max-width', 'none', 'important');
+                            nextDonorName.style.setProperty('white-space', 'normal', 'important');
+                        }
+                        if (nextDonorAmount) {
+                            nextDonorAmount.style.setProperty('display', 'none', 'important');
+                        }
                     } else {
-                        if (nextDonorName) nextDonorName.textContent = song.nextSongDonor || 'Introvert';
-                        if (nextDonorName) nextDonorName.style.maxWidth = '';
+                        if (nextDonorName) {
+                            nextDonorName.textContent = song.nextSongDonor || 'Introvert';
+                            nextDonorName.style.removeProperty('max-width');
+                            nextDonorName.style.removeProperty('white-space');
+                        }
                         if (nextDonorAmount) {
                             nextDonorAmount.textContent = (song.nextSongAmount && Number(song.nextSongAmount) > 0) 
                                 ? Number(song.nextSongAmount).toLocaleString('vi-VN') + ' VNĐ' 
                                 : '0 VNĐ';
-                            nextDonorAmount.style.display = '';
+                            nextDonorAmount.style.removeProperty('display');
                         }
                     }
                 } else {
@@ -3004,13 +3012,15 @@
                     if (data.isOwnerAdd) {
                         const storedMsg = localStorage.getItem('dua_empty_queue_message') || 'Order nhạc tự động Zypage 50k';
                         donorName.textContent = storedMsg;
-                        donorName.style.maxWidth = 'none';
-                        donorAmount.style.display = 'none';
+                        donorName.style.setProperty('max-width', 'none', 'important');
+                        donorName.style.setProperty('white-space', 'normal', 'important');
+                        donorAmount.style.setProperty('display', 'none', 'important');
                     } else {
                         donorName.textContent = data.donorName || "Khách";
-                        donorName.style.maxWidth = '';
+                        donorName.style.removeProperty('max-width');
+                        donorName.style.removeProperty('white-space');
                         donorAmount.textContent = data.amount ? data.amount.toLocaleString('vi-VN') + ' VNĐ' : '0 VNĐ';
-                        donorAmount.style.display = '';
+                        donorAmount.style.removeProperty('display');
                     }
                     donorContainer.style.display = 'flex';
                     
