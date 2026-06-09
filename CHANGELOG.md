@@ -1,5 +1,9 @@
 # Nhật ký thay đổi (Changelog) - Introvert Player
 
+## [2.0.4] - 2026-06-09
+### Added
+- Phát hành phiên bản 2.0.4 phục vụ thử nghiệm tính năng tự động kiểm tra và nâng cấp.
+
 ## [2.0.3] - 2026-06-09
 ### Fixed
 - Khôi phục cơ chế tự động kiểm tra và tải bản cập nhật trực tiếp từ GitHub Releases (truy vấn từ kho phát hành công khai `lupclky/dua-corner-player`).
