@@ -1,5 +1,10 @@
 # Nhật ký thay đổi (Changelog) - Introvert Player
 
+## [2.0.6] - 2026-06-09
+### Added
+- Giữ lại hiệu ứng chuyển chữ (trượt & mờ dần đàn hồi), lược bỏ các hiệu ứng đĩa xoay nảy và lắc widget ở theme Dứa mặc định.
+- Mở rộng hỗ trợ hiệu ứng chữ chuyển bài hát này cho các theme: TFT Spacegods (`theme-spacegods`) và Cute Pink (`theme-cutepink`).
+
 ## [2.0.5] - 2026-06-09
 ### Added
 - Thêm hiệu ứng đổi bài hạt ngầu & dễ thương cho giao diện Dứa mặc định (Pineapple Theme): Đĩa album co giãn/xoay tròn nảy động, chữ thông tin trượt đàn hồi, và lắc nhẹ toàn bộ widget.

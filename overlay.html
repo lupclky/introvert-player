@@ -1857,49 +1857,8 @@
             transition: transform 0.6s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
         }
 
-        /* Animation thay đĩa cho theme Dứa mặc định (Pineapple) */
-        @keyframes pineapple-disc-change {
-            0% {
-                transform: scale(1) rotate(0deg);
-                filter: blur(0px);
-                box-shadow: 6px 6px 0px var(--theme-border-color);
-            }
-            30% {
-                transform: scale(0.2) rotate(-180deg);
-                opacity: 0.3;
-                filter: blur(2px);
-                box-shadow: 0px 0px 0px var(--theme-border-color);
-            }
-            31% {
-                transform: scale(0.2) rotate(180deg);
-                opacity: 0;
-            }
-            55% {
-                transform: scale(1.25) rotate(15deg);
-                opacity: 1;
-                filter: blur(0px);
-                box-shadow: 8px 8px 0px var(--theme-border-color);
-            }
-            75% {
-                transform: scale(0.9) rotate(-8deg);
-                box-shadow: 4px 4px 0px var(--theme-border-color);
-            }
-            90% {
-                transform: scale(1.05) rotate(3deg);
-                box-shadow: 7px 7px 0px var(--theme-border-color);
-            }
-            100% {
-                transform: scale(1) rotate(0deg);
-                box-shadow: 6px 6px 0px var(--theme-border-color);
-            }
-        }
-
-        .obs-cover-wrapper.changing-pineapple-disc {
-            animation: pineapple-disc-change 1.0s cubic-bezier(0.34, 1.56, 0.64, 1) forwards !important;
-        }
-
-        /* Animation cho phần chữ thông tin bài hát */
-        @keyframes pineapple-text-change {
+        /* Animation cho phần chữ thông tin bài hát (áp dụng cho Pineapple, Spacegods, Cute Pink) */
+        @keyframes text-change {
             0% {
                 transform: translateY(0) scale(1);
                 opacity: 1;
@@ -1929,24 +1888,10 @@
             }
         }
 
-        .obs-details.changing-pineapple-text #obs-song-title-container,
-        .obs-details.changing-pineapple-text .obs-donor-info,
-        .obs-details.changing-pineapple-text .obs-song-message {
-            animation: pineapple-text-change 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-        }
-
-        /* Thêm hiệu ứng lắc lư dễ thương cho toàn bộ widget khi đổi bài */
-        @keyframes pineapple-widget-bounce {
-            0% { transform: translateY(0) rotate(0deg); }
-            20% { transform: translateY(6px) rotate(-1.5deg); }
-            45% { transform: translateY(-8px) rotate(2deg); }
-            70% { transform: translateY(3px) rotate(-0.5deg); }
-            85% { transform: translateY(-1px) rotate(0.2deg); }
-            100% { transform: translateY(0) rotate(0deg); }
-        }
-
-        .obs-compact-player.changing-pineapple-widget {
-            animation: pineapple-widget-bounce 0.8s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+        .obs-details.changing-text #obs-song-title-container,
+        .obs-details.changing-text .obs-donor-info,
+        .obs-details.changing-text .obs-song-message {
+            animation: text-change 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
         }
     </style>
 </head>
@@ -3027,44 +2972,36 @@
                     
                     // Hiện empty overlay đè lên player
                     const emptyOverlay = document.getElementById('obs-empty-overlay');
-                    if (emptyOverlay) {
-                        emptyOverlay.classList.add('active');
-                        const storedMsg = localStorage.getItem('dua_empty_queue_message');
-                        emptyOverlay.textContent = storedMsg || 'Order nhạc tự động Zypage 50k';
+                           // Định nghĩa hàm cập nhật nội dung chữ và marquee
+                const updateTextContent = (songData) => {
+                    title.textContent = songData.title || "Chưa có tên bài hát";
+                    if (songData.isOwnerAdd) {
+                        const storedMsg = localStorage.getItem('dua_empty_queue_message') || 'Order nhạc tự động Zypage 50k';
+                        donorName.textContent = storedMsg;
+                        donorName.style.setProperty('max-width', 'none', 'important');
+                        donorName.style.setProperty('white-space', 'normal', 'important');
+                        donorAmount.style.setProperty('display', 'none', 'important');
+                    } else {
+                        donorName.textContent = songData.donorName || "Khách";
+                        donorName.style.removeProperty('max-width');
+                        donorName.style.removeProperty('white-space');
+                        donorAmount.textContent = songData.amount ? songData.amount.toLocaleString('vi-VN') + ' VNĐ' : '0 VNĐ';
+                        donorAmount.style.removeProperty('display');
                     }
+                    donorContainer.style.display = 'flex';
                     
-                    const nextSongDrawer = document.getElementById('obs-next-song-drawer');
-                    if (nextSongDrawer) nextSongDrawer.classList.remove('show');
-                    
-                    if (overlayPlayer) {
-                        try { overlayPlayer.destroy(); } catch (e) {}
-                        overlayPlayer = null;
-                        document.getElementById('obs-youtube-area').innerHTML = '<div id="obs-youtube-placeholder"></div>';
+                    if (songData.message) {
+                        songMessage.textContent = `"${songData.message}"`;
+                        songMessage.style.display = 'block';
+                    } else {
+                        songMessage.style.display = 'none';
                     }
-                    if (spotifyEmbedController) {
-                        try { spotifyEmbedController.pause(); } catch(e){}
-                    }
-                    if (soundCloudWidget) {
-                        try { soundCloudWidget.pause(); } catch(e){}
-                    }
-                    
-                    lastSongId = 'no_song';
-                    currentVideoId = null;
-                    return;
-                } else {
-                    if (destroyTimeout) {
-                        clearTimeout(destroyTimeout);
-                        destroyTimeout = null;
-                    }
-                    // Ẩn empty overlay khi có bài hát mới
-                    const emptyOverlay = document.getElementById('obs-empty-overlay');
-                    if (emptyOverlay) emptyOverlay.classList.remove('active');
-                }
 
-                const data = JSON.parse(dataRaw);
-                skipSegments = data.skipSegments || [];
-                
-                const isNewSong = (lastSongId !== data.id);
+                    // Tự động kiểm tra độ rộng chữ của tiêu đề để kích hoạt animation chạy dòng (marquee)
+                    const titleContainer = document.getElementById('obs-song-title-container');
+                    applyMarquee(titleContainer, title, songData.title || "Chưa có tên bài hát", 30);
+                };
+
                 // Cập nhật thông tin bài hát
                 if (isNewSong) {
                     lastSkippedSegmentKey = null;
@@ -3097,59 +3034,34 @@
                         } else {
                             cover.src = data.thumbnail || "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=200&auto=format&fit=crop";
                         }
-                    } else if (currentTheme === 'pineapple') {
-                        const obsCoverWrapper = document.getElementById('obs-cover-wrapper');
-                        const widget = document.getElementById('obs-player-widget');
-                        const details = document.querySelector('.obs-details');
-                        
-                        if (obsCoverWrapper && widget && details) {
-                            widget.classList.add('changing-pineapple-widget');
-                            obsCoverWrapper.classList.add('changing-pineapple-disc');
-                            details.classList.add('changing-pineapple-text');
-                            
-                            // Cập nhật ảnh đĩa mới ở giữa hiệu ứng co xoay (sau 300ms)
-                            setTimeout(() => {
-                                cover.src = data.thumbnail || "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=200&auto=format&fit=crop";
-                            }, 300);
-                            
-                            // Dọn dẹp các class sau khi hoàn tất (sau 1.0s)
-                            setTimeout(() => {
-                                widget.classList.remove('changing-pineapple-widget');
-                                obsCoverWrapper.classList.remove('changing-pineapple-disc');
-                                details.classList.remove('changing-pineapple-text');
-                            }, 1000);
-                        } else {
-                            cover.src = data.thumbnail || "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=200&auto=format&fit=crop";
-                        }
                     } else {
+                        // Với các theme khác, cập nhật ảnh bìa ngay lập tức
                         cover.src = data.thumbnail || "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=200&auto=format&fit=crop";
                     }
-                    title.textContent = data.title || "Chưa có tên bài hát";
-                    if (data.isOwnerAdd) {
-                        const storedMsg = localStorage.getItem('dua_empty_queue_message') || 'Order nhạc tự động Zypage 50k';
-                        donorName.textContent = storedMsg;
-                        donorName.style.setProperty('max-width', 'none', 'important');
-                        donorName.style.setProperty('white-space', 'normal', 'important');
-                        donorAmount.style.setProperty('display', 'none', 'important');
-                    } else {
-                        donorName.textContent = data.donorName || "Khách";
-                        donorName.style.removeProperty('max-width');
-                        donorName.style.removeProperty('white-space');
-                        donorAmount.textContent = data.amount ? data.amount.toLocaleString('vi-VN') + ' VNĐ' : '0 VNĐ';
-                        donorAmount.style.removeProperty('display');
-                    }
-                    donorContainer.style.display = 'flex';
-                    
-                    if (data.message) {
-                        songMessage.textContent = `"${data.message}"`;
-                        songMessage.style.display = 'block';
-                    } else {
-                        songMessage.style.display = 'none';
-                    }
 
-                    // Tự động kiểm tra độ rộng chữ của tiêu đề để kích hoạt animation chạy dòng (marquee)
-                    const titleContainer = document.getElementById('obs-song-title-container');
-                    applyMarquee(titleContainer, title, data.title || "Chưa có tên bài hát", 30);
+                    // Kích hoạt hiệu ứng chữ cho theme Pineapple, Spacegods và Cute Pink
+                    const isTextAnimTheme = (currentTheme === 'pineapple' || currentTheme === 'spacegods' || currentTheme === 'cutepink');
+                    if (isTextAnimTheme) {
+                        const details = document.querySelector('.obs-details');
+                        if (details) {
+                            details.classList.add('changing-text');
+                            
+                            // Trì hoãn cập nhật nội dung chữ cho đến khi chữ cũ mờ hẳn (sau 250ms)
+                            setTimeout(() => {
+                                updateTextContent(data);
+                            }, 250);
+                            
+                            // Dọn dẹp class sau 1.0s
+                            setTimeout(() => {
+                                details.classList.remove('changing-text');
+                            }, 1000);
+                        } else {
+                            updateTextContent(data);
+                        }
+                    } else {
+                        // Cập nhật chữ lập tức với các theme không hỗ trợ hiệu ứng chữ (Classic)
+                        updateTextContent(data);
+                    }
                     
                     lastSongId = data.id;
                 }
