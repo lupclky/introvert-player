@@ -1,5 +1,10 @@
 # Nhật ký thay đổi (Changelog) - Introvert Player
 
+## [2.0.3] - 2026-06-09
+### Fixed
+- Khôi phục cơ chế tự động kiểm tra và tải bản cập nhật trực tiếp từ GitHub Releases (truy vấn từ kho phát hành công khai `lupclky/dua-corner-player`).
+- Sửa lỗi thiếu các IPC handler (`check-for-updates`, `start-update`) và API tương ứng trong preload script và main process.
+
 ## [2.0.2] - 2026-06-09
 ### Added
 - Thêm checkbox bật/tắt **"Chủ kênh thêm nhạc"** trong phần Thêm nhanh ngoài Dashboard. Khi kích hoạt, các bài hát do Streamer thêm thủ công sẽ ẩn thông tin tên & tiền donate giả lập trên OBS Overlay, thay thế bằng lời nhắn chờ mặc định (VD: `Order nhạc tự động Zypage 50k`).

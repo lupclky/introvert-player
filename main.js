@@ -1,7 +1,9 @@
 const { app, BrowserWindow, Menu, Tray, ipcMain } = require('electron');
 const http = require('http');
+const https = require('https');
 const fs = require('fs');
 const path = require('path');
+const { spawn } = require('child_process');
 
 let mainWindow = null;
 let server = null;
@@ -802,4 +804,158 @@ ipcMain.handle('get-youtube-metadata', async (event, videoId) => {
     }
   });
 });
+
+// Cấu hình cập nhật tự động từ GitHub Release
+const GITHUB_REPO = 'lupclky/dua-corner-player';
+
+function isNewerVersion(latest, current) {
+  const parse = v => v.replace(/^v/, '').split('.').map(Number);
+  const l = parse(latest);
+  const c = parse(current);
+  for (let i = 0; i < 3; i++) {
+    if ((l[i] || 0) > (c[i] || 0)) return true;
+    if ((l[i] || 0) < (c[i] || 0)) return false;
+  }
+  return false;
+}
+
+ipcMain.handle('check-for-updates', async () => {
+  return new Promise((resolve) => {
+    const options = {
+      hostname: 'api.github.com',
+      path: `/repos/${GITHUB_REPO}/releases/latest`,
+      headers: {
+        'User-Agent': 'Electron-Update-Checker'
+      }
+    };
+
+    https.get(options, (res) => {
+      if (res.statusCode !== 200) {
+        resolve({ hasUpdate: false, error: `GitHub API returned status ${res.statusCode}` });
+        return;
+      }
+
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        try {
+          const release = JSON.parse(data);
+          const latestVersion = release.tag_name;
+          const currentVersion = app.getVersion();
+
+          if (isNewerVersion(latestVersion, currentVersion)) {
+            const exeAsset = release.assets.find(asset => asset.name.toLowerCase().endsWith('.exe'));
+            if (exeAsset) {
+              resolve({
+                hasUpdate: true,
+                latestVersion: latestVersion,
+                downloadUrl: exeAsset.browser_download_url,
+                releaseNotes: release.body
+              });
+              return;
+            }
+          }
+          resolve({ hasUpdate: false });
+        } catch (e) {
+          resolve({ hasUpdate: false, error: e.message });
+        }
+      });
+    }).on('error', (err) => {
+      resolve({ hasUpdate: false, error: err.message });
+    });
+  });
+});
+
+ipcMain.on('start-update', (event, downloadUrl) => {
+  const tempPath = app.getPath('temp');
+  const destPath = path.join(tempPath, 'IntrovertPlayer_Setup.exe');
+
+  downloadFileWithProgress(downloadUrl, destPath, 
+    (percent) => {
+      if (mainWindow) {
+        mainWindow.webContents.send('update-progress', percent);
+      }
+    },
+    () => {
+      if (mainWindow) {
+        mainWindow.webContents.send('update-downloaded');
+      }
+      
+      // Khởi chạy trình cài đặt và tự động thoát app
+      setTimeout(() => {
+        try {
+          const child = spawn(destPath, [], {
+            detached: true,
+            stdio: 'ignore'
+          });
+          child.unref();
+          app.isQuitting = true;
+          app.quit();
+        } catch (e) {
+          if (mainWindow) {
+            mainWindow.webContents.send('update-error', `Không thể khởi chạy trình cài đặt: ${e.message}`);
+          }
+        }
+      }, 1000);
+    },
+    (err) => {
+      if (mainWindow) {
+        mainWindow.webContents.send('update-error', err.message);
+      }
+    }
+  );
+});
+
+function downloadFileWithProgress(url, destPath, onProgress, onSuccess, onError) {
+  const options = {
+    headers: {
+      'User-Agent': 'Electron-Update-Checker'
+    }
+  };
+
+  https.get(url, options, (res) => {
+    // Xử lý chuyển hướng (301, 302, 307, 308)
+    if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+      downloadFileWithProgress(res.headers.location, destPath, onProgress, onSuccess, onError);
+      return;
+    }
+
+    if (res.statusCode !== 200) {
+      onError(new Error(`Tải xuống thất bại: HTTP ${res.statusCode}`));
+      return;
+    }
+
+    const totalBytes = parseInt(res.headers['content-length'], 10) || 0;
+    let downloadedBytes = 0;
+    const fileStream = fs.createWriteStream(destPath);
+
+    res.on('data', (chunk) => {
+      downloadedBytes += chunk.length;
+      fileStream.write(chunk);
+      if (totalBytes > 0) {
+        const percent = Math.round((downloadedBytes / totalBytes) * 100);
+        onProgress(percent);
+      }
+    });
+
+    res.on('end', () => {
+      fileStream.end();
+      onSuccess();
+    });
+
+    res.on('error', (err) => {
+      fileStream.close();
+      fs.unlink(destPath, () => {});
+      onError(err);
+    });
+
+    fileStream.on('error', (err) => {
+      fileStream.close();
+      fs.unlink(destPath, () => {});
+      onError(err);
+    });
+  }).on('error', (err) => {
+    onError(err);
+  });
+}
 
