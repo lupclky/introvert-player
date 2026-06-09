@@ -180,6 +180,7 @@ const state = {
     opacity: localStorage.getItem('dua_opacity') || '100',
     emptyQueueMessage: localStorage.getItem('dua_empty_queue_message') || 'Order nhạc tự động Zypage 50k',
     alertActionText: localStorage.getItem('dua_alert_action_text') || 'gửi một quả dứa',
+    selfDonateEnabled: localStorage.getItem('dua_self_donate') === 'true',
 
     // Cờ tạm thời: bỏ qua giới hạn thời gian cho bài hát hiện tại
     bypassCurrentSongDuration: false,
@@ -479,6 +480,43 @@ document.addEventListener("DOMContentLoaded", () => {
                 alert("Đã áp dụng và đồng bộ chữ hiển thị Donate mới lên OBS Overlay!");
             });
         }
+    // Thiết lập bật/tắt chủ kênh tự donate (ẩn tên/tiền donate)
+    const selfDonateToggle = document.getElementById('overlay-self-donate-toggle');
+    if (selfDonateToggle) {
+        selfDonateToggle.checked = state.selfDonateEnabled;
+        selfDonateToggle.addEventListener('change', () => {
+            const isChecked = selfDonateToggle.checked;
+            state.selfDonateEnabled = isChecked;
+            localStorage.setItem('dua_self_donate', isChecked ? 'true' : 'false');
+            updateObsUrlDisplay();
+            publishMqtt('self_donate_change', { enabled: isChecked });
+            logSystem(`Đã ${isChecked ? 'BẬT' : 'TẮT'} chế độ chủ kênh tự donate (ẩn tên/tiền donate trên overlay)`, 'system');
+            
+            // Nếu có bài hát đang phát, chúng ta publish lại bài hát để kích hoạt updateOverlayUI
+            if (state.currentSong) {
+                const nextSong = state.queue.find(s => String(s.id) !== String(state.currentSong.id));
+                const payloadSong = {
+                    id: state.currentSong.id,
+                    type: state.currentSong.type || 'youtube',
+                    videoId: state.currentSong.videoId || null,
+                    soundcloudUrl: state.currentSong.soundcloudUrl || null,
+                    spotifyId: state.currentSong.spotifyId || null,
+                    title: state.currentSong.title,
+                    thumbnail: state.currentSong.thumbnail,
+                    donorName: state.currentSong.donorName,
+                    amount: state.currentSong.amount,
+                    message: state.currentSong.message,
+                    start: state.currentSong.start || 0,
+                    end: state.currentSong.end || null,
+                    skipSegments: state.skipSegments || [],
+                    maxDuration: state.bypassCurrentSongDuration ? 0 : calculateMaxDurationForSong(state.currentSong.amount),
+                    nextSongTitle: nextSong ? nextSong.title : null,
+                    nextSongDonor: nextSong ? nextSong.donorName : null,
+                    nextSongAmount: nextSong ? nextSong.amount : null
+                };
+                publishMqtt('current_song', payloadSong);
+            }
+        });
     }
 
     // Khôi phục trạng thái Dark Mode
@@ -2834,6 +2872,9 @@ function updateObsUrlDisplay() {
     if (state.alertActionText && state.alertActionText !== 'gửi một quả dứa') {
         url += `&alert_action=${encodeURIComponent(state.alertActionText)}`;
     }
+    if (state.selfDonateEnabled) {
+        url += `&self_donate=true`;
+    }
     
     obsUrlInput.value = url;
 }
@@ -2974,6 +3015,8 @@ function handleMqttMessage(topic, messageStr) {
             publishMqtt('max_duration', { value: currentDur });
             // Gửi alert action text
             publishMqtt('alert_action_text', { text: state.alertActionText });
+            // Gửi cấu hình self_donate
+            publishMqtt('self_donate_change', { enabled: state.selfDonateEnabled });
             // Gửi bài hát hiện tại (nếu có)
             if (state.currentSong) {
                 // Gửi lời hiển thị khi hết nhạc

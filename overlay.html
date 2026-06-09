@@ -1856,6 +1856,21 @@
             transform: rotate(-35deg) !important;
             transition: transform 0.6s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
         }
+
+        .obs-donor-info.self-donate-active {
+            justify-content: center !important;
+            text-align: center !important;
+        }
+        .obs-donor-info.self-donate-active .obs-donor-name {
+            white-space: normal !important;
+            overflow: visible !important;
+            text-overflow: clip !important;
+            max-width: 100% !important;
+            text-align: center !important;
+            word-break: break-word !important;
+            font-size: 0.95rem !important;
+            line-height: 1.3 !important;
+        }
     </style>
 </head>
 <body>
@@ -1990,6 +2005,11 @@
 
         const initialOpacity = urlParams.get('opacity') || localStorage.getItem('dua_opacity') || '100';
         applyOpacity(initialOpacity);
+
+        const selfDonateParam = urlParams.get('self_donate');
+        if (selfDonateParam !== null) {
+            localStorage.setItem('dua_self_donate', selfDonateParam === 'true' ? 'true' : 'false');
+        }
 
         function updateAlertActionTextDisplay() {
             const val = urlParams.get('alert_action') || localStorage.getItem('dua_alert_action_text') || 'gửi một quả dứa';
@@ -2987,8 +3007,19 @@
                         cover.src = data.thumbnail || "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=200&auto=format&fit=crop";
                     }
                     title.textContent = data.title || "Chưa có tên bài hát";
-                    donorName.textContent = data.donorName || "Khách";
-                    donorAmount.textContent = data.amount ? data.amount.toLocaleString('vi-VN') + ' VNĐ' : '0 VNĐ';
+                    const selfDonateEnabled = localStorage.getItem('dua_self_donate') === 'true';
+                    if (selfDonateEnabled) {
+                        donorContainer.classList.add('self-donate-active');
+                        const storedMsg = localStorage.getItem('dua_empty_queue_message') || 'Order nhạc tự động Zypage 50k';
+                        donorName.textContent = storedMsg;
+                        donorAmount.textContent = '';
+                        donorAmount.style.setProperty('display', 'none', 'important');
+                    } else {
+                        donorContainer.classList.remove('self-donate-active');
+                        donorName.textContent = data.donorName || "Khách";
+                        donorAmount.textContent = data.amount ? data.amount.toLocaleString('vi-VN') + ' VNĐ' : '0 VNĐ';
+                        donorAmount.style.removeProperty('display');
+                    }
                     donorContainer.style.display = 'flex';
                     
                     if (data.message) {
@@ -3392,6 +3423,12 @@
                     if (text !== undefined) {
                         localStorage.setItem('dua_alert_action_text', text);
                         updateAlertActionTextDisplay();
+                    }
+                } else if (payload.type === 'self_donate_change') {
+                    const enabled = payload.data?.enabled;
+                    if (enabled !== undefined) {
+                        localStorage.setItem('dua_self_donate', enabled ? 'true' : 'false');
+                        updateOverlayUI();
                     }
                 } else if (payload.type === 'sb_categories') {
                     const cats = payload.data;
