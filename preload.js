@@ -12,5 +12,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     startUpdate: (url) => ipcRenderer.send('start-update', url),
     onUpdateProgress: (callback) => ipcRenderer.on('update-progress', (event, progress) => callback(progress)),
     onUpdateDownloaded: (callback) => ipcRenderer.on('update-downloaded', () => callback()),
-    onUpdateError: (callback) => ipcRenderer.on('update-error', (event, error) => callback(error))
+    onUpdateError: (callback) => ipcRenderer.on('update-error', (event, error) => callback(error)),
+    sendWsMessage: (message) => ipcRenderer.send('send-to-overlay', message),
+    onWsMessage: (callback) => ipcRenderer.on('from-overlay', (event, message) => callback(message))
 });

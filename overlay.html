@@ -1990,7 +1990,6 @@
         <iframe id="obs-soundcloud-player" src="about:blank" style="width: 100%; height: 100%; border: none;" allow="autoplay"></iframe>
     </div>
 
-    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <script>
         // Tự động chuyển hướng từ 127.0.0.1 sang localhost để tránh lệch origin localStorage
         if (window.location.hostname === '127.0.0.1') {
@@ -3364,62 +3363,68 @@
         const localKey = urlParams.get('key');
         const channelId = zypageToken || localKey;
 
+        let wsClient = null;
+        let isWsConnecting = false;
+
         function initMqtt() {
-            if (!channelId) {
-                console.warn("Overlay: Không tìm thấy tham số token hoặc key trên URL. Không thể kết nối MQTT.");
+            if (wsClient && (wsClient.readyState === WebSocket.OPEN || wsClient.readyState === WebSocket.CONNECTING)) {
                 return;
             }
+            if (isWsConnecting) return;
+            isWsConnecting = true;
 
-            mqttTopic = `dua_corner/player/${channelId}`;
-            console.log(`Overlay: Đang kết nối MQTT cho kênh: ${channelId}...`);
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            // Tự động nhận diện host/port chạy local web server, fallback về localhost:3000 khi mở file trực tiếp
+            const wsHost = window.location.host || 'localhost:3000';
+            const wsUrl = `${wsProtocol}//${wsHost}/ws`;
+
+            console.log(`Overlay: Đang kết nối Local WebSocket tới: ${wsUrl}...`);
 
             try {
-                mqttClient = mqtt.connect('wss://broker.hivemq.com:8884/mqtt', {
-                    keepalive: 60,
-                    clientId: 'dua_overlay_' + Math.random().toString(16).substr(2, 8),
-                    clean: true
-                });
+                wsClient = new WebSocket(wsUrl);
 
-                mqttClient.on('connect', () => {
-                    console.log("Overlay: Kết nối MQTT thành công!");
+                wsClient.onopen = () => {
+                    isWsConnecting = false;
+                    console.log("Overlay: Kết nối WebSocket thành công!");
                     
-                    const commandTopic = `${mqttTopic}/command`;
-                    mqttClient.subscribe(commandTopic, (err) => {
-                        if (err) {
-                            console.error("Overlay MQTT Subscribe error:", err);
-                        } else {
-                            console.log("Overlay subscribed to:", commandTopic);
-                            // Yêu cầu đồng bộ cấu hình hiện tại từ Dashboard
+                    // Yêu cầu đồng bộ cấu hình hiện tại từ Dashboard
+                    publishMqtt('request_sync', {});
+                    
+                    // Dò tìm kết nối liên tục từ Dashboard (gửi yêu cầu mỗi 5 giây)
+                    if (syncInterval) clearInterval(syncInterval);
+                    syncInterval = setInterval(() => {
+                        if (wsClient && wsClient.readyState === WebSocket.OPEN) {
                             publishMqtt('request_sync', {});
-                            
-                            // Dò tìm kết nối liên tục từ Dashboard (gửi yêu cầu mỗi 5 giây)
-                            if (syncInterval) clearInterval(syncInterval);
-                            syncInterval = setInterval(() => {
-                                if (mqttClient && mqttClient.connected) {
-                                    publishMqtt('request_sync', {});
-                                }
-                            }, 5000);
                         }
-                    });
-                });
+                    }, 5000);
+                };
 
-                mqttClient.on('message', (topic, message) => {
-                    handleMqttMessage(topic, message.toString());
-                });
+                wsClient.onmessage = (event) => {
+                    handleMqttMessage(null, event.data);
+                };
 
-                mqttClient.on('error', (err) => {
-                    console.error("Overlay MQTT error:", err);
-                });
+                wsClient.onclose = () => {
+                    isWsConnecting = false;
+                    console.log("Overlay: Kết nối WebSocket bị đóng. Đang thử kết nối lại sau 3 giây...");
+                    if (syncInterval) clearInterval(syncInterval);
+                    setTimeout(initMqtt, 3000);
+                };
+
+                wsClient.onerror = (err) => {
+                    isWsConnecting = false;
+                    console.error("Overlay WebSocket error:", err);
+                };
 
             } catch (e) {
-                console.error("Overlay MQTT connection failed:", e);
+                isWsConnecting = false;
+                console.error("Overlay WebSocket connection failed:", e);
+                setTimeout(initMqtt, 3000);
             }
         }
 
         function publishMqtt(type, payload) {
-            if (!mqttClient || !mqttClient.connected) return;
+            if (!wsClient || wsClient.readyState !== WebSocket.OPEN) return;
             
-            const topic = `${mqttTopic}/status`;
             const messageObj = { type: type };
             if (type === 'overlay_state') {
                 messageObj.state = payload;
@@ -3427,11 +3432,11 @@
                 messageObj.event = payload;
             }
             
-            mqttClient.publish(topic, JSON.stringify(messageObj), { qos: 1 }, (err) => {
-                if (err) {
-                    console.error("Overlay MQTT publish error:", err);
-                }
-            });
+            try {
+                wsClient.send(JSON.stringify(messageObj));
+            } catch (err) {
+                console.error("Overlay WebSocket send error:", err);
+            }
         }
 
         function handleMqttMessage(topic, messageStr) {

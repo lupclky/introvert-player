@@ -1,5 +1,12 @@
 # Nhật ký thay đổi (Changelog) - Introvert Player
 
+## [2.0.7] - 2026-06-09
+### Added
+- Thay thế kết nối HiveMQ MQTT cloud bằng Local WebSocket Server chạy trực tiếp trong ứng dụng.
+- OBS Overlay và Dashboard đồng bộ trực tiếp qua mạng nội bộ (localhost), loại bỏ phụ thuộc internet, tăng bảo mật và giảm độ trễ tối đa (< 2ms).
+- Giữ nguyên định dạng link OBS hiện tại (`localhost:3000/overlay.html?key=...`), người dùng không cần cấu hình lại link trên OBS Studio.
+- Loại bỏ các script import MQTT bên thứ ba giúp Overlay load nhanh và hoạt động offline 100%.
+
 ## [2.0.6] - 2026-06-09
 ### Added
 - Giữ lại hiệu ứng chuyển chữ (trượt & mờ dần đàn hồi), lược bỏ các hiệu ứng đĩa xoay nảy và lắc widget ở theme Dứa mặc định.

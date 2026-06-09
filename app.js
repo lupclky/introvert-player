@@ -2878,105 +2878,64 @@ function onOpacityChange(val) {
 }
 
 function initMqtt() {
-    if (state.mqttClient) {
-        try {
-            state.mqttClient.end();
-        } catch (e) {
-            console.error("Error ending old MQTT client:", e);
-        }
-        state.mqttClient = null;
-    }
-
-    const channelId = state.localSyncKey;
-    state.mqttTopic = `dua_corner/player/${channelId}`;
+    logSystem(`<span style="color: var(--pineapple-success); font-weight: 800;"><i class="fa-solid fa-circle-check"></i> Đang kết nối Local WebSocket...</span>`);
     
-    logSystem(`Đang kết nối MQTT đồng bộ xuyên trình duyệt...`);
-    
-    try {
-        state.mqttClient = mqtt.connect('wss://broker.hivemq.com:8884/mqtt', {
-            keepalive: 60,
-            clientId: 'dua_dashboard_' + Math.random().toString(16).substr(2, 8),
-            clean: true
-        });
-
-        state.mqttClient.on('connect', () => {
-            logSystem(`<span style="color: var(--pineapple-success); font-weight: 800;"><i class="fa-solid fa-circle-check"></i> Đã kết nối MQTT thành công!</span> Kênh: ${channelId}`);
-            
-            const statusTopic = `${state.mqttTopic}/status`;
-            state.mqttClient.subscribe(statusTopic, (err) => {
-                if (err) {
-                    console.error("MQTT Subscribe error:", err);
-                } else {
-                    console.log("Subscribed to status topic:", statusTopic);
-                }
+    if (window.electronAPI && typeof window.electronAPI.onWsMessage === 'function') {
+        if (!state.wsListenerRegistered) {
+            window.electronAPI.onWsMessage((payload) => {
+                handleMqttMessage(null, payload);
             });
-
-            // Đồng bộ cấu hình ban đầu ngay khi kết nối MQTT thành công
-            publishMqtt('max_duration', { value: state.maxDurationEnabled ? state.maxDuration : 0 });
-            publishMqtt('opacity_change', { opacity: state.opacity });
-            publishMqtt('theme_change', { theme: state.theme });
-            publishMqtt('alert_action_text', { text: state.alertActionText });
-            sendControlCommand('volume', state.volume);
-            
-            if (state.currentSong) {
-                const nextSong = state.queue.find(s => String(s.id) !== String(state.currentSong.id));
-                const payloadSong = {
-                    id: state.currentSong.id,
-                    type: state.currentSong.type || 'youtube',
-                    videoId: state.currentSong.videoId || null,
-                    soundcloudUrl: state.currentSong.soundcloudUrl || null,
-                    spotifyId: state.currentSong.spotifyId || null,
-                    title: state.currentSong.title,
-                    thumbnail: state.currentSong.thumbnail,
-                    donorName: state.currentSong.donorName,
-                    amount: state.currentSong.amount,
-                    message: state.currentSong.message,
-                    start: state.currentSong.start || 0,
-                    end: state.currentSong.end || null,
-                    skipSegments: state.skipSegments || [],
-                    maxDuration: state.bypassCurrentSongDuration ? 0 : calculateMaxDurationForSong(state.currentSong.amount),
-                    nextSongTitle: nextSong ? nextSong.title : null,
-                    nextSongDonor: nextSong ? nextSong.donorName : null,
-                    nextSongAmount: nextSong ? nextSong.amount : null
-                };
-                publishMqtt('current_song', payloadSong);
-                sendControlCommand(state.isPlaying ? 'play' : 'pause');
-            } else {
-                publishMqtt('current_song', null);
-                sendControlCommand('stop');
-            }
-        });
-
-        state.mqttClient.on('message', (topic, message) => {
-            handleMqttMessage(topic, message.toString());
-        });
-
-        state.mqttClient.on('error', (err) => {
-            console.error("MQTT error:", err);
-            logSystem(`Lỗi kết nối MQTT: ${err.message || err}`, 'system');
-        });
-
-    } catch (e) {
-        console.error("Failed to connect to MQTT:", e);
-        logSystem(`Không thể kết nối MQTT: ${e.message}`, 'system');
+            state.wsListenerRegistered = true;
+        }
     }
+    
+    // Đồng bộ cấu hình ban đầu ngay khi gọi initMqtt
+    setTimeout(() => {
+        publishMqtt('max_duration', { value: state.maxDurationEnabled ? state.maxDuration : 0 });
+        publishMqtt('opacity_change', { opacity: state.opacity });
+        publishMqtt('theme_change', { theme: state.theme });
+        publishMqtt('alert_action_text', { text: state.alertActionText });
+        sendControlCommand('volume', state.volume);
+        
+        if (state.currentSong) {
+            const nextSong = state.queue.find(s => String(s.id) !== String(state.currentSong.id));
+            const payloadSong = {
+                id: state.currentSong.id,
+                type: state.currentSong.type || 'youtube',
+                videoId: state.currentSong.videoId || null,
+                soundcloudUrl: state.currentSong.soundcloudUrl || null,
+                spotifyId: state.currentSong.spotifyId || null,
+                title: state.currentSong.title,
+                thumbnail: state.currentSong.thumbnail,
+                donorName: state.currentSong.donorName,
+                amount: state.currentSong.amount,
+                message: state.currentSong.message,
+                start: state.currentSong.start || 0,
+                end: state.currentSong.end || null,
+                skipSegments: state.skipSegments || [],
+                maxDuration: state.bypassCurrentSongDuration ? 0 : calculateMaxDurationForSong(state.currentSong.amount),
+                nextSongTitle: nextSong ? nextSong.title : null,
+                nextSongDonor: nextSong ? nextSong.donorName : null,
+                nextSongAmount: nextSong ? nextSong.amount : null
+            };
+            publishMqtt('current_song', payloadSong);
+            sendControlCommand(state.isPlaying ? 'play' : 'pause');
+        } else {
+            publishMqtt('current_song', null);
+            sendControlCommand('stop');
+        }
+    }, 100);
 }
 
 function publishMqtt(type, payload) {
-    if (!state.mqttClient || !state.mqttClient.connected) return;
-    
-    const topic = `${state.mqttTopic}/command`;
-    const message = JSON.stringify({ type: type, data: payload });
-    state.mqttClient.publish(topic, message, { qos: 1 }, (err) => {
-        if (err) {
-            console.error("MQTT Publish error:", err);
-        }
-    });
+    if (window.electronAPI && typeof window.electronAPI.sendWsMessage === 'function') {
+        window.electronAPI.sendWsMessage({ type: type, data: payload });
+    }
 }
 
-function handleMqttMessage(topic, messageStr) {
+function handleMqttMessage(topic, messageStrOrObj) {
     try {
-        const payload = JSON.parse(messageStr);
+        const payload = typeof messageStrOrObj === 'string' ? JSON.parse(messageStrOrObj) : messageStrOrObj;
         if (!payload) return;
 
         if (payload.type === 'request_sync') {

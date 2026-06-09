@@ -4,12 +4,15 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
+const WebSocket = require('ws');
 
 let mainWindow = null;
 let server = null;
 let serverPort = 3000;
 let tray = null;
 app.isQuitting = false;
+let wss = null;
+const activeWsClients = new Set();
 
 // Tắt GPU và sandbox để tránh crash khi chạy từ thư mục AppData
 app.commandLine.appendSwitch('no-sandbox');
@@ -482,9 +485,50 @@ if (!gotTheLock) {
       });
     });
 
+    // Khởi tạo WebSocket Server gắn với HTTP Server hiện tại
+    wss = new WebSocket.Server({ server });
+    wss.on('connection', (ws, req) => {
+      const origin = req.headers.origin;
+      if (origin && !isOriginAllowed(origin)) {
+        console.warn(`[WebSocket] Kết nối bị từ chối do origin lạ: ${origin}`);
+        ws.close();
+        return;
+      }
+
+      activeWsClients.add(ws);
+      console.log(`[WebSocket] OBS Overlay đã kết nối. Tổng số client: ${activeWsClients.size}`);
+
+      ws.on('message', (message) => {
+        try {
+          const msgStr = message.toString();
+          // Chuyển tiếp tin nhắn từ Overlay sang Dashboard (Renderer)
+          if (mainWindow) {
+            mainWindow.webContents.send('from-overlay', JSON.parse(msgStr));
+          }
+        } catch (err) {
+          console.error('[WebSocket] Lỗi xử lý tin nhắn từ overlay:', err);
+        }
+      });
+
+      ws.on('close', () => {
+        activeWsClients.delete(ws);
+        console.log(`[WebSocket] OBS Overlay đã ngắt kết nối. Tổng số client: ${activeWsClients.size}`);
+      });
+
+      ws.on('error', (err) => {
+        console.error('[WebSocket] Lỗi kết nối client:', err);
+        activeWsClients.delete(ws);
+      });
+    });
+
     server.on('error', (err) => {
       if (err.code === 'EADDRINUSE') {
         console.log(`Port ${startPort} is in use, trying next port...`);
+        if (wss) {
+          try { wss.close(); } catch(e){}
+          wss = null;
+          activeWsClients.clear();
+        }
         createLocalServer(startPort + 1, callback);
       } else {
         console.error('Server error:', err);
@@ -634,6 +678,20 @@ if (!gotTheLock) {
     }
   });
 }
+
+// Chuyển tiếp tin nhắn từ Dashboard tới tất cả các client WebSocket (OBS Overlay)
+ipcMain.on('send-to-overlay', (event, message) => {
+  const msgStr = JSON.stringify(message);
+  activeWsClients.forEach((client) => {
+    if (client.readyState === WebSocket.OPEN) {
+      try {
+        client.send(msgStr);
+      } catch (err) {
+        console.error('[WebSocket] Lỗi gửi tin nhắn sang overlay:', err);
+      }
+    }
+  });
+});
 
 // Lắng nghe sự kiện điều khiển cửa sổ từ Dashboard (Renderer)
 ipcMain.on('window-control', (event, action) => {
