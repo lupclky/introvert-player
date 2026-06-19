@@ -1,0 +1,1322 @@
+diff --git a/styles.css b/styles.css
+index 8e7c456..a92e061 100644
+--- a/styles.css
++++ b/styles.css
+@@ -256,13 +256,13 @@ button[style*="#FFDE4D"] *,
+ .player-widget {
+     background: linear-gradient(135deg, #FFFDF0 0%, #FFF5D0 100%);
+     border: 4px solid var(--pineapple-border-color);
+-    border-radius: 32px;
+-    padding: 1.5rem;
++    border-radius: 24px;
++    padding: 1rem;
+     box-shadow: 8px 8px 0px var(--pineapple-shadow);
+     position: relative;
+     display: flex;
+     flex-direction: column;
+-    gap: 1.2rem;
++    gap: 0.8rem;
+ }
+ 
+ .player-header {
+@@ -295,13 +295,13 @@ button[style*="#FFDE4D"] *,
+ 
+ .song-info-container {
+     display: flex;
+-    gap: 1.2rem;
++    gap: 0.8rem;
+     align-items: center;
+ }
+ 
+ .song-cover-wrapper {
+-    width: 90px;
+-    height: 90px;
++    width: 70px;
++    height: 70px;
+     border-radius: 50%;
+     border: 4px solid var(--pineapple-border-color);
+     overflow: hidden;
+@@ -327,19 +327,19 @@ button[style*="#FFDE4D"] *,
+ 
+ .song-title {
+     font-family: var(--font-title);
+-    font-size: 1.3rem;
+-    font-weight: 700;
+-    white-space: nowrap;
+-    overflow: hidden;
+-    text-overflow: ellipsis;
++    font-size: 1.15rem;
++    font-weight: 800;
++    white-space: normal;
++    word-break: break-word;
++    line-height: 1.3;
+     color: var(--pineapple-text);
+ }
+ 
+ .song-donor {
+-    font-size: 0.95rem;
++    font-size: 0.85rem;
+     font-weight: 700;
+     color: var(--pineapple-orange-dark);
+-    margin-top: 0.2rem;
++    margin-top: 0.1rem;
+     display: flex;
+     align-items: center;
+     gap: 0.4rem;
+@@ -349,10 +349,10 @@ button[style*="#FFDE4D"] *,
+     background: var(--pineapple-white);
+     border: 2px solid var(--pineapple-border-color);
+     border-radius: 12px;
+-    padding: 0.4rem 0.8rem;
+-    font-size: 0.85rem;
++    padding: 0.3rem 0.6rem;
++    font-size: 0.8rem;
+     color: #4B5563;
+-    margin-top: 0.5rem;
++    margin-top: 0.3rem;
+     position: relative;
+     max-height: 48px;
+     overflow-y: auto;
+@@ -409,13 +409,13 @@ button[style*="#FFDE4D"] *,
+ .player-controls {
+     display: flex;
+     flex-direction: column;
+-    gap: 0.8rem;
++    gap: 0.6rem;
+ }
+ 
+ .progress-container {
+     display: flex;
+     align-items: center;
+-    gap: 0.8rem;
++    gap: 0.6rem;
+ }
+ 
+ .progress-time {
+@@ -463,6 +463,128 @@ button[style*="#FFDE4D"] *,
+     gap: 1rem;
+ }
+ 
++/* Countdown timer cho Live Stream trên Dashboard */
++.dash-live-countdown {
++    display: none; /* ẩn mặc định, JS toggle */
++    align-items: center;
++    gap: 0.45rem;
++    background: #fff0f0;
++    border: 2.5px solid #ef4444;
++    border-radius: 10px;
++    padding: 0.28rem 0.65rem 0.28rem 0.5rem;
++    width: fit-content;
++    animation: dashCdFadeIn 0.3s ease;
++    box-shadow: 2px 2px 0px #ef4444;
++}
++
++.dash-live-countdown.visible {
++    display: flex;
++}
++
++/* Dashboard Sensitive Warning Box */
++.dash-sensitive-warning {
++    display: none; /* ẩn mặc định, JS toggle class 'visible' */
++    align-items: flex-start;
++    gap: 0.65rem;
++    background: #fff5f5;
++    border: 3px solid #ef4444;
++    border-radius: 16px;
++    padding: 0.75rem 1rem;
++    margin-top: 1rem;
++    box-shadow: 4px 4px 0px #2d2727;
++    animation: dashCdFadeIn 0.3s ease;
++}
++
++.dash-sensitive-warning.visible {
++    display: flex;
++}
++
++.dash-sensitive-warning i {
++    font-size: 1.35rem;
++    color: #ef4444;
++    margin-top: 0.1rem;
++    flex-shrink: 0;
++}
++
++.dash-sensitive-warning-content {
++    display: flex;
++    flex-direction: column;
++    gap: 0.15rem;
++}
++
++.dash-sensitive-warning-title {
++    font-family: var(--font-title);
++    font-size: 0.85rem;
++    font-weight: 900;
++    color: #ef4444;
++    letter-spacing: 0.05em;
++}
++
++.dash-sensitive-warning-text {
++    font-size: 0.82rem;
++    font-weight: 700;
++    color: #4b5563;
++    line-height: 1.45;
++}
++
++/* Chế độ tối (Dark Mode) cho Cảnh báo nhạy cảm */
++body.dark-mode .dash-sensitive-warning {
++    background: #231215;
++    border-color: #f87171;
++    box-shadow: 4px 4px 0px #050406;
++}
++
++body.dark-mode .dash-sensitive-warning i {
++    color: #f87171;
++}
++
++body.dark-mode .dash-sensitive-warning-title {
++    color: #f87171;
++}
++
++body.dark-mode .dash-sensitive-warning-text {
++    color: #d1d5db;
++}
++
++@keyframes dashCdFadeIn {
++    from { opacity: 0; transform: translateY(3px); }
++    to   { opacity: 1; transform: translateY(0); }
++}
++
++.dash-cd-dot {
++    width: 8px;
++    height: 8px;
++    border-radius: 50%;
++    background: #ef4444;
++    flex-shrink: 0;
++    animation: dashCdPulse 1s ease-in-out infinite;
++}
++
++@keyframes dashCdPulse {
++    0%, 100% { opacity: 1; box-shadow: 0 0 3px #ef4444; }
++    50%       { opacity: 0.35; box-shadow: 0 0 7px #ef4444; }
++}
++
++.dash-cd-label {
++    font-family: var(--font-title);
++    font-size: 0.7rem;
++    font-weight: 800;
++    color: #ef4444;
++    letter-spacing: 0.04em;
++    text-transform: uppercase;
++    white-space: nowrap;
++}
++
++.dash-cd-time {
++    font-family: var(--font-title);
++    font-size: 0.92rem;
++    font-weight: 900;
++    color: #2d2727;
++    letter-spacing: 0.02em;
++    white-space: nowrap;
++    min-width: 3ch;
++}
++
+ .control-playback {
+     display: flex;
+     gap: 0.75rem;
+@@ -711,7 +833,7 @@ button[style*="#FFDE4D"] *,
+     display: flex;
+     flex-direction: column;
+     gap: 1rem;
+-    max-height: 520px;
++    max-height: calc(100vh - 250px);
+     overflow-y: auto;
+     padding-right: 0.5rem;
+ }
+@@ -720,14 +842,23 @@ button[style*="#FFDE4D"] *,
+ .queue-list::-webkit-scrollbar,
+ .log-box-inner::-webkit-scrollbar,
+ .song-message::-webkit-scrollbar,
+-.app-content::-webkit-scrollbar {
++.app-content::-webkit-scrollbar,
++#qa-content-recommendations::-webkit-scrollbar,
++#qa-content-playlists::-webkit-scrollbar,
++.aftercredit-letter-container::-webkit-scrollbar,
++.settings-sidebar::-webkit-scrollbar {
+     width: 10px;
++    height: 10px;
+ }
+ 
+ .queue-list::-webkit-scrollbar-track,
+ .log-box-inner::-webkit-scrollbar-track,
+ .song-message::-webkit-scrollbar-track,
+-.app-content::-webkit-scrollbar-track {
++.app-content::-webkit-scrollbar-track,
++#qa-content-recommendations::-webkit-scrollbar-track,
++#qa-content-playlists::-webkit-scrollbar-track,
++.aftercredit-letter-container::-webkit-scrollbar-track,
++.settings-sidebar::-webkit-scrollbar-track {
+     background: var(--pineapple-yellow-light);
+     border: 3px solid var(--pineapple-border-color);
+     border-radius: 5px;
+@@ -736,7 +867,11 @@ button[style*="#FFDE4D"] *,
+ .queue-list::-webkit-scrollbar-thumb,
+ .log-box-inner::-webkit-scrollbar-thumb,
+ .song-message::-webkit-scrollbar-thumb,
+-.app-content::-webkit-scrollbar-thumb {
++.app-content::-webkit-scrollbar-thumb,
++#qa-content-recommendations::-webkit-scrollbar-thumb,
++#qa-content-playlists::-webkit-scrollbar-thumb,
++.aftercredit-letter-container::-webkit-scrollbar-thumb,
++.settings-sidebar::-webkit-scrollbar-thumb {
+     background: var(--pineapple-orange);
+     border: 2px solid var(--pineapple-border-color);
+     border-radius: 4px;
+@@ -897,6 +1032,19 @@ body.dark-mode .queue-item.playing-now .queue-item-message {
+     min-width: 0;
+ }
+ 
++.owner-add-badge {
++    background: var(--pineapple-yellow);
++    color: var(--pineapple-text);
++    padding: 0.1rem 0.35rem;
++    border-radius: 4px;
++    font-size: 0.72rem;
++    font-weight: 800;
++    border: 1.5px solid var(--pineapple-border-color);
++    display: inline-flex;
++    align-items: center;
++    gap: 0.2rem;
++}
++
+ .queue-item-row2 {
+     display: flex;
+     align-items: center;
+@@ -999,7 +1147,7 @@ body.dark-mode .queue-item.playing-now .queue-item-message {
+ 
+ /* Nhật ký Logs */
+ .log-box-inner {
+-    height: 180px;
++    height: 480px;
+     overflow-y: auto;
+     display: flex;
+     flex-direction: column;
+@@ -1011,8 +1159,8 @@ body.dark-mode .queue-item.playing-now .queue-item-message {
+     background: var(--pineapple-gray);
+     border: 2px solid var(--pineapple-border-color);
+     border-radius: 12px;
+-    padding: 0.4rem 0.8rem;
+-    font-size: 0.85rem;
++    padding: 0.6rem 0.9rem;
++    font-size: 0.9rem;
+     font-weight: 700;
+     line-height: 1.4;
+     display: flex;
+@@ -1049,6 +1197,7 @@ body.dark-mode .queue-item.playing-now .queue-item-message {
+ .log-tag-system { background: var(--pineapple-info); }
+ .log-tag-sb { background: var(--pineapple-yellow); }
+ .log-tag-queue { background: var(--pineapple-success); }
++.log-tag-error { background: var(--pineapple-error); color: #FFF !important; }
+ 
+ /* Hiệu ứng chặn trình duyệt (Autoplay Screen Block) */
+ .browser-blocked-overlay {
+@@ -1426,6 +1575,14 @@ body.dark-mode .queue-item.playing-now .queue-item-message {
+ }
+ 
+ body.dark-mode .slider-round {
++    background-color: var(--pineapple-border-color);
++}
++
++body.dark-mode .slider-round:before {
++    background-color: var(--pineapple-text);
++}
++
++body.dark-mode input:checked + .slider-round {
+     background-color: var(--pineapple-yellow);
+ }
+ 
+@@ -1472,7 +1629,7 @@ body.dark-mode input:checked + .slider-round:before {
+ /* Sidebar and Tab Layout */
+ .app-layout {
+     display: flex;
+-    height: calc(100vh - 44px);
++    height: calc(100vh - 44px - 90px);
+     margin-top: 44px;
+     overflow: hidden;
+     width: 100%;
+@@ -1557,10 +1714,156 @@ body.dark-mode .titlebar-menu-btn:hover {
+     display: flex;
+     flex-direction: column;
+     gap: 1.5rem;
+-    max-width: 800px;
++    max-width: 1000px;
+     margin: 0 auto;
+ }
+ 
++/* Settings Layout Redesign */
++.settings-layout {
++    display: flex;
++    gap: 1.5rem;
++    width: 100%;
++}
++
++.settings-sidebar {
++    width: 240px;
++    display: flex;
++    flex-direction: column;
++    gap: 0.5rem;
++    flex-shrink: 0;
++}
++
++.settings-tab-btn {
++    font-family: var(--font-primary);
++    font-weight: 800;
++    font-size: 0.9rem;
++    color: var(--pineapple-text);
++    background: var(--pineapple-white);
++    border: 3px solid var(--pineapple-border-color);
++    border-radius: 12px;
++    padding: 0.65rem 1rem;
++    cursor: pointer;
++    transition: all 0.1s ease;
++    display: flex;
++    align-items: center;
++    gap: 0.6rem;
++    text-align: left;
++    box-shadow: 2px 2px 0px var(--pineapple-shadow);
++}
++
++.settings-tab-btn:hover {
++    transform: translate(-1px, -1px);
++    box-shadow: 3px 3px 0px var(--pineapple-shadow);
++    background: var(--pineapple-yellow-light);
++}
++
++.settings-tab-btn.active {
++    background: var(--pineapple-yellow);
++    border-color: var(--pineapple-border-color);
++    box-shadow: 2px 2px 0px var(--pineapple-shadow);
++    transform: translate(0, 0);
++}
++
++body.dark-mode .settings-tab-btn:hover {
++    background: var(--pineapple-gray);
++}
++
++body.dark-mode .settings-tab-btn.active {
++    background: var(--pineapple-orange-dark);
++    color: white;
++}
++
++/* After Credit Button & Divider Custom Styles */
++.settings-aftercredit-btn {
++    font-family: var(--font-primary);
++    font-weight: 700;
++    font-size: 0.8rem;
++    color: var(--pineapple-text);
++    background: var(--pineapple-white);
++    border: 2px solid var(--pineapple-border-color);
++    border-radius: 10px;
++    padding: 0.45rem 0.8rem;
++    cursor: pointer;
++    transition: all 0.1s ease;
++    display: inline-flex;
++    align-items: center;
++    justify-content: center;
++    text-align: center;
++    margin-top: 1.5rem;
++    box-shadow: 1px 1px 0px var(--pineapple-shadow);
++    width: fit-content;
++    align-self: center;
++    opacity: 0.8;
++}
++
++.settings-aftercredit-btn:hover {
++    transform: translate(-0.5px, -0.5px);
++    box-shadow: 1.5px 1.5px 0px var(--pineapple-shadow);
++    background: var(--pineapple-yellow-light);
++    opacity: 1;
++}
++
++.settings-aftercredit-btn.active {
++    background: var(--pineapple-yellow);
++    border-color: var(--pineapple-border-color);
++    box-shadow: 1px 1px 0px var(--pineapple-shadow);
++    transform: translate(0, 0);
++    opacity: 1;
++    font-weight: 800;
++}
++
++body.dark-mode .settings-aftercredit-btn:hover {
++    background: var(--pineapple-gray);
++}
++
++body.dark-mode .settings-aftercredit-btn.active {
++    background: var(--pineapple-orange-dark);
++    color: white;
++}
++
++@media (max-width: 768px) {
++    .settings-sidebar-divider {
++        display: none !important;
++    }
++    .settings-aftercredit-btn {
++        margin-top: 0 !important;
++        align-self: center !important;
++        font-size: 0.85rem !important;
++        white-space: nowrap !important;
++    }
++}
++
++.settings-content-panel {
++    flex-grow: 1;
++    display: flex;
++    flex-direction: column;
++    gap: 1rem;
++    min-width: 0;
++}
++
++.settings-section {
++    display: flex;
++    flex-direction: column;
++    gap: 1rem;
++    width: 100%;
++}
++
++@media (max-width: 768px) {
++    .settings-layout {
++        flex-direction: column;
++    }
++    .settings-sidebar {
++        width: 100%;
++        flex-direction: row;
++        overflow-x: auto;
++        padding-bottom: 0.5rem;
++    }
++    .settings-tab-btn {
++        white-space: nowrap;
++    }
++}
++
++
+ /* Dark Mode Theme Variables & Custom Overrides */
+ body.dark-mode {
+     --pineapple-bg: #121016;
+@@ -1704,6 +2007,12 @@ body.dark-mode .status-badge.connecting {
+     border-color: #FBBF24;
+ }
+ 
++body.dark-mode .owner-add-badge {
++    color: #000000 !important;
++    background: var(--pineapple-yellow) !important;
++    border-color: var(--pineapple-border-color) !important;
++}
++
+ /* Dashboard New Donation Alert Popup */
+ .db-alert-box {
+     position: fixed;
+@@ -1822,12 +2131,15 @@ body.dark-mode .status-badge.connecting {
+     #card-quick-add {
+         order: 3;
+     }
+-    #card-time-limit {
++    #card-youtube-dashboard {
+         order: 4;
+     }
+-    #card-logs {
++    #card-time-limit {
+         order: 5;
+     }
++    #card-logs {
++        order: 6;
++    }
+ }
+ 
+ @media (max-width: 600px) {
+@@ -1919,7 +2231,7 @@ body.dark-mode #app-update-widget:hover {
+     border-radius: 16px;
+     box-shadow: 4px 4px 0px var(--pineapple-shadow);
+     z-index: 1000;
+-    max-height: 250px;
++    max-height: 280px;
+     overflow-y: auto;
+     display: flex;
+     flex-direction: column;
+@@ -2013,9 +2325,778 @@ body.dark-mode .search-result-item:hover {
+     font-size: 0.75rem;
+     flex-shrink: 0;
+ }
+-
+ .search-result-btn:hover {
+     background: var(--pineapple-orange);
+     transform: translate(-1px, -1px);
+     box-shadow: 2px 2px 0px var(--pineapple-shadow);
+ }
++
++/* Quick Add Tabs Styles */
++.qa-tabs-row {
++    display: flex;
++    border-bottom: 2px solid var(--pineapple-border-color);
++    background: var(--pineapple-gray);
++    border-top-left-radius: 12px;
++    border-top-right-radius: 12px;
++    padding: 4px 4px 0 4px;
++}
++
++.qa-tab-btn {
++    flex: 1;
++    border: 2px solid transparent;
++    border-bottom: none;
++    background: transparent;
++    padding: 0.45rem 0.2rem;
++    font-size: 0.8rem;
++    font-weight: 800;
++    cursor: pointer;
++    color: var(--pineapple-text);
++    border-top-left-radius: 8px;
++    border-top-right-radius: 8px;
++    margin-bottom: -2px;
++    transition: all 0.1s ease;
++    display: flex;
++    align-items: center;
++    justify-content: center;
++    gap: 0.3rem;
++}
++
++.qa-tab-btn:hover {
++    color: var(--pineapple-orange);
++}
++
++.qa-tab-btn.active {
++    background: var(--pineapple-white);
++    border-color: var(--pineapple-border-color);
++    border-bottom: 2px solid var(--pineapple-white);
++    color: var(--pineapple-orange);
++}
++
++body.dark-mode .qa-tab-btn.active {
++    border-bottom-color: var(--pineapple-white);
++}
++
++.qa-tab-content {
++    flex-grow: 1;
++    overflow-y: auto;
++    padding: 0.5rem;
++    display: flex;
++    flex-direction: column;
++    gap: 0.4rem;
++}
++
++.qa-playlists-header {
++    border-bottom: 2px dashed var(--pineapple-border-color);
++    padding-bottom: 0.4rem;
++    margin-bottom: 0.4rem;
++}
++
++.qa-playlists-header select {
++    box-shadow: none !important;
++}
++
++/* Force primary font-family on all YouTube Dashboard card and Quick Add search elements */
++#card-youtube-dashboard,
++#card-youtube-dashboard *:not(i):not([class*="fa-"]),
++.quick-add-search-results,
++.quick-add-search-results *:not(i):not([class*="fa-"]) {
++    font-family: var(--font-primary) !important;
++}
++
++/* Responsive Grid Layout for Recommendations & Playlists */
++#qa-recommendations-list,
++#qa-playlists-list {
++    display: grid;
++    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
++    gap: 0.8rem;
++    padding: 0.2rem;
++}
++
++.grid-result-item {
++    display: flex;
++    flex-direction: column;
++    gap: 0.4rem;
++    padding: 0.5rem;
++    background: var(--pineapple-white);
++    border: 2px solid var(--pineapple-border-color);
++    border-radius: 16px;
++    box-shadow: 2px 2px 0px var(--pineapple-shadow);
++    cursor: pointer;
++    transition: all 0.1s ease;
++    position: relative;
++}
++
++.grid-result-item:hover {
++    transform: translate(-1px, -1px);
++    box-shadow: 3px 3px 0px var(--pineapple-shadow);
++    border-color: var(--pineapple-orange);
++}
++
++.grid-result-thumb-wrapper {
++    position: relative;
++    width: 100%;
++    aspect-ratio: 16/9;
++    border-radius: 10px;
++    overflow: hidden;
++    border: 1.5px solid var(--pineapple-border-color);
++    background: #000;
++}
++
++.grid-result-thumb-wrapper img {
++    width: 100%;
++    height: 100%;
++    object-fit: cover;
++}
++
++.grid-result-duration {
++    position: absolute;
++    bottom: 4px;
++    right: 4px;
++    background: rgba(0, 0, 0, 0.8);
++    color: #fff;
++    padding: 0.1rem 0.3rem;
++    border-radius: 4px;
++    font-size: 0.65rem;
++    font-weight: 800;
++}
++
++.grid-result-info {
++    display: flex;
++    flex-direction: column;
++    gap: 0.15rem;
++    min-width: 0;
++}
++
++.grid-result-title {
++    font-size: 0.8rem;
++    font-weight: 700;
++    color: var(--pineapple-text);
++    display: -webkit-box;
++    -webkit-line-clamp: 2;
++    -webkit-box-orient: vertical;
++    overflow: hidden;
++    text-overflow: ellipsis;
++    line-height: 1.25;
++    height: 2.5rem; /* keep title height uniform for alignment */
++}
++
++.grid-result-meta {
++    font-size: 0.7rem;
++    color: #6B7280;
++    white-space: nowrap;
++    overflow: hidden;
++    text-overflow: ellipsis;
++}
++
++.grid-result-actions {
++    display: flex;
++    justify-content: flex-end;
++    margin-top: auto;
++    padding-top: 0.3rem;
++}
++
++/* Styles for Changelog Modal */
++.changelog-h3 {
++    font-size: 1.05rem;
++    margin-top: 1rem;
++    margin-bottom: 0.5rem;
++    font-weight: 800;
++    color: var(--pineapple-orange-dark);
++}
++.changelog-ul {
++    margin-bottom: 0.8rem;
++    padding-left: 1.25rem;
++    list-style-type: disc;
++}
++.changelog-li {
++    margin-bottom: 0.4rem;
++    font-size: 0.9rem;
++    font-weight: 500;
++}
++.changelog-p {
++    margin-bottom: 0.6rem;
++    font-size: 0.92rem;
++    font-weight: 500;
++}
++
++/* Loại bỏ hiệu ứng hover nảy và xoay trên thẻ changelog */
++#changelog-modal .blocked-card:hover {
++    transform: none !important;
++    box-shadow: 8px 8px 0px var(--pineapple-shadow) !important;
++}
++
++/* Chế độ tập trung (Focus Mode Active) - Vô hiệu hóa và làm mờ các tương tác */
++body.focus-mode-active .player-controls .progress-container,
++body.focus-mode-active .player-controls .control-playback,
++body.focus-mode-active .player-controls .control-volume,
++body.focus-mode-active #card-quick-add form,
++body.focus-mode-active #card-youtube-dashboard .qa-tabs-row,
++body.focus-mode-active #card-youtube-dashboard .qa-tab-content,
++body.focus-mode-active #card-time-limit,
++body.focus-mode-active #card-queue .queue-header-actions,
++body.focus-mode-active .queue-item-actions,
++body.focus-mode-active .grid-result-item,
++body.focus-mode-active .search-result-item {
++    pointer-events: none !important;
++    opacity: 0.55 !important;
++    filter: grayscale(25%) !important;
++    cursor: not-allowed !important;
++}
++
++/* Đảm bảo switch của focus mode vẫn dùng được */
++body.focus-mode-active #focus-mode-toggle-switch,
++body.focus-mode-active .player-header .theme-switch-wrapper {
++    pointer-events: auto !important;
++    opacity: 1 !important;
++    filter: none !important;
++    cursor: pointer !important;
++}
++
++/* --- After Credit Section Styling --- */
++.aftercredit-letter-container {
++    font-family: var(--font-primary);
++    font-size: 0.95rem;
++    line-height: 1.6;
++    max-height: 480px;
++    overflow-y: auto;
++    overflow-x: hidden;
++    box-sizing: border-box;
++    padding-right: 0.5rem;
++    -webkit-user-select: none !important;
++    -moz-user-select: none !important;
++    -ms-user-select: none !important;
++    user-select: none !important;
++}
++
++.aftercredit-letter-container p {
++    margin-bottom: 0.8rem;
++}
++
++.aftercredit-letter-container p:last-child {
++    margin-bottom: 0;
++}
++
++/* --- After Credit Lock Screen --- */
++.aftercredit-lock-wrapper {
++    display: flex;
++    flex-direction: column;
++    align-items: center;
++    justify-content: center;
++    padding: 2.5rem 1.5rem;
++    text-align: center;
++    border-radius: 12px;
++    background: rgba(255, 255, 255, 0.03);
++    border: 1px solid rgba(255, 255, 255, 0.05);
++    margin-top: 1rem;
++    backdrop-filter: blur(10px);
++}
++.dark-mode .aftercredit-lock-wrapper {
++    background: rgba(0, 0, 0, 0.2);
++    border: 1px solid rgba(255, 255, 255, 0.03);
++}
++.aftercredit-lock-icon {
++    font-size: 3.5rem;
++    color: var(--pineapple-orange);
++    margin-bottom: 1.5rem;
++    text-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
++    animation: lockPulse 2s infinite ease-in-out;
++}
++@keyframes lockPulse {
++    0% { transform: scale(1); }
++    50% { transform: scale(1.05); }
++    100% { transform: scale(1); }
++}
++.aftercredit-lock-title {
++    font-size: 1.3rem;
++    font-weight: 800;
++    margin-bottom: 1rem;
++    color: #333;
++}
++.dark-mode .aftercredit-lock-title {
++    color: #fff;
++}
++.aftercredit-lock-desc {
++    font-size: 0.95rem;
++    color: #555;
++    max-width: 500px;
++    margin-bottom: 1.5rem;
++    line-height: 1.5;
++}
++.dark-mode .aftercredit-lock-desc {
++    color: rgba(255, 255, 255, 0.7);
++}
++.aftercredit-progress-box {
++    width: 100%;
++    max-width: 400px;
++    margin-bottom: 1.5rem;
++}
++.aftercredit-progress-text {
++    display: flex;
++    justify-content: space-between;
++    font-size: 0.85rem;
++    margin-bottom: 0.5rem;
++    font-weight: 600;
++    color: var(--pineapple-orange);
++}
++.aftercredit-progress-bar-bg {
++    width: 100%;
++    height: 12px;
++    background: rgba(0, 0, 0, 0.1);
++    border-radius: 6px;
++    overflow: hidden;
++    position: relative;
++    border: 1px solid rgba(0, 0, 0, 0.05);
++}
++.dark-mode .aftercredit-progress-bar-bg {
++    background: rgba(255, 255, 255, 0.1);
++    border: 1px solid rgba(255, 255, 255, 0.05);
++}
++.aftercredit-progress-bar-fill {
++    height: 100%;
++    background: linear-gradient(90deg, #ffd700, #ff8c00);
++    border-radius: 6px;
++    width: 0%;
++    transition: width 1s ease-in-out;
++    box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
++}
++.aftercredit-btn-refresh {
++    display: inline-flex;
++    align-items: center;
++    gap: 0.5rem;
++    padding: 0.6rem 1.2rem;
++    background: var(--pineapple-primary-color);
++    color: #000;
++    border: none;
++    border-radius: 20px;
++    font-size: 0.85rem;
++    font-weight: 700;
++    cursor: pointer;
++    transition: all 0.2s ease-in-out;
++}
++.aftercredit-btn-refresh:hover {
++    transform: translateY(-2px);
++    box-shadow: 0 4px 12px rgba(255, 215, 0, 0.3);
++    opacity: 0.9;
++}
++.aftercredit-btn-refresh:active {
++    transform: translateY(0);
++}
++.aftercredit-btn-refresh i.spin {
++    animation: btnSpin 1s linear infinite;
++}
++@keyframes btnSpin {
++    from { transform: rotate(0deg); }
++    to { transform: rotate(360deg); }
++}
++
++.aftercredit-pw-input {
++    flex-grow: 1;
++    padding: 0.6rem 1rem;
++    border-radius: 12px;
++    border: 2px solid var(--pineapple-border-color);
++    background: var(--pineapple-white);
++    color: var(--pineapple-text);
++    font-family: var(--font-primary);
++    font-size: 0.85rem;
++    outline: none;
++    text-align: center;
++    box-shadow: 2px 2px 0px var(--pineapple-shadow);
++    transition: all 0.2s ease-in-out;
++}
++.dark-mode .aftercredit-pw-input {
++    background: rgba(0, 0, 0, 0.2);
++    color: #fff;
++    border-color: var(--pineapple-border-color);
++    box-shadow: 2px 2px 0px var(--pineapple-shadow);
++}
++.aftercredit-pw-input:focus {
++    border-color: var(--pineapple-orange);
++    box-shadow: 3px 3px 0px var(--pineapple-orange);
++}
++.aftercredit-pw-submit {
++    padding: 0.6rem 1.2rem;
++    border-radius: 12px;
++    border: 2px solid var(--pineapple-border-color);
++    background: var(--pineapple-orange);
++    color: #fff;
++    font-family: var(--font-primary);
++    font-size: 0.85rem;
++    font-weight: 800;
++    cursor: pointer;
++    box-shadow: 2px 2px 0px var(--pineapple-shadow);
++    transition: all 0.15s ease-in-out;
++}
++.dark-mode .aftercredit-pw-submit {
++    box-shadow: 2px 2px 0px var(--pineapple-shadow);
++    color: #fff;
++}
++.aftercredit-pw-submit:hover {
++    transform: translate(-1px, -1px);
++    box-shadow: 3px 3px 0px var(--pineapple-shadow);
++}
++.aftercredit-pw-submit:active {
++    transform: translate(1px, 1px);
++    box-shadow: 0px 0px 0px var(--pineapple-shadow);
++}
++
++/* Titlebar Quick Add Styles */
++.titlebar-quick-add,
++.titlebar-quick-add *:not(i):not([class*="fa-"]) {
++    font-family: var(--font-primary) !important;
++}
++
++.titlebar-quick-add {
++    position: relative;
++    width: 380px;
++    margin: 0 auto;
++}
++
++.search-input-wrapper {
++    position: relative;
++    display: flex;
++    align-items: center;
++    background: var(--pineapple-white);
++    border: 2px solid var(--pineapple-border-color);
++    border-radius: 20px;
++    padding: 0 0.75rem;
++    height: 30px;
++    transition: all 0.15s ease;
++    box-shadow: 1px 1px 0px var(--pineapple-shadow);
++}
++
++.search-input-wrapper:focus-within {
++    border-color: var(--pineapple-orange);
++    box-shadow: 2px 2px 0px var(--pineapple-shadow);
++}
++
++.search-input-wrapper .search-icon {
++    font-size: 0.8rem;
++    color: #9CA3AF;
++    margin-right: 0.4rem;
++    flex-shrink: 0;
++}
++
++.titlebar-search-input {
++    border: none !important;
++    background: transparent !important;
++    padding: 0 !important;
++    font-size: 0.8rem;
++    font-weight: 700;
++    width: 100%;
++    outline: none;
++    color: var(--pineapple-text);
++    box-shadow: none !important;
++    font-family: var(--font-primary) !important;
++}
++
++.titlebar-search-input::placeholder {
++    font-family: var(--font-primary) !important;
++}
++
++/* Popover panel */
++.quick-add-popover {
++    position: absolute;
++    top: calc(100% + 8px);
++    left: 50%;
++    transform: translateX(-50%);
++    width: 440px;
++    background: var(--pineapple-yellow-light);
++    border: 3px solid var(--pineapple-border-color);
++    border-radius: 16px;
++    box-shadow: 6px 6px 0px var(--pineapple-shadow);
++    z-index: 11000;
++    padding: 0.8rem;
++    display: none;
++    flex-direction: column;
++    gap: 0.6rem;
++}
++
++.quick-add-popover.visible {
++    display: flex;
++}
++
++.popover-donor-settings {
++    display: flex;
++    flex-direction: column;
++    gap: 0.5rem;
++    border-bottom: 2px dashed var(--pineapple-border-color);
++    padding-bottom: 0.6rem;
++}
++
++.popover-row {
++    display: flex;
++    gap: 0.5rem;
++}
++
++.popover-input {
++    flex: 1;
++    font-size: 0.8rem;
++    padding: 0.35rem 0.6rem;
++}
++
++.popover-row-footer {
++    display: flex;
++    align-items: center;
++    justify-content: space-between;
++}
++
++.popover-submit-btn {
++    padding: 0.35rem 0.8rem;
++    font-size: 0.8rem;
++    font-weight: 800;
++}
++
++/* Override YouTube search results list inside the Popover */
++.quick-add-popover .quick-add-search-results {
++    position: static;
++    border: none;
++    box-shadow: none;
++    max-height: 250px;
++    padding: 0;
++    width: 100%;
++    background: transparent;
++    overflow-y: auto;
++}
++
++/* Spotify-Style Bottom Player Bar */
++.spotify-player-bar {
++    position: fixed;
++    bottom: 0;
++    left: 0;
++    right: 0;
++    height: 90px;
++    background: var(--pineapple-yellow-light);
++    border-top: 3px solid var(--pineapple-border-color);
++    z-index: 9999;
++    display: flex;
++    align-items: center;
++    justify-content: space-between;
++    padding: 0 1.5rem;
++    box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.05);
++    box-sizing: border-box;
++}
++
++.spotify-left {
++    display: flex;
++    align-items: center;
++    gap: 0.8rem;
++    width: 30%;
++    min-width: 220px;
++}
++
++.spotify-left .song-details {
++    flex-grow: 1;
++    min-width: 0;
++}
++
++.spotify-left .song-title-container {
++    width: 100%;
++    overflow: hidden;
++    white-space: nowrap;
++}
++
++.spotify-left .song-title {
++    font-size: 0.95rem;
++    font-weight: 800;
++    line-height: 1.2;
++    white-space: normal;
++    word-break: break-word;
++}
++
++.spotify-left .song-donor {
++    font-size: 0.78rem;
++    font-weight: 700;
++    color: var(--pineapple-orange-dark);
++    margin-top: 0.1rem;
++    white-space: nowrap;
++    overflow: hidden;
++    text-overflow: ellipsis;
++}
++
++.spotify-left .spotify-message {
++    background: var(--pineapple-white);
++    border: 1.5px solid var(--pineapple-border-color);
++    border-radius: 8px;
++    padding: 0.15rem 0.45rem;
++    font-size: 0.72rem;
++    color: #4B5563;
++    margin-top: 0.2rem;
++    white-space: nowrap;
++    overflow: hidden;
++    text-overflow: ellipsis;
++    max-height: 22px;
++    display: inline-block;
++    max-width: 100%;
++}
++
++body.dark-mode .spotify-left .spotify-message {
++    background: #1D1A22;
++    color: #D1D5DB;
++}
++
++.spotify-center {
++    display: flex;
++    flex-direction: column;
++    align-items: center;
++    gap: 0.4rem;
++    width: 40%;
++}
++
++.spotify-center .control-playback {
++    display: flex;
++    align-items: center;
++    gap: 0.8rem;
++}
++
++.spotify-center .control-playback .focus-wrapper {
++    margin-right: 0.5rem;
++    font-size: 0.75rem;
++}
++
++.spotify-center .progress-container {
++    width: 100%;
++    max-width: 500px;
++    display: flex;
++    align-items: center;
++    gap: 0.5rem;
++}
++
++.spotify-center .progress-time {
++    font-size: 0.75rem;
++    font-weight: 700;
++    min-width: 32px;
++}
++
++.spotify-center .progress-bar-slider {
++    height: 8px;
++}
++
++.spotify-right {
++    display: flex;
++    align-items: center;
++    justify-content: flex-end;
++    gap: 1rem;
++    width: 30%;
++    min-width: 220px;
++}
++
++.spotify-right .spotify-countdown {
++    margin-right: 0.5rem;
++    flex-shrink: 0;
++}
++
++.spotify-right .control-volume {
++    display: flex;
++    align-items: center;
++    gap: 0.5rem;
++}
++
++.spotify-right .control-volume .volume-slider {
++    width: 80px;
++    height: 8px;
++}
++
++.spotify-right #volume-val-display {
++    font-size: 0.78rem;
++    font-weight: 700;
++    min-width: 28px;
++}
++
++/* Floating Sensitive Warning box */
++.spotify-sensitive-warning {
++    position: absolute;
++    bottom: calc(100% + 10px);
++    left: 1.5rem;
++    margin-top: 0 !important;
++    z-index: 10001;
++    width: 360px;
++    box-shadow: 4px 4px 0px var(--pineapple-shadow) !important;
++    background: #fff5f5;
++    border: 3px solid #ef4444;
++}
++
++body.dark-mode .spotify-sensitive-warning {
++    background: #2d1a1a;
++    border-color: #f87171;
++}
++
++/* Song title marquee animation definition */
++@keyframes marquee-scroll {
++    0% { transform: translate3d(0, 0, 0); }
++    100% { transform: translate3d(-100%, 0, 0); }
++}
++
++/* Responsive adjustments for Spotify Player Bar (Vertical / Narrow Layout) */
++@media (max-width: 768px) {
++    .spotify-player-bar {
++        padding: 0 0.75rem;
++    }
++
++    .spotify-left {
++        width: 35%;
++        min-width: 130px;
++        gap: 0.5rem;
++    }
++
++    .spotify-left .song-cover-wrapper {
++        width: 45px;
++        height: 45px;
++        border-width: 2px;
++    }
++
++    /* Song title marquee animation for vertical layout */
++    .spotify-left .song-title {
++        display: inline-block;
++        white-space: nowrap;
++        animation: marquee-scroll 15s linear infinite;
++        padding-left: 100%;
++        text-overflow: clip;
++        overflow: visible;
++    }
++
++    .spotify-center {
++        width: 45%;
++    }
++
++    /* Hide text labels on control buttons to make icons look reasonable */
++    .spotify-center .control-playback .focus-wrapper .focus-label {
++        display: none;
++    }
++
++    .spotify-center .control-playback .focus-wrapper {
++        margin-right: 0.2rem;
++    }
++
++    #btn-bypass-limit .bypass-text {
++        display: none;
++    }
++
++    #btn-bypass-limit {
++        padding: 0.35rem 0.6rem;
++    }
++
++    /* Adjust Right section in narrow screen */
++    .spotify-right {
++        width: 20%;
++        min-width: 70px;
++        gap: 0.5rem;
++    }
++
++    .spotify-right .spotify-countdown .dash-cd-label {
++        display: none;
++    }
++
++    .spotify-right .control-volume .volume-slider,
++    .spotify-right .control-volume #volume-val-display,
++    .spotify-right .control-volume #music-waves {
++        display: none;
++    }
++}
++
++
++
++
++
++
++
++

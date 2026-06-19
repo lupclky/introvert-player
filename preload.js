@@ -14,5 +14,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
     onUpdateDownloaded: (callback) => ipcRenderer.on('update-downloaded', () => callback()),
     onUpdateError: (callback) => ipcRenderer.on('update-error', (event, error) => callback(error)),
     sendWsMessage: (message) => ipcRenderer.send('send-to-overlay', message),
-    onWsMessage: (callback) => ipcRenderer.on('from-overlay', (event, message) => callback(message))
+    onWsMessage: (callback) => ipcRenderer.on('from-overlay', (event, message) => callback(message)),
+    
+    // YouTube Account Sync
+    ytLogin: () => ipcRenderer.invoke('youtube-login'),
+    ytCheckAuth: () => ipcRenderer.invoke('youtube-check-auth'),
+    ytLogout: () => ipcRenderer.invoke('youtube-logout'),
+    ytGetPlaylists: () => ipcRenderer.invoke('youtube-get-playlists'),
+    ytGetPlaylistVideos: (playlistId) => ipcRenderer.invoke('youtube-get-playlist-videos', playlistId),
+    ytGetRecommendations: () => ipcRenderer.invoke('youtube-get-recommendations'),
+    
+    // External Log File
+    saveLogEntry: (text) => ipcRenderer.send('save-log-entry', text),
+    openLogFile: () => ipcRenderer.invoke('open-log-file')
 });

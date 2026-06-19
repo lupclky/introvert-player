@@ -1,8 +1,9 @@
-const { app, BrowserWindow, Menu, Tray, ipcMain } = require('electron');
+const { app, BrowserWindow, Menu, Tray, ipcMain, session, shell } = require('electron');
 const http = require('http');
 const https = require('https');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const { spawn } = require('child_process');
 const WebSocket = require('ws');
 
@@ -88,8 +89,9 @@ if (!gotTheLock) {
       // Xử lý API lưu cấu hình (POST /api/config)
       if (req.url === '/api/config' && req.method === 'POST') {
         let body = '';
+        req.setEncoding('utf8');
         req.on('data', chunk => {
-          body += chunk.toString();
+          body += chunk;
         });
         req.on('end', () => {
           try {
@@ -194,6 +196,7 @@ if (!gotTheLock) {
 
           const ytReq = https.request(reqOpts, (ytRes) => {
             let data = '';
+            ytRes.setEncoding('utf8');
             ytRes.on('data', chunk => data += chunk);
             ytRes.on('end', () => {
               let duration = 0;
@@ -254,6 +257,7 @@ if (!gotTheLock) {
           };
           https.get(searchUrl, reqOpts, (clientRes) => {
             let body = '';
+            clientRes.setEncoding('utf8');
             clientRes.on('data', chunk => body += chunk);
             clientRes.on('end', () => {
               try {
@@ -377,6 +381,7 @@ if (!gotTheLock) {
                 fetchSoundCloudPage(nextUrl, depth + 1);
               } else {
                 let data = '';
+                clientRes.setEncoding('utf8');
                 clientRes.on('data', chunk => data += chunk);
                 clientRes.on('end', () => {
                   let duration = 0;
@@ -562,6 +567,8 @@ if (!gotTheLock) {
     // Tạo menu ứng dụng cơ bản
     Menu.setApplicationMenu(null); // Ẩn menu mặc định để giao diện trông tối giản và chuyên nghiệp hơn
 
+
+
     mainWindow.on('close', (event) => {
       if (!app.isQuitting) {
         event.preventDefault();
@@ -709,78 +716,80 @@ ipcMain.on('window-control', (event, action) => {
   }
 });
 
-// Trả về phiên bản ứng dụng động cho Renderer Process
-ipcMain.handle('get-app-version', () => app.getVersion());
-
 ipcMain.handle('search-youtube', async (event, query) => {
-  return new Promise((resolve) => {
-    const https = require('https');
+  if (currentSearchReq) {
+    try {
+      currentSearchReq.destroy();
+    } catch (e) {}
+    currentSearchReq = null;
+  }
+  try {
     const url = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}&sp=EgIQAQ%253D%253D`;
+    const cookies = await getYoutubeCookieHeader();
     
-    https.get(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept-Language': 'vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7'
+    let cookieStr = cookies || '';
+    if (!cookieStr.includes('SOCS=')) {
+      if (cookieStr) cookieStr += '; ';
+      cookieStr += 'SOCS=CAESEwgDEgk0ODE3Nzk3OTQaAmVuIAEaBgiA_eWqBg';
+    }
+    
+    const headers = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept-Language': 'vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7',
+      'Cookie': cookieStr
+    };
+    
+    const { html } = await fetchHtmlWithRedirects(url, headers);
+    const jsonObj = extractYtInitialData(html);
+    if (!jsonObj) {
+      return { error: "Could not find or parse ytInitialData in response" };
+    }
+    
+    const contents = jsonObj.contents?.twoColumnSearchResultsRenderer?.primaryContents?.sectionListRenderer?.contents;
+    if (!contents) {
+      return { error: "Unexpected JSON structure" };
+    }
+    
+    let items = [];
+    for (const content of contents) {
+      if (content.itemSectionRenderer) {
+        items = content.itemSectionRenderer.contents;
+        break;
       }
-    }, (res) => {
-      let data = '';
-      res.on('data', chunk => { data += chunk; });
-      res.on('end', () => {
-        try {
-          const regex = /ytInitialData\s*=\s*({.+?});/;
-          const match = data.match(regex);
-          if (!match) {
-            return resolve({ error: "Could not find ytInitialData in response" });
-          }
-          
-          const jsonObj = JSON.parse(match[1]);
-          const contents = jsonObj.contents?.twoColumnSearchResultsRenderer?.primaryContents?.sectionListRenderer?.contents;
-          if (!contents) {
-            return resolve({ error: "Unexpected JSON structure" });
-          }
-          
-          let items = [];
-          for (const content of contents) {
-            if (content.itemSectionRenderer) {
-              items = content.itemSectionRenderer.contents;
-              break;
-            }
-          }
-          
-          const videos = [];
-          for (const item of items) {
-            if (item.videoRenderer) {
-              const v = item.videoRenderer;
-              const videoId = v.videoId;
-              const title = v.title?.runs?.[0]?.text || '';
-              const thumbnail = v.thumbnail?.thumbnails?.[0]?.url || '';
-              const duration = v.lengthText?.simpleText || '0:00';
-              const author = v.ownerText?.runs?.[0]?.text || '';
-              const views = v.viewCountText?.simpleText || '';
-              
-              if (videoId && title) {
-                videos.push({
-                  videoId,
-                  title,
-                  thumbnail,
-                  duration,
-                  author,
-                  views,
-                  url: `https://www.youtube.com/watch?v=${videoId}`
-                });
-              }
-            }
-          }
-          
-          resolve({ success: true, videos: videos.slice(0, 15) });
-        } catch (e) {
-          resolve({ error: e.message });
+    }
+    
+    const videos = [];
+    for (const item of items) {
+      if (item.videoRenderer) {
+        const v = item.videoRenderer;
+        const videoId = v.videoId;
+        const title = v.title?.runs?.[0]?.text || '';
+        const thumbnail = v.thumbnail?.thumbnails?.[0]?.url || '';
+        const duration = v.lengthText?.simpleText || '0:00';
+        const author = v.ownerText?.runs?.[0]?.text || '';
+        const views = v.viewCountText?.simpleText || '';
+        
+        if (videoId && title) {
+          videos.push({
+            videoId,
+            title,
+            thumbnail,
+            duration,
+            author,
+            views,
+            url: `https://www.youtube.com/watch?v=${videoId}`
+          });
         }
-      });
-    }).on('error', (e) => {
-      resolve({ error: e.message });
-    });
-  });
+      }
+    }
+    
+    return { success: true, videos: videos.slice(0, 15) };
+  } catch (e) {
+    if (e.message === 'SEARCH_ABORTED') {
+      return { success: false, aborted: true };
+    }
+    return { error: e.message };
+  }
 });
 
 ipcMain.handle('get-youtube-metadata', async (event, videoId) => {
@@ -807,6 +816,7 @@ ipcMain.handle('get-youtube-metadata', async (event, videoId) => {
       }
     }, (res) => {
       let data = '';
+      res.setEncoding('utf8');
       res.on('data', chunk => { data += chunk; });
       res.on('end', () => {
         try {
@@ -833,6 +843,7 @@ ipcMain.handle('get-youtube-metadata', async (event, videoId) => {
         }
       }, (res) => {
         let data = '';
+        res.setEncoding('utf8');
         res.on('data', chunk => { data += chunk; });
         res.on('end', () => {
           const titleMatch = data.match(/<title>(.*?)<\/title>/i);
@@ -862,6 +873,672 @@ ipcMain.handle('get-youtube-metadata', async (event, videoId) => {
     }
   });
 });
+
+// ==========================================
+// YOUTUBE ACCOUNT SYNC HANDLERS (OPTION 2)
+// ==========================================
+
+// Helper to follow redirects and get page HTML
+function fetchHtmlWithRedirects(urlToFetch, reqHeaders, depth = 0) {
+  return new Promise((resolve, reject) => {
+    if (depth > 5) {
+      return reject(new Error("Too many redirects"));
+    }
+    const https = require('https');
+    try {
+      const req = https.get(urlToFetch, { headers: reqHeaders }, (res) => {
+        if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+          let nextUrl = res.headers.location;
+          if (!nextUrl.startsWith('http')) {
+            const origin = new URL(urlToFetch).origin;
+            nextUrl = new URL(nextUrl, origin).href;
+          }
+          return fetchHtmlWithRedirects(nextUrl, reqHeaders, depth + 1).then(resolve, reject);
+        }
+        
+        let data = '';
+        res.setEncoding('utf8');
+        res.on('data', chunk => { data += chunk; });
+        res.on('end', () => {
+          resolve({ html: data, statusCode: res.statusCode });
+        });
+      });
+      
+      currentSearchReq = req;
+      
+      req.on('error', (err) => {
+        if (req.destroyed) {
+          reject(new Error("SEARCH_ABORTED"));
+        } else {
+          reject(err);
+        }
+      });
+    } catch (e) {
+      reject(e);
+    }
+  });
+}
+
+// Helper to extract ytInitialData from HTML using robust substring search
+function extractYtInitialData(html) {
+  const startStr = 'ytInitialData = ';
+  let startIdx = html.indexOf(startStr);
+  let jsonStartIdx = -1;
+  
+  if (startIdx !== -1) {
+    jsonStartIdx = startIdx + startStr.length;
+  } else {
+    // Thử các mẫu khác
+    const altStarts = [
+      "window['ytInitialData'] = ",
+      'window["ytInitialData"] = ',
+      "ytInitialData="
+    ];
+    for (const alt of altStarts) {
+      const idx = html.indexOf(alt);
+      if (idx !== -1) {
+        jsonStartIdx = idx + alt.length;
+        break;
+      }
+    }
+  }
+  
+  if (jsonStartIdx === -1) return null;
+  
+  // Tìm thẻ kết thúc </script> của block script hiện tại
+  const endIdx = html.indexOf('</script>', jsonStartIdx);
+  if (endIdx === -1) return null;
+  
+  let jsonStr = html.substring(jsonStartIdx, endIdx).trim();
+  // Loại bỏ dấu chấm phẩy ở cuối nếu có
+  if (jsonStr.endsWith(';')) {
+    jsonStr = jsonStr.substring(0, jsonStr.length - 1).trim();
+  }
+  
+  try {
+    return JSON.parse(jsonStr);
+  } catch (e) {
+    // Fallback: Sử dụng regex nếu cắt chuỗi đơn giản gặp lỗi
+    const patterns = [
+      /ytInitialData\s*=\s*({.+?});/,
+      /ytInitialData\s*=\s*({.+?})(?:\s*;|\s*<\/script>)/,
+      /ytInitialData\s*=\s*({[\s\S]+?});/,
+      /ytInitialData\s*=\s*({[\s\S]+?})(?:\s*;|\s*<\/script>)/
+    ];
+    for (const pattern of patterns) {
+      const match = html.match(pattern);
+      if (match && match[1]) {
+        try {
+          return JSON.parse(match[1]);
+        } catch (e2) {}
+      }
+    }
+  }
+  return null;
+}
+
+async function getYoutubeCookieHeader() {
+  const cookies = await session.defaultSession.cookies.get({ url: 'https://www.youtube.com' });
+  return cookies.map(c => `${c.name}=${c.value}`).join('; ');
+}
+
+async function getSapisidHash() {
+  const cookies = await session.defaultSession.cookies.get({ url: 'https://www.youtube.com' });
+  const sapisidCookie = cookies.find(c => c.name === 'SAPISID' || c.name === '__Secure-3PAPISID');
+  if (!sapisidCookie) return null;
+  
+  const sapisid = sapisidCookie.value;
+  const time = Math.floor(Date.now() / 1000);
+  const origin = 'https://www.youtube.com';
+  const msg = `${time} ${sapisid} ${origin}`;
+  const sha1 = crypto.createHash('sha1').update(msg).digest('hex');
+  return `SAPISIDHASH ${time}_${sha1}`;
+}
+
+function findKeysRecursive(obj, keys, results = []) {
+  if (!obj || typeof obj !== 'object') return results;
+  
+  if (Array.isArray(obj)) {
+    for (const item of obj) {
+      findKeysRecursive(item, keys, results);
+    }
+  } else {
+    for (const k of Object.keys(obj)) {
+      if (keys.includes(k)) {
+        results.push({ key: k, value: obj[k] });
+      }
+      findKeysRecursive(obj[k], keys, results);
+    }
+  }
+  return results;
+}
+
+function extractVideoData(v) {
+  const videoId = v.videoId;
+  if (!videoId) return null;
+  
+  let title = '';
+  if (typeof v.title === 'string') {
+    title = v.title;
+  } else if (v.title?.runs?.[0]?.text) {
+    title = v.title.runs[0].text;
+  } else if (v.title?.simpleText) {
+    title = v.title.simpleText;
+  }
+  
+  let thumbnail = '';
+  if (v.thumbnail?.thumbnails?.length > 0) {
+    const thumbs = v.thumbnail.thumbnails;
+    thumbnail = thumbs[thumbs.length - 1].url;
+  } else {
+    thumbnail = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+  }
+  
+  let duration = '0:00';
+  if (v.lengthText?.simpleText) {
+    duration = v.lengthText.simpleText;
+  } else if (v.thumbnailOverlays) {
+    for (const overlay of v.thumbnailOverlays) {
+      if (overlay.thumbnailOverlayTimeStatusRenderer?.text?.simpleText) {
+        duration = overlay.thumbnailOverlayTimeStatusRenderer.text.simpleText;
+        break;
+      }
+    }
+  }
+  
+  let author = '';
+  if (v.ownerText?.runs?.[0]?.text) {
+    author = v.ownerText.runs[0].text;
+  } else if (v.shortBylineText?.runs?.[0]?.text) {
+    author = v.shortBylineText.runs[0].text;
+  }
+  
+  let views = '';
+  if (v.viewCountText?.simpleText) {
+    views = v.viewCountText.simpleText;
+  } else if (v.shortViewCountText?.simpleText) {
+    views = v.shortViewCountText.simpleText;
+  }
+  
+  return {
+    videoId,
+    title,
+    thumbnail,
+    duration,
+    author,
+    views,
+    url: `https://www.youtube.com/watch?v=${videoId}`
+  };
+}
+
+function extractPlaylistData(p) {
+  const playlistId = p.playlistId;
+  if (!playlistId) return null;
+  
+  let title = '';
+  if (typeof p.title === 'string') {
+    title = p.title;
+  } else if (p.title?.runs?.[0]?.text) {
+    title = p.title.runs[0].text;
+  } else if (p.title?.simpleText) {
+    title = p.title.simpleText;
+  }
+  
+  let thumbnail = '';
+  if (p.thumbnail?.thumbnails?.length > 0) {
+    thumbnail = p.thumbnail.thumbnails[p.thumbnail.thumbnails.length - 1].url;
+  } else if (p.thumbnails?.[0]?.thumbnails?.length > 0) {
+    thumbnail = p.thumbnails[0].thumbnails[0].url;
+  }
+  
+  let videoCount = '0';
+  if (p.videoCount) {
+    videoCount = String(p.videoCount);
+  } else if (p.videoCountText?.runs?.[0]?.text) {
+    videoCount = p.videoCountText.runs[0].text;
+  } else if (p.videoCountText?.simpleText) {
+    videoCount = p.videoCountText.simpleText;
+  } else if (p.videoCountShortText?.simpleText) {
+    videoCount = p.videoCountShortText.simpleText;
+  }
+  
+  return {
+    playlistId,
+    title,
+    thumbnail,
+    videoCount
+  };
+}
+
+function extractVideoFromLockup(v) {
+  if (v.contentType !== 'LOCKUP_CONTENT_TYPE_VIDEO') return null;
+  
+  const videoId = v.contentId;
+  if (!videoId) return null;
+  
+  const m = v.metadata?.lockupMetadataViewModel;
+  const title = m?.title?.content || '';
+  
+  let thumbnail = '';
+  const sources = v.contentImage?.thumbnailViewModel?.image?.sources;
+  if (sources && sources.length > 0) {
+    thumbnail = sources[sources.length - 1].url;
+  } else {
+    thumbnail = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+  }
+  
+  let duration = '0:00';
+  const overlays = v.contentImage?.thumbnailViewModel?.overlays;
+  if (overlays && overlays.length > 0) {
+    for (const ov of overlays) {
+      const text = ov.thumbnailBottomOverlayViewModel?.badges?.[0]?.thumbnailBadgeViewModel?.text;
+      if (text) {
+        duration = text;
+        break;
+      }
+    }
+  }
+  
+  let author = '';
+  let views = '';
+  const rows = m?.metadata?.contentMetadataViewModel?.metadataRows;
+  if (rows && rows.length > 0) {
+    author = rows[0].metadataParts?.[0]?.text?.content || '';
+    if (rows.length > 1) {
+      views = rows[1].metadataParts?.[0]?.text?.content || '';
+    }
+  }
+  
+  return {
+    videoId,
+    title,
+    thumbnail,
+    duration,
+    author,
+    views,
+    url: `https://www.youtube.com/watch?v=${videoId}`
+  };
+}
+
+function extractPlaylistFromLockup(p) {
+  if (p.contentType !== 'LOCKUP_CONTENT_TYPE_PLAYLIST') return null;
+  
+  const playlistId = p.contentId;
+  if (!playlistId) return null;
+  
+  const m = p.metadata?.lockupMetadataViewModel;
+  const title = m?.title?.content || '';
+  
+  let thumbnail = '';
+  const sources = p.contentImage?.collectionThumbnailViewModel?.primaryThumbnail?.thumbnailViewModel?.image?.sources;
+  if (sources && sources.length > 0) {
+    thumbnail = sources[sources.length - 1].url;
+  }
+  
+  let videoCount = '0';
+  const overlays = p.contentImage?.collectionThumbnailViewModel?.primaryThumbnail?.thumbnailViewModel?.overlays;
+  if (overlays && overlays.length > 0) {
+    for (const ov of overlays) {
+      const text = ov.thumbnailOverlayBadgeViewModel?.thumbnailBadges?.[0]?.thumbnailBadgeViewModel?.text;
+      if (text) {
+        videoCount = text;
+        break;
+      }
+    }
+  }
+  
+  return {
+    playlistId,
+    title,
+    thumbnail,
+    videoCount
+  };
+}
+
+async function fetchYoutubePageData(url) {
+  const cookies = await getYoutubeCookieHeader();
+  
+  let cookieStr = cookies || '';
+  if (!cookieStr.includes('SOCS=')) {
+    if (cookieStr) cookieStr += '; ';
+    cookieStr += 'SOCS=CAESEwgDEgk0ODE3Nzk3OTQaAmVuIAEaBgiA_eWqBg';
+  }
+  
+  const headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'Accept-Language': 'vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7',
+    'Cookie': cookieStr
+  };
+  
+  const { html } = await fetchHtmlWithRedirects(url, headers);
+  const jsonObj = extractYtInitialData(html);
+  if (!jsonObj) {
+    throw new Error("Could not find or parse ytInitialData in response");
+  }
+  return jsonObj;
+}
+
+async function fetchYoutubePageDataAndHtml(url) {
+  const cookies = await getYoutubeCookieHeader();
+  
+  let cookieStr = cookies || '';
+  if (!cookieStr.includes('SOCS=')) {
+    if (cookieStr) cookieStr += '; ';
+    cookieStr += 'SOCS=CAESEwgDEgk0ODE3Nzk3OTQaAmVuIAEaBgiA_eWqBg';
+  }
+  
+  const headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'Accept-Language': 'vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7',
+    'Cookie': cookieStr
+  };
+  
+  const { html } = await fetchHtmlWithRedirects(url, headers);
+  const jsonObj = extractYtInitialData(html);
+  if (!jsonObj) {
+    throw new Error("Could not find or parse ytInitialData in response");
+  }
+  return { jsonObj, html };
+}
+
+ipcMain.handle('youtube-login', async () => {
+  return new Promise((resolve) => {
+    let win = new BrowserWindow({
+      width: 500,
+      height: 600,
+      title: 'Đăng nhập YouTube',
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true
+      }
+    });
+    
+    win.loadURL('https://www.youtube.com/signin');
+    
+    // Check cookies periodically
+    const checkInterval = setInterval(async () => {
+      if (win.isDestroyed()) {
+        clearInterval(checkInterval);
+        return;
+      }
+      
+      try {
+        const cookies = await session.defaultSession.cookies.get({ domain: '.youtube.com' });
+        const hasSid = cookies.some(c => c.name === 'SID' || c.name === '__Secure-3PSID');
+        
+        if (hasSid) {
+          clearInterval(checkInterval);
+          win.destroy();
+          resolve({ success: true });
+        }
+      } catch (e) {
+        // ignore errors during polling
+      }
+    }, 1000);
+    
+    win.on('closed', () => {
+      clearInterval(checkInterval);
+      resolve({ success: false, error: 'User closed window' });
+    });
+  });
+});
+
+ipcMain.handle('youtube-check-auth', async () => {
+  try {
+    const cookies = await session.defaultSession.cookies.get({ domain: '.youtube.com' });
+    const hasSid = cookies.some(c => c.name === 'SID' || c.name === '__Secure-3PSID');
+    
+    let displayName = 'YouTube Account';
+    let avatarUrl = '';
+    
+    if (hasSid) {
+      // Try to fetch home page to extract user avatar/name if possible
+      try {
+        const data = await fetchYoutubePageData('https://www.youtube.com');
+        // Look for avatar/name in initial data
+        const keys = ['avatar', 'accountName'];
+        const results = findKeysRecursive(data, keys);
+        for (const item of results) {
+          if (item.key === 'avatar' && item.value?.thumbnails?.[0]?.url) {
+            avatarUrl = item.value.thumbnails[0].url;
+          }
+          if (item.key === 'accountName' && item.value?.runs?.[0]?.text) {
+            displayName = item.value.runs[0].text;
+          }
+        }
+      } catch (e) {
+        // Fallback to generic info if fetching fails
+      }
+    }
+    
+    return { loggedIn: hasSid, displayName, avatarUrl };
+  } catch (error) {
+    return { loggedIn: false, error: error.message };
+  }
+});
+
+ipcMain.handle('youtube-logout', async () => {
+  try {
+    const cookies = await session.defaultSession.cookies.get({});
+    for (const cookie of cookies) {
+      if (cookie.domain.includes('youtube') || cookie.domain.includes('google')) {
+        let domain = cookie.domain;
+        if (domain.startsWith('.')) {
+          domain = domain.substring(1);
+        }
+        const url = `https://${domain}${cookie.path}`;
+        await session.defaultSession.cookies.remove(url, cookie.name);
+      }
+    }
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('youtube-get-playlists', async () => {
+  try {
+    const data = await fetchYoutubePageData('https://www.youtube.com/feed/playlists');
+    const keys = ['playlistRenderer', 'gridPlaylistRenderer', 'lockupViewModel'];
+    const results = findKeysRecursive(data, keys);
+    const playlists = [];
+    const seenIds = new Set();
+    
+    for (const item of results) {
+      if (item.key === 'lockupViewModel') {
+        const p = extractPlaylistFromLockup(item.value);
+        if (p && !seenIds.has(p.playlistId)) {
+          seenIds.add(p.playlistId);
+          playlists.push(p);
+        }
+      } else {
+        const p = extractPlaylistData(item.value);
+        if (p && !seenIds.has(p.playlistId)) {
+          seenIds.add(p.playlistId);
+          playlists.push(p);
+        }
+      }
+    }
+    return { success: true, playlists };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('youtube-get-playlist-videos', async (event, playlistId) => {
+  try {
+    const data = await fetchYoutubePageData(`https://www.youtube.com/playlist?list=${playlistId}`);
+    const keys = ['playlistVideoRenderer', 'videoRenderer', 'gridVideoRenderer', 'compactVideoRenderer', 'lockupViewModel'];
+    const results = findKeysRecursive(data, keys);
+    const videos = [];
+    const seenIds = new Set();
+    
+    for (const item of results) {
+      if (item.key === 'lockupViewModel') {
+        const v = extractVideoFromLockup(item.value);
+        if (v && !seenIds.has(v.videoId)) {
+          seenIds.add(v.videoId);
+          videos.push(v);
+        }
+      } else {
+        const v = extractVideoData(item.value);
+        if (v && !seenIds.has(v.videoId)) {
+          seenIds.add(v.videoId);
+          videos.push(v);
+        }
+      }
+    }
+    return { success: true, videos };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('youtube-get-recommendations', async () => {
+  try {
+    // Bước 1: Tải trang chủ YouTube với đầy đủ cookies của tài khoản đã đăng nhập
+    // fetchYoutubePageDataAndHtml đã xử lý SOCS cookie + redirect đúng chuẩn, trả về cả JSON và HTML thô
+    const { jsonObj: homeData, html: homepageHtml } = await fetchYoutubePageDataAndHtml('https://www.youtube.com');
+
+    // Lấy cookies đầy đủ (bao gồm SID, SAPISID, SOCS...) để dùng cho Innertube POST
+    const rawCookies = await getYoutubeCookieHeader();
+    let cookieStr = rawCookies || '';
+    if (!cookieStr.includes('SOCS=')) {
+      if (cookieStr) cookieStr += '; ';
+      cookieStr += 'SOCS=CAESEwgDEgk0ODE3Nzk3OTQaAmVuIAEaBgiA_eWqBg';
+    }
+
+    const baseHeaders = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept-Language': 'vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7',
+      'Cookie': cookieStr
+    };
+
+    const authHeader = await getSapisidHash();
+    if (authHeader) {
+      baseHeaders['Authorization'] = authHeader;
+    }
+
+    // Lấy API Key từ trang chủ HTML (Ưu tiên apiKey thực tế của session rồi mới đến INNERTUBE_API_KEY dự phòng)
+    const apiKeyMatch = homepageHtml.match(/"apiKey"\s*:\s*"([^"]+)"/) || homepageHtml.match(/"INNERTUBE_API_KEY"\s*:\s*"([^"]+)"/);
+    const apiKey = apiKeyMatch ? apiKeyMatch[1] : 'AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8';
+
+    // Helper: POST Innertube browse với cookies tài khoản đầy đủ
+    const innertubePost = (body) => new Promise((resolve, reject) => {
+      const postStr = JSON.stringify(body);
+      const reqOpts = {
+        hostname: 'www.youtube.com',
+        port: 443,
+        path: `/youtubei/v1/browse?key=${apiKey}`,
+        method: 'POST',
+        headers: {
+          ...baseHeaders,
+          'Content-Type': 'application/json',
+          'X-YouTube-Client-Name': '1',
+          'X-YouTube-Client-Version': '2.20240308.01.00',
+          'Origin': 'https://www.youtube.com',
+          'Referer': 'https://www.youtube.com/'
+        }
+      };
+      const req = https.request(reqOpts, (res) => {
+        let resBody = '';
+        res.setEncoding('utf8');
+        res.on('data', chunk => resBody += chunk);
+        res.on('end', () => {
+          try { resolve(JSON.parse(resBody)); } catch (e) { reject(e); }
+        });
+      });
+      req.on('error', err => reject(err));
+      req.write(postStr);
+      req.end();
+    });
+
+    const innertubeCxt = {
+      context: {
+        client: {
+          clientName: 'WEB',
+          clientVersion: '2.20240308.01.00',
+          originalUrl: 'https://www.youtube.com',
+          hl: 'vi',
+          gl: 'VN'
+        }
+      }
+    };
+
+    // Tìm chip "Âm nhạc" trong feedFilterChipBarRenderer của trang chủ (hỗ trợ nhiều ngôn ngữ)
+    let musicChipToken = null;
+    const musicLabels = [
+      'Âm nhạc', 'Music', 'Musique', 'Música', 'Musik', 'Musica', 
+      '音楽', '음악', '音乐', '音樂', 'Музыка', 'Muzyka', 'Müzik'
+    ];
+    const chipResults = findKeysRecursive(homeData, ['chipCloudChipRenderer']);
+    for (const item of chipResults) {
+      const chip = item.value;
+      const label = chip?.text?.runs?.[0]?.text || chip?.text?.simpleText || '';
+      const isMusicLabel = musicLabels.some(l => label.toLowerCase().trim() === l.toLowerCase());
+      if (isMusicLabel) {
+        musicChipToken =
+          chip?.navigationEndpoint?.continuationCommand?.token ||
+          chip?.onSelectCommand?.continuationCommand?.token ||
+          null;
+        break;
+      }
+    }
+
+    const keys = ['videoRenderer', 'gridVideoRenderer', 'compactVideoRenderer', 'lockupViewModel', 'continuationItemRenderer'];
+    const videos = [];
+    const seenIds = new Set();
+    let continuationToken = null;
+
+    const collectVideos = (results) => {
+      for (const item of results) {
+        if (item.key === 'continuationItemRenderer') {
+          continuationToken = continuationToken || item.value?.continuationEndpoint?.continuationCommand?.token;
+        } else if (item.key === 'lockupViewModel') {
+          const v = extractVideoFromLockup(item.value);
+          if (v && !seenIds.has(v.videoId)) { seenIds.add(v.videoId); videos.push(v); }
+        } else {
+          const v = extractVideoData(item.value);
+          if (v && !seenIds.has(v.videoId)) { seenIds.add(v.videoId); videos.push(v); }
+        }
+      }
+    };
+
+    if (musicChipToken) {
+      // Bước 2: POST với token chip Âm nhạc → feed trang chủ đã lọc theo Âm nhạc, cá nhân hóa
+      try {
+        const chipJson = await innertubePost({ ...innertubeCxt, continuation: musicChipToken });
+        collectVideos(findKeysRecursive(chipJson, keys));
+      } catch (e) {
+        console.error("Lỗi khi fetch chip âm nhạc:", e);
+      }
+    }
+
+    // Fallback: dùng ytInitialData trang chủ nếu chip không có kết quả
+    if (videos.length === 0) {
+      collectVideos(findKeysRecursive(homeData, keys));
+    }
+
+    // Lấy thêm trang tiếp theo nếu cần
+    if (continuationToken && videos.length < 36) {
+      try {
+        const contJson = await innertubePost({ ...innertubeCxt, continuation: continuationToken });
+        collectVideos(findKeysRecursive(contJson, keys));
+      } catch (contErr) {
+        console.error("Lỗi khi tải thêm gợi ý âm nhạc từ YouTube:", contErr);
+      }
+    }
+
+    return { success: true, videos: videos.slice(0, 60) };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+
+
+
+ipcMain.handle('get-app-version', () => app.getVersion());
 
 // Cấu hình cập nhật tự động từ GitHub Release
 const GITHUB_REPO = 'lupclky/dua-corner-player';
@@ -894,6 +1571,7 @@ ipcMain.handle('check-for-updates', async () => {
       }
 
       let data = '';
+      res.setEncoding('utf8');
       res.on('data', chunk => data += chunk);
       res.on('end', () => {
         try {
@@ -1016,4 +1694,50 @@ function downloadFileWithProgress(url, destPath, onProgress, onSuccess, onError)
     onError(err);
   });
 }
+
+// ==========================================
+// ĐIỀU KHIỂN & LƯU TRỮ NHẬT KÝ HOẠT ĐỘNG
+// ==========================================
+
+ipcMain.on('save-log-entry', (event, text) => {
+  try {
+    const logPath = path.join(app.getPath('userData'), 'activity_logs.txt');
+    const timestamp = new Date().toLocaleString('vi-VN');
+    const logLine = `[${timestamp}] ${text}\n`;
+    fs.appendFileSync(logPath, logLine, 'utf8');
+
+    // Giới hạn kích thước file log dưới 2MB
+    try {
+      const stats = fs.statSync(logPath);
+      if (stats.size > 2 * 1024 * 1024) {
+        const data = fs.readFileSync(logPath, 'utf8');
+        const lines = data.split('\n');
+        if (lines.length > 1000) {
+          const truncated = lines.slice(-1000).join('\n');
+          fs.writeFileSync(logPath, truncated, 'utf8');
+        }
+      }
+    } catch (e) {
+      // Bỏ qua lỗi khi kiểm tra kích thước file
+    }
+  } catch (err) {
+    console.error('Failed to save log entry:', err);
+  }
+});
+
+ipcMain.handle('open-log-file', async () => {
+  try {
+    const logPath = path.join(app.getPath('userData'), 'activity_logs.txt');
+    if (!fs.existsSync(logPath)) {
+      const timestamp = new Date().toLocaleString('vi-VN');
+      fs.writeFileSync(logPath, `[${timestamp}] [System] Khởi tạo file log hoạt động thành công.\n`, 'utf8');
+    }
+    await shell.openPath(logPath);
+    return { success: true };
+  } catch (err) {
+    console.error('Failed to open log file:', err);
+    return { success: false, error: err.message };
+  }
+});
+
 

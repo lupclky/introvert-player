@@ -48,6 +48,44 @@ function normalizeTimestamp(t) {
     return (num < 10000000000) ? num * 1000 : num;
 }
 
+// Lấy thông tin tiêu đề và ảnh thu nhỏ cho các bài hát từ URL
+async function fetchSongMetadata(type, videoId, soundcloudUrl) {
+    let title = '';
+    let thumbnail = '';
+    
+    try {
+        if (type === 'youtube') {
+            const url = `https://www.youtube.com/watch?v=${videoId}`;
+            if (window.electronAPI && typeof window.electronAPI.getYoutubeMetadata === 'function') {
+                const metadata = await window.electronAPI.getYoutubeMetadata(videoId);
+                title = metadata.title || `Nhạc YouTube (${videoId})`;
+                thumbnail = metadata.thumbnail || `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+            } else {
+                const response = await fetch(`https://noembed.com/embed?url=${encodeURIComponent(url)}`);
+                const data = await response.json();
+                title = data.title || `Nhạc YouTube (${videoId})`;
+                thumbnail = data.thumbnail_url || `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+            }
+        } else if (type === 'soundcloud') {
+            const response = await fetch(`https://soundcloud.com/oembed?format=json&url=${encodeURIComponent(soundcloudUrl)}`);
+            const data = await response.json();
+            title = data.title || `Nhạc SoundCloud`;
+            thumbnail = data.thumbnail_url || "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=200&auto=format&fit=crop";
+        }
+    } catch (e) {
+        console.error("Lỗi lấy siêu dữ liệu bài nhạc:", e);
+        if (type === 'youtube') {
+            title = `YT: ${videoId}`;
+            thumbnail = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+        } else {
+            title = `SC: ${(soundcloudUrl || '').replace('https://soundcloud.com/', '')}`;
+            thumbnail = 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=200&auto=format&fit=crop';
+        }
+    }
+    return { title, thumbnail };
+}
+
+
 // --- BIẾN TOÀN CỤC & CẤU HÌNH ---
 let player = null;
 let isPlayerApiReady = false;
@@ -77,6 +115,11 @@ const state = {
         return this._currentSong;
     },
     set currentSong(val) {
+        if (val && typeof val === 'object') {
+            if (val.extensionForceShow === undefined) {
+                val.extensionForceShow = false;
+            }
+        }
         this._currentSong = val;
         if (val) {
             localStorage.setItem('dua_current_song_raw', JSON.stringify(val));
@@ -98,6 +141,7 @@ const state = {
     skipSegments: [],
     volume: localStorage.getItem('dua_volume') !== null ? parseInt(localStorage.getItem('dua_volume')) : 80,
     maxDurationEnabled: localStorage.getItem('dua_max_duration_enabled') === 'true',
+    hideEmptyOverlay: localStorage.getItem('dua_hide_empty_overlay') === 'true',
     maxDuration: parseInt(localStorage.getItem('dua_max_duration_val')) || 180,
     limitMode: localStorage.getItem('dua_limit_mode') || 'fixed',
     milestones: (() => {
@@ -163,7 +207,7 @@ const state = {
                     return { key: item, timestamp: now };
                 }
                 return item;
-            }).filter(item => now - item.timestamp < 24 * 60 * 60 * 1000);
+            }).filter(item => now - item.timestamp < 7 * 24 * 60 * 60 * 1000);
         } catch (e) {
             return [];
         }
@@ -180,11 +224,32 @@ const state = {
     opacity: localStorage.getItem('dua_opacity') || '100',
     emptyQueueMessage: localStorage.getItem('dua_empty_queue_message') || 'Order nhạc tự động Zypage 50k',
     alertActionText: localStorage.getItem('dua_alert_action_text') || 'gửi một quả dứa',
+    focusModeMessage: localStorage.getItem('dua_focus_mode_message') || 'Đang bật chế độ Tập trung 🤫 Hàng đợi tạm dừng',
+    sensitiveVideosUrl: localStorage.getItem('dua_sensitive_videos_url') || 'https://gist.githubusercontent.com/lupclky/55e17b98530c70085aaece7e2a0289b7/raw/sensitive_videos.json',
+
+    extensionEnabled: localStorage.getItem('dua_extension_enabled') === 'true',
+    extensionPrice: parseInt(localStorage.getItem('dua_extension_price')) || 50000,
+    extensionMinutes: parseInt(localStorage.getItem('dua_extension_minutes')) || 6,
+    voteSkipDefaultAmount: parseInt(localStorage.getItem('dua_vote_skip_default_amount')) || 20000,
 
     // Cờ tạm thời: bỏ qua giới hạn thời gian cho bài hát hiện tại
     bypassCurrentSongDuration: false,
-    lastSwitchTime: 0
+    lastHandledEndedEventId: null,
+    focusMode: localStorage.getItem('dua_focus_mode') === 'true',
+    _wasPlayingBeforeFocusMode: localStorage.getItem('dua_was_playing_before_focus') === 'true',
+    get wasPlayingBeforeFocusMode() {
+        return this._wasPlayingBeforeFocusMode;
+    },
+    set wasPlayingBeforeFocusMode(val) {
+        this._wasPlayingBeforeFocusMode = val;
+        localStorage.setItem('dua_was_playing_before_focus', val);
+    },
+    lastSwitchTime: 0,
+    pendingOverlayReset: !sessionStorage.getItem('dua_app_initialized'),
+    lastReportedTime: 0
 };
+
+sessionStorage.setItem('dua_app_initialized', 'true');
 
 // Tự động sinh khóa đồng bộ cục bộ nếu chưa có
 if (!state.localSyncKey) {
@@ -254,42 +319,377 @@ function syncMaxDurationToOverlay(val) {
     publishMqtt('max_duration', { value: val });
 }
 
-// Tạm thời bỏ giới hạn thời gian cho bài hát đang phát
+// Tạm thời bật/tắt giới hạn thời gian cho bài hát đang phát
 function bypassCurrentSongLimit() {
+    if (state.focusMode) return;
     if (!state.currentSong) return;
-    state.bypassCurrentSongDuration = true;
-    syncMaxDurationToOverlay(0);
     
-    // Cập nhật payload đang lưu trong localStorage để bảo tồn bypass
-    // qua mọi lần re-broadcast (ví dụ: khi sắp xếp lại hàng đợi)
+    if (state.bypassCurrentSongDuration) {
+        // Tắt bypass (Khôi phục giới hạn thời gian ban đầu)
+        state.bypassCurrentSongDuration = false;
+        const originalLimit = calculateMaxDurationForSong(state.currentSong);
+        syncMaxDurationToOverlay(originalLimit);
+        
+        // Cập nhật payload đang lưu trong localStorage
+        const payloadRaw = localStorage.getItem('dua_current_song');
+        if (payloadRaw) {
+            try {
+                const payload = JSON.parse(payloadRaw);
+                payload.maxDuration = originalLimit;
+                localStorage.setItem('dua_current_song', JSON.stringify(payload));
+                publishMqtt('current_song', payload);
+            } catch(e) {}
+        }
+        
+        logSystem(`🔒 Đã khôi phục giới hạn thời gian cho bài hiện tại: <strong>${state.currentSong.title}</strong>`);
+        showDashboardSystemAlert("Khôi phục giới hạn", `🔒 Đã khôi phục giới hạn thời gian cho bài hiện tại: <strong>${state.currentSong.title}</strong>`);
+    } else {
+        // Bật bypass (Mở giới hạn thời gian)
+        state.bypassCurrentSongDuration = true;
+        syncMaxDurationToOverlay(0);
+        
+        // Cập nhật payload đang lưu trong localStorage
+        const payloadRaw = localStorage.getItem('dua_current_song');
+        if (payloadRaw) {
+            try {
+                const payload = JSON.parse(payloadRaw);
+                payload.maxDuration = 0;
+                localStorage.setItem('dua_current_song', JSON.stringify(payload));
+                publishMqtt('current_song', payload);
+            } catch(e) {}
+        }
+        
+        logSystem(`🔓 Đã mở giới hạn thời gian cho bài hiện tại: <strong>${state.currentSong.title}</strong>`);
+        showDashboardSystemAlert("Mở giới hạn bài", `🔓 Đã mở giới hạn thời gian cho bài hiện tại: <strong>${state.currentSong.title}</strong>`);
+    }
+    
+    renderQueue(); // Cập nhật lại nút bấm trên giao diện
+    updateBypassButtonUI(); // Cập nhật nút trạng thái trên giao diện
+}
+
+function generateExtensionCode() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let code = '';
+    for (let i = 0; i < 5; i++) {
+        code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return code;
+}
+
+function markMusicKeyAsEnded(key) {
+    if (!key) return;
+    const musicKeyStr = String(key);
+    const exists = state.endedKeys.some(e => e.key === musicKeyStr);
+    if (!exists) {
+        state.endedKeys.push({
+            key: musicKeyStr,
+            timestamp: Date.now()
+        });
+        const now = Date.now();
+        state.endedKeys = state.endedKeys.filter(item => now - item.timestamp < 7 * 24 * 60 * 60 * 1000);
+        if (state.endedKeys.length > 1000) {
+            state.endedKeys.shift();
+        }
+        localStorage.setItem('dua_ended_keys', JSON.stringify(state.endedKeys));
+    }
+}
+
+function calculateMaxDurationForSong(songOrAmount) {
+    if (!state.maxDurationEnabled) return 0;
+    
+    let amount = 0;
+    let extended = 0;
+    if (songOrAmount && typeof songOrAmount === 'object') {
+        amount = songOrAmount.amount;
+        extended = songOrAmount.extendedDuration || 0;
+    } else {
+        amount = songOrAmount;
+    }
+    
+    let baseDuration = 0;
+    if (state.limitMode === 'fixed') {
+        baseDuration = state.maxDuration;
+    } else {
+        const songAmount = Number(amount) || 0;
+        const sortedMilestones = [...state.milestones].sort((a, b) => a.amount - b.amount);
+        let found = false;
+        for (const milestone of sortedMilestones) {
+            if (songAmount < milestone.amount) {
+                baseDuration = milestone.duration * 60;
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            baseDuration = state.defaultDuration * 60;
+        }
+    }
+    return baseDuration + extended;
+}
+
+function isExtensionAllowedForSong(song) {
+    if (!song) return false;
+    // Nếu chưa có thời lượng thực của bài hát, mặc định cho phép để tránh bị chặn oan lúc mới load
+    if (!song.duration || song.duration <= 0) return true;
+    
+    const currentLimit = calculateMaxDurationForSong(song);
+    return (song.duration - currentLimit) > 240;
+}
+
+function checkAndApplyExtension(donation) {
+    if (!state.extensionEnabled) return false;
+    if (!state.currentSong) return false;
+    
+    if (!isExtensionAllowedForSong(state.currentSong)) {
+        logSystem(`Nhận code gia hạn từ <strong>${donation.name}</strong>, nhưng khoảng cách giữa thời lượng thực và giới hạn của bài hiện tại không lớn hơn 4 phút. Không áp dụng gia hạn.`, 'system');
+        return false;
+    }
+    
+    const message = (donation.message || '').trim();
+    if (!message) return false;
+    
+    const activeCode = state.currentSong.extensionCode;
+    if (!activeCode) return false;
+    
+    // Check if the message contains the active code case-insensitively
+    const upperMessage = message.toUpperCase();
+    if (upperMessage.includes(activeCode)) {
+        const amount = Number(donation.amount) || 0;
+        const price = state.extensionPrice || 50000;
+        const minutes = state.extensionMinutes || 6;
+        
+        const addedSeconds = Math.round((amount / price) * minutes * 60);
+        if (addedSeconds <= 0) {
+            logSystem(`Nhận code gia hạn từ <strong>${donation.name}</strong>, nhưng số tiền ${amount.toLocaleString('vi-VN')} đ không đủ để gia hạn (Giá thiết lập: ${price.toLocaleString('vi-VN')} đ = ${minutes} phút).`, 'system');
+            return false;
+        }
+        
+        // Mark this donation key as ended/processed
+        if (donation.id) {
+            markMusicKeyAsEnded(donation.id);
+        }
+        
+        // Log to donation history (shouldAlert = false)
+        handleNewDonation(donation, false);
+        
+        // Apply extension
+        state.currentSong.extendedDuration = (state.currentSong.extendedDuration || 0) + addedSeconds;
+        
+        // Generate new code
+        const oldCode = activeCode;
+        const newCode = generateExtensionCode();
+        state.currentSong.extensionCode = newCode;
+        
+        // Re-save to triggering setter
+        state.currentSong = state.currentSong;
+        
+        // Sync new max duration to overlay
+        const newMaxDur = calculateMaxDurationForSong(state.currentSong);
+        syncMaxDurationToOverlay(newMaxDur);
+        
+        // Update payload and broadcast
+        const payloadRaw = localStorage.getItem('dua_current_song');
+        if (payloadRaw) {
+            try {
+                const payload = JSON.parse(payloadRaw);
+                payload.maxDuration = newMaxDur;
+                payload.extensionCode = newCode;
+                payload.extendedDuration = state.currentSong.extendedDuration;
+                payload.extensionPrice = state.extensionPrice;
+                payload.extensionMinutes = state.extensionMinutes;
+                localStorage.setItem('dua_current_song', JSON.stringify(payload));
+                publishMqtt('current_song', payload);
+            } catch(e) {}
+        }
+        
+        // Trigger floating flash on overlay
+        sendControlCommand('extended', {
+            donorName: donation.name,
+            amount: amount,
+            seconds: addedSeconds
+        });
+        
+        const minutesStr = (addedSeconds / 60).toFixed(1).replace(/\.0$/, '');
+        logSystem(`➕ <strong>[Gia hạn thành công]</strong> Lượt donate từ <strong>${donation.name}</strong> (${amount.toLocaleString('vi-VN')} ₫) chứa mã code <strong>${oldCode}</strong>. Bài hát <strong>${state.currentSong.title}</strong> được cộng thêm <strong>${minutesStr} phút</strong>. Mã gia hạn mới: <strong>${newCode}</strong>`, 'system');
+        showDashboardSystemAlert("Gia hạn thời gian", `Lượt donate từ <strong>${donation.name}</strong> (${amount.toLocaleString('vi-VN')} ₫) chứa mã code <strong>${oldCode}</strong>. Bài hát <strong>${state.currentSong.title}</strong> được cộng thêm <strong>${minutesStr} phút</strong>.`);
+        
+        return true;
+    }
+    
+    return false;
+}
+
+function formatMoneyShort(amount) {
+    if (amount >= 1000000) {
+        return (amount / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+    }
+    if (amount >= 1000) {
+        return (amount / 1000).toFixed(0) + 'k';
+    }
+    return amount + 'đ';
+}
+
+function checkAndApplyVoteSkip(donation) {
+    if (!state.currentSong) return false;
+    if (!state.currentSong.voteSkipActive) return false;
+
+    // Tạm thời bỏ yêu cầu từ khóa #skip khi vote skip bài hát
+    // const message = (donation.message || '').trim().toLowerCase();
+    // if (!message.includes('#skip')) return false;
+
+    const amount = Number(donation.amount) || 0;
+    state.currentSong.voteAmount = (state.currentSong.voteAmount || 0) + amount;
+
+    // Cập nhật lại target nếu cần
+    const target = state.currentSong.voteSkipTarget || (state.currentSong.isOwnerAdd ? state.voteSkipDefaultAmount : (state.currentSong.amount || state.voteSkipDefaultAmount));
+    state.currentSong.voteSkipTarget = target;
+
+    // Lưu lại trạng thái của song hiện tại
+    state.currentSong = state.currentSong;
+
+    // Đánh dấu khoá này đã xử lý xong để tránh xử lý lại
+    if (donation.id) {
+        markMusicKeyAsEnded(donation.id);
+    }
+
+    // Ghi nhận lịch sử
+    handleNewDonation(donation, false);
+
+    if (state.currentSong.voteAmount > target) {
+        if (state.currentSong.voteSkipSuccess) return true;
+        state.currentSong.voteSkipSuccess = true;
+
+        logSystem(`🗳️ <strong>[Vote Skip Thành Công]</strong> Lượt donate từ <strong>${donation.name}</strong> (${amount.toLocaleString('vi-VN')} ₫) đã đưa quỹ vote skip (${state.currentSong.voteAmount.toLocaleString('vi-VN')} ₫) vượt ngưỡng mục tiêu (${target.toLocaleString('vi-VN')} ₫). Tự động skip bài!`, 'system');
+        showDashboardSystemAlert("Vote Skip", `Quỹ vote skip bài hát đạt ${state.currentSong.voteAmount.toLocaleString('vi-VN')} ₫. Bỏ qua bài hát hiện tại.`);
+        
+        // Cập nhật payload gửi sang overlay
+        const payloadRaw = localStorage.getItem('dua_current_song');
+        if (payloadRaw) {
+            try {
+                const payload = JSON.parse(payloadRaw);
+                payload.voteAmount = state.currentSong.voteAmount;
+                payload.voteSkipTarget = state.currentSong.voteSkipTarget;
+                payload.voteSkipSuccess = true;
+                localStorage.setItem('dua_current_song', JSON.stringify(payload));
+                publishMqtt('current_song', payload);
+            } catch (e) {
+                console.error("Lỗi cập nhật payload vote skip thành công:", e);
+            }
+        }
+
+        // Gửi lệnh điều khiển thành công sang overlay
+        sendControlCommand('vote_skip_success');
+        
+        const currentSongId = state.currentSong.id;
+        // Trì hoãn skip bài hát 3 giây
+        setTimeout(() => {
+            if (state.currentSong && state.currentSong.id === currentSongId) {
+                skipSong();
+            }
+        }, 3000);
+    } else {
+        // Cập nhật payload gửi sang overlay
+        const payloadRaw = localStorage.getItem('dua_current_song');
+        if (payloadRaw) {
+            try {
+                const payload = JSON.parse(payloadRaw);
+                payload.voteAmount = state.currentSong.voteAmount;
+                payload.voteSkipTarget = state.currentSong.voteSkipTarget;
+                localStorage.setItem('dua_current_song', JSON.stringify(payload));
+                publishMqtt('current_song', payload);
+            } catch (e) {
+                console.error("Lỗi cập nhật payload vote skip:", e);
+            }
+        }
+        
+        updateVoteSkipButtonUI();
+        
+        logSystem(`🗳️ <strong>[Nhận Vote Skip]</strong> Lượt donate từ <strong>${donation.name}</strong> (${amount.toLocaleString('vi-VN')} ₫) được cộng dồn vào quỹ vote skip. Quỹ hiện tại: <strong>${state.currentSong.voteAmount.toLocaleString('vi-VN')} / ${target.toLocaleString('vi-VN')} ₫</strong>.`, 'system');
+        showDashboardSystemAlert("Vote Skip", `Lượt donate từ <strong>${donation.name}</strong> (${amount.toLocaleString('vi-VN')} ₫) được cộng dồn vào quỹ. Quỹ hiện tại: ${state.currentSong.voteAmount.toLocaleString('vi-VN')} ₫.`);
+    }
+
+    return true;
+}
+
+function toggleVoteSkip() {
+    if (!state.currentSong) {
+        logSystem("Không có bài hát nào đang phát để mở Vote Skip!", 'system');
+        return;
+    }
+
+    state.currentSong.voteSkipActive = !state.currentSong.voteSkipActive;
+    if (state.currentSong.voteSkipActive) {
+        state.currentSong.voteAmount = 0;
+        state.currentSong.voteSkipTarget = state.currentSong.isOwnerAdd ? state.voteSkipDefaultAmount : (state.currentSong.amount || state.voteSkipDefaultAmount);
+        logSystem(`🗳️ <strong>[Mở Vote Skip]</strong> Đã bật tính năng vote skip cho bài hát: <strong>${state.currentSong.title}</strong> (Mục tiêu: ${state.currentSong.voteSkipTarget.toLocaleString('vi-VN')} ₫)`, 'system');
+        showDashboardSystemAlert("Mở Vote Skip", `Đã bật tính năng vote skip cho bài hát hiện tại.`);
+    } else {
+        logSystem(`🗳️ <strong>[Tắt Vote Skip]</strong> Đã tắt tính năng vote skip cho bài hát: <strong>${state.currentSong.title}</strong>`, 'system');
+        showDashboardSystemAlert("Tắt Vote Skip", `Đã tắt tính năng vote skip cho bài hát hiện tại.`);
+    }
+
+    // Trigger state setter to save current song raw state
+    state.currentSong = state.currentSong;
+
+    // Sync to overlay current song payload
     const payloadRaw = localStorage.getItem('dua_current_song');
     if (payloadRaw) {
         try {
             const payload = JSON.parse(payloadRaw);
-            payload.maxDuration = 0;
+            payload.voteSkipActive = state.currentSong.voteSkipActive;
+            payload.voteAmount = state.currentSong.voteAmount;
+            payload.voteSkipTarget = state.currentSong.voteSkipTarget;
             localStorage.setItem('dua_current_song', JSON.stringify(payload));
             publishMqtt('current_song', payload);
-        } catch(e) {}
-    }
-    
-    logSystem(`🔓 Đã mở giới hạn thời gian cho bài hiện tại: <strong>${state.currentSong.title}</strong>`);
-    showDashboardSystemAlert("Mở giới hạn bài", `🔓 Đã mở giới hạn thời gian cho bài hiện tại: <strong>${state.currentSong.title}</strong>`);
-    renderQueue(); // Cập nhật lại nút bấm trên giao diện
-}
-
-function calculateMaxDurationForSong(amount) {
-    if (!state.maxDurationEnabled) return 0;
-    if (state.limitMode === 'fixed') return state.maxDuration;
-    
-    const songAmount = Number(amount) || 0;
-    const sortedMilestones = [...state.milestones].sort((a, b) => a.amount - b.amount);
-    
-    for (const milestone of sortedMilestones) {
-        if (songAmount < milestone.amount) {
-            return milestone.duration * 60;
+        } catch (e) {
+            console.error("Lỗi đồng bộ toggle vote skip:", e);
         }
     }
-    return state.defaultDuration * 60;
+
+    updateVoteSkipButtonUI();
+}
+
+function updateVoteSkipButtonUI() {
+    const btn = document.getElementById('btn-vote-skip');
+    const dashBar = document.getElementById('dash-vote-skip-bar');
+    const progressText = document.getElementById('dash-vote-skip-progress-text');
+    const fill = document.getElementById('dash-vote-skip-fill');
+
+    if (!state.currentSong) {
+        if (btn) btn.style.display = 'none';
+        if (dashBar) dashBar.classList.remove('visible');
+        return;
+    }
+
+    if (btn) {
+        btn.style.display = 'inline-flex';
+        if (state.currentSong.voteSkipActive) {
+            btn.classList.add('active-voteskip');
+            const target = state.currentSong.voteSkipTarget || (state.currentSong.isOwnerAdd ? state.voteSkipDefaultAmount : (state.currentSong.amount || state.voteSkipDefaultAmount));
+            const voteAmt = state.currentSong.voteAmount || 0;
+            btn.innerHTML = `Đang Vote skip: ${formatMoneyShort(voteAmt)}/${formatMoneyShort(target)}`;
+        } else {
+            btn.classList.remove('active-voteskip');
+            btn.innerHTML = `Mở Vote skip`;
+        }
+    }
+
+    if (dashBar) {
+        if (state.currentSong.voteSkipActive) {
+            dashBar.classList.add('visible');
+            const target = state.currentSong.voteSkipTarget || (state.currentSong.isOwnerAdd ? state.voteSkipDefaultAmount : (state.currentSong.amount || state.voteSkipDefaultAmount));
+            const voteAmt = state.currentSong.voteAmount || 0;
+            if (progressText) {
+                progressText.textContent = `${voteAmt.toLocaleString('vi-VN')} / ${target.toLocaleString('vi-VN')} VNĐ`;
+            }
+            if (fill) {
+                const pct = Math.min(100, Math.max(0, (voteAmt / target) * 100));
+                fill.style.width = `${pct}%`;
+            }
+        } else {
+            dashBar.classList.remove('visible');
+        }
+    }
 }
 
 function updateMaxDurationValue() {
@@ -303,7 +703,7 @@ function updateMaxDurationValue() {
         syncMaxDurationToOverlay(state.maxDuration);
     } else {
         if (state.currentSong) {
-            const currentDur = calculateMaxDurationForSong(state.currentSong.amount);
+            const currentDur = calculateMaxDurationForSong(state.currentSong);
             syncMaxDurationToOverlay(currentDur);
         } else {
             syncMaxDurationToOverlay(0);
@@ -312,8 +712,53 @@ function updateMaxDurationValue() {
     updateBypassButtonUI();
 }
 
+let sensitiveVideosConfig = {};
+
+async function fetchSensitiveVideosConfig() {
+    const url = localStorage.getItem('dua_sensitive_videos_url') || 'https://gist.githubusercontent.com/lupclky/55e17b98530c70085aaece7e2a0289b7/raw/sensitive_videos.json';
+    if (!url) {
+        sensitiveVideosConfig = {};
+        return;
+    }
+    try {
+        const cacheBusterUrl = url.trim() + (url.includes('?') ? '&' : '?') + 't=' + Date.now();
+        let rawText = null;
+        try {
+            const proxyRes = await fetchWithCorsProxy(cacheBusterUrl);
+            if (proxyRes && proxyRes.contents) {
+                rawText = proxyRes.contents;
+            }
+        } catch (proxyErr) {
+            console.warn("Dashboard: Tải qua proxy thất bại, thử tải trực tiếp:", proxyErr);
+            const response = await fetch(cacheBusterUrl, { cache: 'no-store' });
+            if (response.ok) {
+                rawText = await response.text();
+            }
+        }
+
+        if (rawText) {
+            try {
+                const data = JSON.parse(rawText);
+                if (data && typeof data === 'object') {
+                    sensitiveVideosConfig = data;
+                    console.log("Dashboard: Đã tải cấu hình video nhạy cảm trực tuyến thành công:", sensitiveVideosConfig);
+                }
+            } catch (jsonErr) {
+                console.error("Dashboard: Lỗi định dạng JSON trong file Gist:", jsonErr);
+            }
+        }
+    } catch (e) {
+        console.error("Dashboard: Lỗi kết nối khi tải cấu hình video nhạy cảm trực tuyến:", e);
+    }
+}
+
 // --- LOGIC KHỞI ĐẦU KHI TRANG LOAD ---
 document.addEventListener("DOMContentLoaded", () => {
+    // Khởi động monitor kết nối dịch vụ
+    startServiceMonitorLoop();
+
+
+
     // Dọn dẹp dữ liệu hàng đợi và trạng thái bài hát cũ từ phiên trước
     localStorage.removeItem('dua_music_queue');
     localStorage.removeItem('dua_current_song');
@@ -323,7 +768,43 @@ document.addEventListener("DOMContentLoaded", () => {
     if (window.electronAPI && typeof window.electronAPI.getAppVersion === 'function') {
         window.electronAPI.getAppVersion().then((ver) => {
             const verDisplay = document.getElementById('app-version-display');
-            if (verDisplay) verDisplay.textContent = `v${ver}`;
+            if (verDisplay) {
+                verDisplay.textContent = `Phiên bản v${ver}`;
+                verDisplay.style.cursor = 'pointer';
+                verDisplay.title = "Phiên bản ứng dụng";
+
+                // Click 5 lần vào phiên bản để kích hoạt tab After Credit bí mật (Easter Egg)
+                let versionClicks = 0;
+                verDisplay.addEventListener('click', () => {
+                    versionClicks++;
+                    if (versionClicks === 5) {
+                        localStorage.setItem('dua_aftercredit_unlocked', 'true');
+                        const afterCreditBtn = document.getElementById('menu-btn-aftercredit');
+                        if (afterCreditBtn) {
+                            afterCreditBtn.style.display = 'inline-flex';
+                            showDashboardSystemAlert("Mở khóa bí mật", "Đã kích hoạt tab After Credit bí mật! 🎁", "BÍ MẬT");
+                        }
+                    }
+                });
+            }
+
+            // Hiển thị nút tab After Credit nếu đã được mở khóa trước đó
+            if (localStorage.getItem('dua_aftercredit_unlocked') === 'true') {
+                const afterCreditBtn = document.getElementById('menu-btn-aftercredit');
+                if (afterCreditBtn) {
+                    afterCreditBtn.style.display = 'inline-flex';
+                }
+            }
+
+            // Bổ sung hiển thị changelog lần đầu sau khi nâng cấp phiên bản mới
+            const lastSeenVersion = localStorage.getItem('dua_last_seen_version');
+            if (lastSeenVersion !== ver) {
+                loadChangelogForVersion(ver).then((markdownText) => {
+                    const htmlContent = convertChangelogMarkdownToHtml(markdownText);
+                    showChangelogModal(ver, htmlContent);
+                });
+            }
+            localStorage.setItem('dua_last_seen_version', ver);
         });
     }
 
@@ -481,6 +962,92 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    // Thiết lập input lời hiển thị khi bật chế độ Tập trung và nút áp dụng
+    const focusMsgInput = document.getElementById('overlay-focus-msg-input');
+    const focusMsgApplyBtn = document.getElementById('btn-overlay-focus-msg-apply');
+    const focusMsgCounter = document.getElementById('overlay-focus-msg-counter');
+    if (focusMsgInput) {
+        focusMsgInput.value = state.focusModeMessage;
+        
+        const updateFocusCounter = () => {
+            if (focusMsgCounter) {
+                const len = focusMsgInput.value.length;
+                focusMsgCounter.textContent = `${len}/50`;
+                if (len >= 50) {
+                    focusMsgCounter.style.color = '#EF4444';
+                    focusMsgInput.style.borderColor = '#EF4444';
+                } else {
+                    focusMsgCounter.style.color = '';
+                    focusMsgInput.style.borderColor = '';
+                }
+            }
+        };
+
+        focusMsgInput.addEventListener('input', updateFocusCounter);
+        updateFocusCounter();
+
+        if (focusMsgApplyBtn) {
+            focusMsgApplyBtn.addEventListener('click', () => {
+                let val = focusMsgInput.value || 'Đang bật chế độ Tập trung 🤫 Hàng đợi tạm dừng';
+                if (val.length > 50) {
+                    val = val.substring(0, 50);
+                }
+                state.focusModeMessage = val;
+                localStorage.setItem('dua_focus_mode_message', val);
+                publishMqtt('focus_mode_message', { text: val });
+                logSystem(`Đã lưu và đồng bộ lời hiển thị Tập trung: "<strong>${val}</strong>"`, 'system');
+                
+                // Phản hồi trực quan trên nút
+                focusMsgApplyBtn.style.background = 'var(--pineapple-success)';
+                setTimeout(() => {
+                    focusMsgApplyBtn.style.background = 'var(--pineapple-yellow)';
+                }, 800);
+                
+                alert("Đã áp dụng và đồng bộ lời hiển thị Tập trung mới lên OBS Overlay!");
+            });
+        }
+    }
+
+    const hideEmptyToggle = document.getElementById('hide-empty-overlay-toggle');
+    if (hideEmptyToggle) {
+        hideEmptyToggle.checked = state.hideEmptyOverlay;
+        hideEmptyToggle.addEventListener('change', (e) => {
+            const isChecked = e.target.checked;
+            state.hideEmptyOverlay = isChecked;
+            localStorage.setItem('dua_hide_empty_overlay', isChecked);
+            publishMqtt('hide_empty_overlay', { value: isChecked });
+            logSystem(`Đã cấu hình ${isChecked ? 'Ẩn' : 'Hiện'} overlay khi không có nhạc.`);
+        });
+    }
+
+    // Thiết lập input link Gist JSON cảnh báo nhạy cảm
+    const sensitiveUrlInput = document.getElementById('sensitive-videos-url-input');
+    const sensitiveUrlApplyBtn = document.getElementById('btn-sensitive-videos-url-apply');
+    if (sensitiveUrlInput) {
+        sensitiveUrlInput.value = state.sensitiveVideosUrl;
+        if (sensitiveUrlApplyBtn) {
+            sensitiveUrlApplyBtn.addEventListener('click', () => {
+                const val = (sensitiveUrlInput.value || '').trim();
+                state.sensitiveVideosUrl = val;
+                localStorage.setItem('dua_sensitive_videos_url', val);
+                publishMqtt('sensitive_videos_url', { url: val });
+                logSystem(`Đã lưu và đồng bộ Link Gist cảnh báo: "<strong>${val || 'Mặc định'}</strong>"`, 'system');
+                
+                // Tải lại danh sách nhạy cảm ngay lập tức và cập nhật UI
+                fetchSensitiveVideosConfig().then(() => {
+                    updatePlayerUI(state.currentSong);
+                });
+
+                sensitiveUrlApplyBtn.style.background = 'var(--pineapple-success)';
+                setTimeout(() => {
+                    sensitiveUrlApplyBtn.style.background = 'var(--pineapple-yellow)';
+                }, 800);
+                
+                alert("Đã lưu và đồng bộ Link JSON cảnh báo nhạy cảm trực tuyến!");
+            });
+        }
+    }
+
     // Khôi phục trạng thái Dark Mode
     const isDark = localStorage.getItem('dua_dark_mode') === 'true';
     toggleDarkMode(isDark);
@@ -490,10 +1057,30 @@ document.addEventListener("DOMContentLoaded", () => {
     if (quickOwnerAddCheckbox) {
         const isQuickOwnerAdd = localStorage.getItem('dua_quick_owner_add') === 'true';
         quickOwnerAddCheckbox.checked = isQuickOwnerAdd;
+        
+        const nameInput = document.getElementById('quick-donor-name');
+        const amountInput = document.getElementById('quick-donor-amount');
+        const toggleInputs = () => {
+            const isChecked = quickOwnerAddCheckbox.checked;
+            if (nameInput) {
+                nameInput.disabled = isChecked;
+                nameInput.style.opacity = isChecked ? '0.5' : '1';
+                nameInput.style.cursor = isChecked ? 'not-allowed' : '';
+            }
+            if (amountInput) {
+                amountInput.disabled = isChecked;
+                amountInput.style.opacity = isChecked ? '0.5' : '1';
+                amountInput.style.cursor = isChecked ? 'not-allowed' : '';
+            }
+        };
+        
         quickOwnerAddCheckbox.addEventListener('change', (e) => {
             localStorage.setItem('dua_quick_owner_add', e.target.checked ? 'true' : 'false');
             logSystem(`Cập nhật chế độ Chủ kênh thêm nhạc: ${e.target.checked ? 'BẬT' : 'TẮT'}`, 'system');
+            toggleInputs();
         });
+        
+        toggleInputs();
     }
 
     // Thiết lập input Giới hạn thời gian phát tối đa
@@ -708,10 +1295,162 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             });
         }
+
+        // Thiết lập cấu hình Gia hạn thời gian
+        const extensionToggle = document.getElementById('extension-toggle');
+        const extensionPriceInput = document.getElementById('extension-price-input');
+        const extensionMinutesInput = document.getElementById('extension-minutes-input');
+        const extensionFormGroup = document.getElementById('extension-form-group');
+        const extensionApplyBtn = document.getElementById('btn-extension-apply');
+
+        function updateExtensionUI() {
+            if (!extensionToggle || !extensionFormGroup) return;
+            if (!state.extensionEnabled) {
+                extensionFormGroup.style.display = 'none';
+            } else {
+                extensionFormGroup.style.display = 'flex';
+            }
+        }
+
+        if (extensionToggle && extensionPriceInput && extensionMinutesInput && extensionFormGroup && extensionApplyBtn) {
+            extensionToggle.checked = state.extensionEnabled;
+            extensionPriceInput.value = state.extensionPrice;
+            extensionMinutesInput.value = state.extensionMinutes;
+
+            updateExtensionUI();
+
+            extensionToggle.addEventListener('change', (e) => {
+                const isChecked = e.target.checked;
+                state.extensionEnabled = isChecked;
+                localStorage.setItem('dua_extension_enabled', isChecked ? 'true' : 'false');
+                updateExtensionUI();
+                
+                // Nếu bật gia hạn và đang có bài hát phát nhưng chưa có code, tự động sinh mã
+                if (isChecked && state.currentSong && !state.currentSong.extensionCode) {
+                    state.currentSong.extensionCode = generateExtensionCode();
+                    state.currentSong.extendedDuration = state.currentSong.extendedDuration || 0;
+                    state.currentSong = state.currentSong; // trigger setter
+                    
+                    const payloadRaw = localStorage.getItem('dua_current_song');
+                    if (payloadRaw) {
+                        try {
+                            const payload = JSON.parse(payloadRaw);
+                            payload.extensionCode = state.currentSong.extensionCode;
+                            payload.maxDuration = calculateMaxDurationForSong(state.currentSong);
+                            payload.extensionPrice = state.extensionPrice;
+                            payload.extensionMinutes = state.extensionMinutes;
+                            localStorage.setItem('dua_current_song', JSON.stringify(payload));
+                            publishMqtt('current_song', payload);
+                        } catch(e) {}
+                    }
+                    updateMaxDurationValue();
+                }
+                
+                logSystem(`Cập nhật chế độ gia hạn thời gian: ${isChecked ? 'BẬT' : 'TẤT'}`, 'system');
+                showDashboardSystemAlert("Gia hạn thời gian", `Cập nhật chế độ gia hạn thời gian: ${isChecked ? 'BẬT' : 'TẤT'}`);
+                updateForceExtensionButtonUI();
+            });
+
+            extensionApplyBtn.addEventListener('click', () => {
+                const price = parseInt(extensionPriceInput.value) || 50000;
+                const minutes = parseInt(extensionMinutesInput.value) || 6;
+                
+                state.extensionPrice = price;
+                state.extensionMinutes = minutes;
+                localStorage.setItem('dua_extension_price', price);
+                localStorage.setItem('dua_extension_minutes', minutes);
+
+                // Sync rate mới xuống payload overlay nếu đang có bài hát
+                const payloadRaw = localStorage.getItem('dua_current_song');
+                if (payloadRaw) {
+                    try {
+                        const payload = JSON.parse(payloadRaw);
+                        payload.extensionPrice = price;
+                        payload.extensionMinutes = minutes;
+                        localStorage.setItem('dua_current_song', JSON.stringify(payload));
+                        publishMqtt('current_song', payload);
+                    } catch(e) {}
+                }
+                
+                logSystem(`Đã áp dụng cấu hình gia hạn: <strong>${price.toLocaleString('vi-VN')} VNĐ = ${minutes} phút</strong>`, 'system');
+                showDashboardSystemAlert("Gia hạn thời gian", `Đã áp dụng cấu hình gia hạn: <strong>${price.toLocaleString('vi-VN')} VNĐ = ${minutes} phút</strong>`);
+                
+                extensionApplyBtn.style.background = 'var(--pineapple-success)';
+                setTimeout(() => {
+                    extensionApplyBtn.style.background = 'var(--pineapple-yellow)';
+                }, 800);
+            });
+        }
+
+        // Thiết lập cấu hình Vote Skip
+        const voteSkipDefaultAmountInput = document.getElementById('vote-skip-default-amount-input');
+        const voteSkipSettingsApplyBtn = document.getElementById('btn-vote-skip-settings-apply');
+        
+        if (voteSkipDefaultAmountInput && voteSkipSettingsApplyBtn) {
+            voteSkipDefaultAmountInput.value = state.voteSkipDefaultAmount;
+            
+            voteSkipSettingsApplyBtn.addEventListener('click', () => {
+                const defaultAmt = parseInt(voteSkipDefaultAmountInput.value) || 20000;
+                state.voteSkipDefaultAmount = defaultAmt;
+                localStorage.setItem('dua_vote_skip_default_amount', defaultAmt);
+                
+                // Đồng bộ nếu bài hát đang phát là bài tự thêm và đang bật vote skip
+                if (state.currentSong) {
+                    if (state.currentSong.isOwnerAdd) {
+                        state.currentSong.voteSkipTarget = defaultAmt;
+                        state.currentSong = state.currentSong; // trigger setter
+                        
+                        const payloadRaw = localStorage.getItem('dua_current_song');
+                        if (payloadRaw) {
+                            try {
+                                const payload = JSON.parse(payloadRaw);
+                                payload.voteSkipTarget = defaultAmt;
+                                localStorage.setItem('dua_current_song', JSON.stringify(payload));
+                                publishMqtt('current_song', payload);
+                            } catch (e) {}
+                        }
+                        updateVoteSkipButtonUI();
+                    }
+                }
+                
+                logSystem(`Đã áp dụng cấu hình mục tiêu skip mặc định cho bài tự thêm: <strong>${defaultAmt.toLocaleString('vi-VN')} VNĐ</strong>`, 'system');
+                showDashboardSystemAlert("Vote Skip", `Đã áp dụng cấu hình mục tiêu skip mặc định: <strong>${defaultAmt.toLocaleString('vi-VN')} VNĐ</strong>`);
+                
+                voteSkipSettingsApplyBtn.style.background = 'var(--pineapple-success)';
+                setTimeout(() => {
+                    voteSkipSettingsApplyBtn.style.background = 'var(--pineapple-yellow)';
+                }, 800);
+            });
+        }
     }
 
     // Tải cấu hình ZyPage từ AppData nếu chạy trong Electron HTTP server
     loadConfigFromAppData();
+
+    // Thiết lập sự kiện áp dụng cho số tiền tối thiểu nhận nhạc từ tin nhắn ZyPage
+    const minAmountInput = document.getElementById('zypage-min-amount-input');
+    const minAmountApplyBtn = document.getElementById('btn-zypage-min-amount-apply');
+    if (minAmountInput && minAmountApplyBtn) {
+        minAmountApplyBtn.addEventListener('click', () => {
+            const val = minAmountInput.value;
+            onMinAmountConfigChange(val);
+
+            // Phản hồi trực quan trên nút
+            minAmountApplyBtn.style.background = 'var(--pineapple-success)';
+            setTimeout(() => {
+                minAmountApplyBtn.style.background = 'var(--pineapple-yellow)';
+            }, 800);
+
+            alert("Đã áp dụng số tiền tối thiểu mới nhận nhạc từ tin nhắn!");
+        });
+
+        // Hỗ trợ nhấn Enter trong ô nhập liệu
+        minAmountInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                minAmountApplyBtn.click();
+            }
+        });
+    }
 
     // Hiển thị hàng đợi
     renderQueue();
@@ -719,6 +1458,12 @@ document.addEventListener("DOMContentLoaded", () => {
     initQueue();
     // Đồng bộ UI nút Test Mode từ localStorage
     updateTestModeUI();
+
+    const focusModeSwitch = document.getElementById('focus-mode-toggle-switch');
+    if (focusModeSwitch) {
+        focusModeSwitch.checked = state.focusMode;
+    }
+    applyDashboardFocusModeState(state.focusMode);
 
     // Cấu hình hiển thị ô nhúng OBS và khởi tạo MQTT
     updateObsUrlDisplay();
@@ -735,7 +1480,6 @@ document.addEventListener("DOMContentLoaded", () => {
             const query = urlInput.value.trim();
             if (searchTimeout) clearTimeout(searchTimeout);
             
-            // Kiểm tra xem có phải là đường dẫn URL hay không
             const isUrl = query.startsWith('http://') || query.startsWith('https://') || query.startsWith('spotify:');
             
             if (isUrl || query.length < 2) {
@@ -743,15 +1487,19 @@ document.addEventListener("DOMContentLoaded", () => {
                 return;
             }
             
-            // Trì hoãn 200ms để tránh gửi request liên tục (debounce)
+            searchResultsContainer.style.display = 'flex';
+            
+            // Trì hoãn 450ms để tránh gửi request liên tục (debounce)
             searchTimeout = setTimeout(async () => {
                 searchResultsContainer.innerHTML = '<div style="padding: 10px; text-align: center; font-weight: 700; color: var(--pineapple-text);"><i class="fa-solid fa-spinner fa-spin"></i> Đang tìm kiếm trên YouTube...</div>';
-                searchResultsContainer.style.display = 'flex';
                 
                 try {
                     const result = await callYouTubeSearch(query);
+                    if (result && result.aborted) {
+                        return; // Bỏ qua nếu request này bị hủy bởi request mới hơn
+                    }
                     if (result && result.success && result.videos && result.videos.length > 0) {
-                        renderSearchResults(result.videos);
+                        renderSearchResults(result.videos, 'quick-add-search-results');
                     } else if (result && result.error) {
                         searchResultsContainer.innerHTML = `<div style="padding: 10px; text-align: center; color: var(--pineapple-error); font-weight: 700;">Lỗi: ${result.error}</div>`;
                     } else {
@@ -760,7 +1508,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 } catch (e) {
                     searchResultsContainer.innerHTML = `<div style="padding: 10px; text-align: center; color: var(--pineapple-error); font-weight: 700;">Lỗi kết nối mạng!</div>`;
                 }
-            }, 200);
+            }, 450);
         });
 
         // Ẩn bảng kết quả khi click ra ngoài
@@ -877,6 +1625,41 @@ document.addEventListener("DOMContentLoaded", () => {
             });
         }
     }
+    
+    // Thiết lập Popover cho Quick Add trên Titlebar
+    const donorUrlInput = document.getElementById('donor-url');
+    const quickAddPopover = document.getElementById('quick-add-popover');
+    const quickAddForm = document.getElementById('quick-add-form');
+
+    if (donorUrlInput && quickAddPopover) {
+        // Hiển thị popover khi focus vào ô tìm kiếm/nhập link
+        donorUrlInput.addEventListener('focus', () => {
+            quickAddPopover.classList.add('visible');
+        });
+
+        // Ẩn popover khi click ra ngoài form
+        document.addEventListener('click', (e) => {
+            if (quickAddForm && !quickAddForm.contains(e.target)) {
+                quickAddPopover.classList.remove('visible');
+            }
+        });
+
+        // Đóng popover khi bấm nút Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                quickAddPopover.classList.remove('visible');
+                donorUrlInput.blur();
+            }
+        });
+    }
+
+    // Khôi phục trạng thái kết nối YouTube
+    checkYoutubeAuth();
+
+
+
+    // Render danh sách lịch sử lời nhắn donate
+    renderDonationHistory();
 });
 
 // --- HÀM GHI LOG HỆ THỐNG ---
@@ -895,6 +1678,9 @@ function logSystem(message, type = 'system') {
     } else if (type === 'queue') {
         tagText = 'Donate';
         tagClass = 'log-tag-queue';
+    } else if (type === 'error') {
+        tagText = 'Lỗi';
+        tagClass = 'log-tag-error';
     }
 
     entry.innerHTML = `
@@ -909,7 +1695,53 @@ function logSystem(message, type = 'system') {
         logBox.removeChild(logBox.firstChild);
     }
     
-    logBox.scrollTop = logBox.scrollHeight;
+    // Đã loại bỏ tự động cuộn (auto scroll) theo yêu cầu người dùng
+    
+    // Ghi log ra file ngoài .txt thông qua IPC (Đã tắt theo yêu cầu người dùng để tránh nặng máy)
+    /*
+    if (window.electronAPI && typeof window.electronAPI.saveLogEntry === 'function') {
+        const cleanMessage = message.replace(/<\/?[^>]+(>|$)/g, "").replace(/&nbsp;/g, " ");
+        window.electronAPI.saveLogEntry(`[${tagText}] ${cleanMessage}`);
+    }
+    */
+}
+
+// Hàm mở file log hoạt động bên ngoài ứng dụng
+async function openExternalLogFile() {
+    if (window.electronAPI && typeof window.electronAPI.openLogFile === 'function') {
+        try {
+            const result = await window.electronAPI.openLogFile();
+            if (!result.success) {
+                logSystem(`Không thể mở file log: ${result.error}`, 'error');
+            }
+        } catch (err) {
+            logSystem(`Lỗi khi mở file log: ${err.message}`, 'error');
+        }
+    } else {
+        alert("Tính năng này chỉ hỗ trợ khi chạy trên ứng dụng Introvert Player Desktop.");
+    }
+}
+
+// --- HÀM XỬ LÝ LỖI PHÁT NHẠC (NHÚNG BỊ CHẶN) ---
+function handlePlayerError(code, title) {
+    let errorDescription = "Lỗi chưa xác định";
+    if (code === 101 || code === 150) {
+        errorDescription = "Hãng đĩa sở hữu đã chặn tính năng phát nhúng (Embedding Disabled) của video này trên các trang web/ứng dụng ngoài.";
+    } else if (code === 2) {
+        errorDescription = "ID video YouTube không hợp lệ.";
+    } else if (code === 100) {
+        errorDescription = "Video không tồn tại hoặc đã bị xóa / chuyển sang chế độ riêng tư.";
+    } else if (code === 5) {
+        errorDescription = "Không thể phát video này trong trình phát HTML5.";
+    }
+
+    const fullMsg = `Bài hát: <strong>${title}</strong> gặp sự cố phát.<br><br>
+        <span style="color: var(--pineapple-orange-dark); font-weight: 800;"><i class="fa-solid fa-triangle-exclamation"></i> Chi tiết:</span> ${errorDescription}<br><br>
+        <em>Hệ thống đã tự động bỏ qua để phát bài tiếp theo. Hãy chọn bản nhạc khác thay thế (ví dụ: bản Vietsub, Lyric do fan đăng tải).</em>`;
+
+    // Hiển thị thông báo màu đỏ/cam trên Dashboard
+    showDashboardSystemAlert("Lỗi trình phát", fullMsg, "LỖI PHÁT NHẠC");
+    logSystem(`Lỗi phát bài "${title}" (Mã lỗi: ${code}). Chi tiết: ${errorDescription}`, "error");
 }
 
 // --- MÔ PHỎNG THÊM LINK NHANH MẪU ---
@@ -957,6 +1789,7 @@ function parseSpotifyTrackId(url) {
 // --- THÊM BÀI HÁT NHANH BẰNG LINK ---
 async function handleQuickAddSubmit(event) {
     event.preventDefault();
+    if (state.focusMode) return;
 
     const urlInput = document.getElementById('donor-url');
     if (!urlInput) return;
@@ -968,7 +1801,6 @@ async function handleQuickAddSubmit(event) {
         searchTimeout = null;
     }
     
-    // Nếu không phải là URL, thực hiện tìm kiếm ngay lập tức
     const isUrl = url.startsWith('http://') || url.startsWith('https://') || url.startsWith('spotify:');
     if (!isUrl) {
         const searchResultsContainer = document.getElementById('quick-add-search-results');
@@ -979,7 +1811,7 @@ async function handleQuickAddSubmit(event) {
             try {
                 const result = await callYouTubeSearch(url);
                 if (result && result.success && result.videos && result.videos.length > 0) {
-                    renderSearchResults(result.videos);
+                    renderSearchResults(result.videos, 'quick-add-search-results');
                 } else if (result && result.error) {
                     searchResultsContainer.innerHTML = `<div style="padding: 10px; text-align: center; color: var(--pineapple-error); font-weight: 700;">Lỗi: ${result.error}</div>`;
                 } else {
@@ -1066,7 +1898,7 @@ async function handleQuickAddSubmit(event) {
         }
 
         const nameInput = document.getElementById('quick-donor-name');
-        const donorName = (nameInput && nameInput.value.trim()) ? nameInput.value.trim() : "Introvert";
+        const donorName = (nameInput && nameInput.value.trim()) ? nameInput.value.trim() : "Em Dứa";
 
         const amountInput = document.getElementById('quick-donor-amount');
         const donorAmount = (amountInput && amountInput.value.trim() !== '') ? Number(amountInput.value) : 100000000;
@@ -1104,7 +1936,11 @@ async function handleQuickAddSubmit(event) {
         if (nameInput) nameInput.value = '';
         if (amountInput) amountInput.value = '';
 
-        if (!state.currentSong) {
+        // Ẩn popover thêm nhanh
+        const quickAddPopover = document.getElementById('quick-add-popover');
+        if (quickAddPopover) quickAddPopover.classList.remove('visible');
+
+        if (!state.currentSong && !state.focusMode) {
             playNextInQueue();
         }
 
@@ -1140,6 +1976,9 @@ function broadcastStateToOverlay() {
 // --- PHÁT THÔNG BÁO DONATE MỚI LÊN OBS OVERLAY ---
 function broadcastNewDonationAlert(song) {
     if (!song) return;
+    
+    // Nếu là chủ kênh thêm nhạc, không phát thông báo Donate mới
+    if (song.isOwnerAdd) return;
     
     // Tìm vị trí của bài hát trong hàng đợi sau khi sắp xếp để gửi đi chính xác
     let tempQueue = [...state.queue];
@@ -1202,6 +2041,9 @@ function broadcastNewDonationAlert(song) {
         title: song.title,
         message: song.message,
         position: positionStr,
+        thumbnail: song.thumbnail || '',
+        type: song.type || '',
+        videoId: song.videoId || '',
         timestamp: Date.now() + Math.random() // Tránh trùng lặp sự kiện storage
     };
     
@@ -1217,6 +2059,7 @@ function broadcastNewDonationAlert(song) {
 // --- LƯU TRỮ HÀNG ĐỢI VÀO LOCALSTORAGE ---
 function saveQueue() {
     localStorage.setItem('dua_queue', JSON.stringify(state.queue));
+    publishMqtt('queue_change', state.queue);
 }
 
 // --- SẮP XẾP VÀ VẼ LẠI HÀNG ĐỢI ---
@@ -1238,13 +2081,23 @@ function sortAndRefreshQueue(forceSort = false) {
     if (forceSort) {
         if (state.sortConfig === 'amount') {
             otherSongs.sort((a, b) => {
+                // Ưu tiên bài hát đã ghim (isPinned)
+                if (a.isPinned && !b.isPinned) return -1;
+                if (!a.isPinned && b.isPinned) return 1;
+                
                 if (b.amount !== a.amount) {
                     return b.amount - a.amount;
                 }
                 return a.timestamp - b.timestamp;
             });
         } else if (state.sortConfig === 'time') {
-            otherSongs.sort((a, b) => a.timestamp - b.timestamp);
+            otherSongs.sort((a, b) => {
+                // Ưu tiên bài hát đã ghim (isPinned)
+                if (a.isPinned && !b.isPinned) return -1;
+                if (!a.isPinned && b.isPinned) return 1;
+                
+                return a.timestamp - b.timestamp;
+            });
         }
     }
 
@@ -1410,14 +2263,19 @@ function renderQueue() {
             <div class="queue-item-info">
                 <!-- Hàng 1: Tiêu đề bài hát hiển thị đầy đủ -->
                 <div class="queue-item-title">
+                    ${song.isPinned ? `<i class="fa-solid fa-thumbtack pinned-title-icon" style="color: var(--pineapple-orange-dark); margin-right: 0.35rem; transform: rotate(45deg); display: inline-block; vertical-align: middle;"></i>` : ''}
                     ${song.title}${sourceBadgeHTML}
                 </div>
                 <!-- Hàng 2: Thông tin người ủng hộ + thời gian + nút chức năng -->
                 <div class="queue-item-row2">
                     <div class="queue-item-donor">
-                        ${song.donorName}
-                        <span style="color: var(--pineapple-text); font-weight: 500;">gửi</span>
-                        <span style="color: var(--pineapple-orange-dark); font-weight: 800;">${song.amount.toLocaleString('vi-VN')} VNĐ</span>
+                        ${song.isOwnerAdd ? `
+                            <span class="owner-add-badge"><i class="fa-solid fa-user-shield"></i> Chủ kênh thêm</span>
+                        ` : `
+                            ${song.donorName}
+                            <span style="color: var(--pineapple-text); font-weight: 500;">gửi</span>
+                            <span style="color: var(--pineapple-orange-dark); font-weight: 800;">${song.amount.toLocaleString('vi-VN')} VNĐ</span>
+                        `}
                         ${(song.start > 0 || song.end) && !song.isZyPage ? `<span style="font-size:0.72rem; color:#6B7280; margin-left: 0.3rem;">[${song.start}s–${song.end || 'hết'}]</span>` : ''}
                     </div>
                     <div class="queue-item-row2-right">
@@ -1437,6 +2295,9 @@ function renderQueue() {
                                     <i class="fa-solid fa-play"></i>
                                 </button>
                             ` : `
+                                <button class="queue-item-btn btn-pin ${song.isPinned ? 'pinned' : ''}" title="${song.isPinned ? 'Bỏ ghim bài hát' : 'Ghim bài hát lên đầu'}" onclick="togglePinQueueItem('${song.id}')">
+                                    <i class="fa-solid fa-thumbtack"></i>
+                                </button>
                                 ${realIndex > (state.currentSong ? 1 : 0) ? `
                                     <button class="queue-item-btn" title="Dịch chuyển lên" onclick="moveQueueItemUp('${song.id}')">
                                         <i class="fa-solid fa-arrow-up"></i>
@@ -1504,10 +2365,70 @@ function sendControlCommand(type, value = null) {
         timestamp: Date.now() + Math.random() // Đảm bảo sự kiện storage kích hoạt liên tục
     };
     
+    logSystem(`[Điều khiển] Thực thi lệnh điều khiển trình phát: <strong>${type}</strong>${value !== null ? ` [Giá trị: ${value}]` : ''}`, 'system');
+    
     localStorage.setItem('dua_control_command', JSON.stringify(cmdPayload));
     
     // MQTT broadcast
     publishMqtt('control_command', cmdPayload);
+}
+
+// --- BẢNG HỎI LỰA CHỌN PHÁT TIẾP BÀI HÁT BỊ ĐẨY XUỐNG ---
+function promptResumePlayback(song, onResolve) {
+    // Xóa bất kỳ modal nào cũ nếu còn tồn tại
+    const oldModal = document.getElementById('resume-playback-modal');
+    if (oldModal) oldModal.remove();
+
+    // Tạo modal lựa chọn phát tiếp
+    const modal = document.createElement('div');
+    modal.id = 'resume-playback-modal';
+    modal.className = 'browser-blocked-overlay';
+    modal.style.cssText = 'display: flex; justify-content: center; align-items: center; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 10000;';
+
+    const savedSeconds = Math.floor(song.savedProgress);
+    const card = document.createElement('div');
+    card.className = 'blocked-card';
+    card.style.cssText = 'max-width: 420px; width: 100%;';
+
+    card.innerHTML = `
+        <h3 style="font-family: var(--font-title); font-weight: 800; color: var(--pineapple-text); margin-top: 0; margin-bottom: 0.5rem;"><i class="fa-solid fa-clock-rotate-left"></i> Phát tiếp tục?</h3>
+        <p style="font-size: 0.9rem; font-weight: 700; color: var(--pineapple-text); margin-bottom: 1.25rem; line-height: 1.4; opacity: 0.85;">
+            Bài hát <strong>${song.title}</strong> có tiến trình cũ tại <strong style="color: var(--pineapple-orange-dark, #D97706);">${formatTime(savedSeconds)}</strong>.<br>
+            Bạn có muốn phát tiếp hay phát lại từ đầu?
+        </p>
+        <div style="display: flex; gap: 0.75rem; justify-content: center; margin-bottom: 0.8rem;">
+            <button id="btn-resume-yes" class="dua-btn dua-btn-primary" style="padding: 0.45rem 1.2rem; font-size: 0.85rem; border-width: 2px; box-shadow: 2px 2px 0px var(--pineapple-shadow, #2B1810); font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem;"><i class="fa-solid fa-forward"></i> Phát tiếp</button>
+            <button id="btn-resume-no" class="dua-btn dua-btn-secondary" style="padding: 0.45rem 1.2rem; font-size: 0.85rem; border-width: 2px; box-shadow: 2px 2px 0px var(--pineapple-shadow, #2B1810); font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem;"><i class="fa-solid fa-rotate-left"></i> Phát lại</button>
+        </div>
+        <div id="resume-countdown" style="font-size: 0.82rem; font-weight: 700; color: var(--pineapple-text); opacity: 0.55;">
+            Tự động phát tiếp sau 8 giây...
+        </div>
+    `;
+
+    modal.appendChild(card);
+    document.body.appendChild(modal);
+
+    let timeLeft = 8;
+    const countdownEl = card.querySelector('#resume-countdown');
+    
+    const interval = setInterval(() => {
+        timeLeft--;
+        if (countdownEl) {
+            countdownEl.textContent = `Tự động phát tiếp sau ${timeLeft} giây...`;
+        }
+        if (timeLeft <= 0) {
+            cleanup(true);
+        }
+    }, 1000);
+
+    const cleanup = (shouldResume) => {
+        clearInterval(interval);
+        modal.remove();
+        onResolve(shouldResume);
+    };
+
+    card.querySelector('#btn-resume-yes').addEventListener('click', () => cleanup(true));
+    card.querySelector('#btn-resume-no').addEventListener('click', () => cleanup(false));
 }
 
 // --- PHÁT MỘT BÀI HÁT CHI TIẾT (ĐỒNG BỘ SANG OVERLAY) ---
@@ -1519,8 +2440,50 @@ async function playSong(song) {
     // Đặt lại cờ bypass khi chuyển bài mới
     state.bypassCurrentSongDuration = false;
 
+    // Khởi tạo/đặt lại thuộc tính vote skip của bài hát hiện tại
+    song.voteSkipActive = song.voteSkipActive || false;
+    song.voteAmount = song.voteAmount || 0;
+    song.voteSkipTarget = song.voteSkipTarget || (song.isOwnerAdd ? state.voteSkipDefaultAmount : (song.amount || state.voteSkipDefaultAmount));
+
     // Gửi cấu hình âm lượng hiện tại sang overlay để đảm bảo đồng bộ tuyệt đối trước khi phát
     sendControlCommand('volume', state.volume);
+
+    // Kiểm tra xem bài hát có tiến trình đã lưu hay không
+    let startFrom = song.start || 0;
+    let needSeekAfterLoad = false;
+    if (song.savedProgress && song.savedProgress > 2) {
+        // Tạm dừng bài đang phát (nếu có) trước khi hỏi người dùng
+        if (state.isPlaying) {
+            sendControlCommand('pause');
+        }
+        // Gửi trạng thái chờ lên overlay để hiển thị thông báo
+        sendControlCommand('waiting_resume', song.title);
+
+        const shouldResume = await new Promise((resolve) => {
+            promptResumePlayback(song, resolve);
+        });
+        if (shouldResume) {
+            startFrom = Math.floor(song.savedProgress);
+            needSeekAfterLoad = true;
+            logSystem(`Phát tiếp tục bài hát "${song.title}" từ ${formatTime(startFrom)}`, 'system');
+        } else {
+            // Xóa tiến trình đã lưu
+            delete song.savedProgress;
+            const qItem = state.queue.find(s => String(s.id) === String(song.id));
+            if (qItem) {
+                delete qItem.savedProgress;
+            }
+            saveQueue();
+        }
+    }
+
+    // Thiết lập mã gia hạn nếu tính năng được bật
+    if (state.extensionEnabled) {
+        if (!song.extensionCode) {
+            song.extensionCode = generateExtensionCode();
+        }
+        song.extendedDuration = song.extendedDuration || 0;
+    }
 
     logSystem(`Đang chuẩn bị gửi bài hát sang Overlay: <strong>${song.title}</strong>...`);
     updatePlayerUI(song);
@@ -1544,10 +2507,19 @@ async function playSong(song) {
         amount: song.amount,
         message: song.message,
         isOwnerAdd: song.isOwnerAdd || false,
-        start: song.start || 0,
+        start: startFrom,
+        isResuming: needSeekAfterLoad,
         end: song.end || null,
         skipSegments: state.skipSegments || [],
-        maxDuration: calculateMaxDurationForSong(song.amount),
+        maxDuration: calculateMaxDurationForSong(song),
+        extensionCode: song.extensionCode || null,
+        extendedDuration: song.extendedDuration || 0,
+        extensionForceShow: song.extensionForceShow || false,
+        extensionPrice: state.extensionPrice,
+        extensionMinutes: state.extensionMinutes,
+        voteSkipActive: song.voteSkipActive || false,
+        voteAmount: song.voteAmount || 0,
+        voteSkipTarget: song.voteSkipTarget || (song.isOwnerAdd ? state.voteSkipDefaultAmount : (song.amount || state.voteSkipDefaultAmount)),
         nextSongTitle: nextSong ? nextSong.title : null,
         nextSongDonor: nextSong ? nextSong.donorName : null,
         nextSongAmount: nextSong ? nextSong.amount : null,
@@ -1574,13 +2546,12 @@ function updatePlayPauseButtonUI(isPlaying) {
     const playBtn = document.getElementById('btn-play-pause');
     if (isPlaying) {
         if (waves) waves.classList.remove('paused');
-        if (playBtn) playBtn.innerHTML = '<i class="fa-solid fa-pause"></i> Tạm dừng';
+        if (playBtn) playBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
     } else {
         if (waves) waves.classList.add('paused');
-        if (playBtn) playBtn.innerHTML = '<i class="fa-solid fa-play"></i> Tiếp tục';
+        if (playBtn) playBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
     }
 }
-
 // --- THU THẬP PHÂN ĐOẠN QUẢNG CÁO TỪ SPONSORBLOCK ---
 async function fetchSponsorBlockSegments(videoId) {
     state.skipSegments = [];
@@ -1633,22 +2604,45 @@ function startPlaybackMonitor() {
         if (!player || typeof player.getCurrentTime !== 'function') return;
 
         const currentTime = player.getCurrentTime();
+        state.lastReportedTime = currentTime;
+
         const duration = player.getDuration();
-        
-        if (!duration) return;
+        let isLiveStream = false;
+        try {
+            const vd = player.getVideoData ? player.getVideoData() : {};
+            isLiveStream = !!(vd && vd.isLive);
+        } catch (e) {
+            isLiveStream = (!duration || duration <= 0);
+        }
 
         const progressSlider = document.getElementById('progress-slider');
         const currentTimeDisplay = document.getElementById('current-time-display');
         const totalTimeDisplay = document.getElementById('total-time-display');
 
-        if (progressSlider) {
-            const pct = (currentTime / duration) * 100;
-            progressSlider.value = pct;
-            progressSlider.style.background = `linear-gradient(to right, var(--pineapple-orange) 0%, var(--pineapple-orange) ${pct}%, var(--pineapple-white) ${pct}%, var(--pineapple-white) 100%)`;
+        if (isLiveStream) {
+            if (progressSlider) progressSlider.style.display = 'none';
+            if (currentTimeDisplay) currentTimeDisplay.style.display = 'none';
+            if (totalTimeDisplay) {
+                totalTimeDisplay.textContent = "LIVE";
+                totalTimeDisplay.style.display = 'inline';
+            }
+        } else {
+            if (!duration) return;
+            if (progressSlider) {
+                progressSlider.style.display = 'block';
+                const pct = (currentTime / duration) * 100;
+                progressSlider.value = pct;
+                progressSlider.style.background = `linear-gradient(to right, var(--pineapple-orange) 0%, var(--pineapple-orange) ${pct}%, var(--pineapple-white) ${pct}%, var(--pineapple-white) 100%)`;
+            }
+            if (currentTimeDisplay) {
+                currentTimeDisplay.textContent = formatTime(currentTime);
+                currentTimeDisplay.style.display = 'inline';
+            }
+            if (totalTimeDisplay) {
+                totalTimeDisplay.textContent = formatTime(duration);
+                totalTimeDisplay.style.display = 'inline';
+            }
         }
-
-        if (currentTimeDisplay) currentTimeDisplay.textContent = formatTime(currentTime);
-        if (totalTimeDisplay) totalTimeDisplay.textContent = formatTime(duration);
 
         // Đồng bộ dữ liệu sang Overlay
         broadcastStateToOverlay();
@@ -1711,6 +2705,7 @@ function resumeAutoplay() {
 // --- THAY ĐỔI MỐC THỜI GIAN THEO THANH TRƯỢT (SEEK) ---
 let currentOverlayDuration = 0;
 function onSeekSliderChange(pct) {
+    if (state.focusMode) return;
     const progressSlider = document.getElementById('progress-slider');
     if (progressSlider) {
         progressSlider.style.background = `linear-gradient(to right, var(--pineapple-orange) 0%, var(--pineapple-orange) ${pct}%, var(--pineapple-white) ${pct}%, var(--pineapple-white) 100%)`;
@@ -1728,6 +2723,7 @@ function onSeekSliderChange(pct) {
 
 // --- ĐIỀU CHỈNH ÂM LƯỢNG ---
 function onVolumeChange(val) {
+    if (state.focusMode) return;
     state.volume = parseInt(val);
     localStorage.setItem('dua_volume', val);
     document.getElementById('volume-val-display').textContent = val + '%';
@@ -1748,6 +2744,7 @@ function onVolumeChange(val) {
 }
 
 function toggleMute() {
+    if (state.focusMode) return;
     if (state.volume > 0) {
         // Tắt âm thanh
         state.preMuteVolume = state.volume;
@@ -1766,6 +2763,7 @@ function toggleMute() {
 
 // --- PHÁT / TẠM DỪNG BẰNG TAY ---
 function togglePlayPause() {
+    if (state.focusMode) return;
     if (!state.currentSong) {
         if (state.queue.length > 0) {
             playNextInQueue();
@@ -1790,6 +2788,7 @@ function togglePlayPause() {
 
 // --- SKIP BÀI (NEXT) ---
 function skipSong() {
+    if (state.focusMode) return;
     if (!state.currentSong) return;
     logSystem(`Bỏ qua bài hát: <strong>${state.currentSong.title}</strong>`);
     showDashboardSystemAlert("Bỏ qua bài hát", `Đã bỏ qua bài hát: <strong>${state.currentSong.title}</strong>`);
@@ -1830,8 +2829,23 @@ function updateTestModeUI() {
 
 // --- FORCE PLAY (PHÁT NGAY LẬP TỨC MỘT BÀI TRONG QUEUE) ---
 function forcePlaySong(songId) {
+    if (state.focusMode) return;
     const songIndex = state.queue.findIndex(s => String(s.id) === String(songId));
     if (songIndex === -1) return;
+
+    // Lưu tiến trình bài đang phát trước khi chuyển bài ưu tiên
+    if (state.currentSong) {
+        const currentSongInQueue = state.queue.find(s => String(s.id) === String(state.currentSong.id));
+        if (currentSongInQueue) {
+            const duration = currentSongInQueue.duration || 0;
+            const currentTime = state.lastReportedTime || 0;
+            // Chỉ lưu tiến trình nếu bài hát đã phát được trên 2 giây và còn cách kết thúc trên 5 giây (nếu có duration)
+            if (currentTime > 2 && (duration === 0 || currentTime < duration - 5)) {
+                currentSongInQueue.savedProgress = currentTime;
+                logSystem(`Đã lưu tiến trình bài hát "${currentSongInQueue.title}" tại ${formatTime(currentTime)}`, 'system');
+            }
+        }
+    }
 
     const targetSong = state.queue[songIndex];
     
@@ -1907,7 +2921,20 @@ function insertSongSmartly(newSong) {
     if (state.sortConfig === 'amount') {
         let insertIndex = -1;
         for (let i = startIndex; i < state.queue.length; i++) {
-            if (state.queue[i].amount < newSong.amount) {
+            const item = state.queue[i];
+            
+            // Bài mới (mặc định chưa ghim) không được chèn trước bài đã ghim
+            if (item.isPinned && !newSong.isPinned) {
+                continue;
+            }
+            // Nếu bài mới được ghim mà bài duyệt qua chưa ghim, chèn ngay trước nó
+            if (!item.isPinned && newSong.isPinned) {
+                insertIndex = i;
+                break;
+            }
+            
+            // Cả hai cùng ghim hoặc cùng không ghim: so sánh số tiền
+            if (item.amount < newSong.amount) {
                 insertIndex = i;
                 break;
             }
@@ -1919,12 +2946,24 @@ function insertSongSmartly(newSong) {
         }
     } else {
         // Defaults to 'time' or any other configurations
-        state.queue.push(newSong);
+        if (newSong.isPinned) {
+            // Chèn sau bài hát đã ghim cuối cùng
+            let lastPinnedIndex = startIndex - 1;
+            for (let i = startIndex; i < state.queue.length; i++) {
+                if (state.queue[i].isPinned) {
+                    lastPinnedIndex = i;
+                }
+            }
+            state.queue.splice(lastPinnedIndex + 1, 0, newSong);
+        } else {
+            state.queue.push(newSong);
+        }
     }
 }
 
 // --- DỊCH CHUYỂN BÀI HÁT LÊN TRONG HÀNG ĐỢI ---
 function moveQueueItemUp(songId) {
+    if (state.focusMode) return;
     const index = state.queue.findIndex(s => String(s.id) === String(songId));
     const minIndex = state.currentSong ? 1 : 0;
     if (index > minIndex) {
@@ -1956,7 +2995,7 @@ function moveQueueItemUp(songId) {
         }
         
         // Nếu chuyển lên đầu hàng đợi và hiện tại không có bài nào phát, kích hoạt phát
-        if (index - 1 === 0 && !state.currentSong) {
+        if (index - 1 === 0 && !state.currentSong && !state.focusMode) {
             playNextInQueue();
         }
     }
@@ -1964,6 +3003,7 @@ function moveQueueItemUp(songId) {
 
 // --- DỊCH CHUYỂN BÀI HÁT XUỐNG TRONG HÀNG ĐỢI ---
 function moveQueueItemDown(songId) {
+    if (state.focusMode) return;
     const index = state.queue.findIndex(s => String(s.id) === String(songId));
     const minIndex = state.currentSong ? 1 : 0;
     if (index >= minIndex && index !== -1 && index < state.queue.length - 1) {
@@ -1996,6 +3036,21 @@ function moveQueueItemDown(songId) {
     }
 }
 
+// --- GHIM / BỎ GHIM BÀI HÁT TRONG HÀNG ĐỢI ---
+function togglePinQueueItem(songId) {
+    const index = state.queue.findIndex(s => String(s.id) === String(songId));
+    if (index === -1) return;
+    
+    const song = state.queue[index];
+    song.isPinned = !song.isPinned;
+    
+    logSystem(`Đã ${song.isPinned ? 'ghim' : 'bỏ ghim'} bài hát: <strong>${song.title}</strong>`);
+    
+    // Sắp xếp lại hàng đợi để đưa bài ghim lên trên
+    sortAndRefreshQueue(true);
+}
+window.togglePinQueueItem = togglePinQueueItem;
+
 // --- CẬP NHẬT GIAO DIỆN KHI CÓ BÀI MỚI / DỪNG ---
 function updatePlayerUI(song) {
     const cover = document.getElementById('current-song-cover');
@@ -2003,8 +3058,8 @@ function updatePlayerUI(song) {
     const donorSection = document.getElementById('current-song-donor');
     const messageSection = document.getElementById('current-song-message');
     const coverWrapper = document.getElementById('song-cover-wrapper');
-    const liveBadge = document.getElementById('playing-live-badge');
     const slider = document.getElementById('progress-slider');
+    const separator = document.getElementById('progress-separator');
 
     if (!song) {
         cover.src = "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=200&auto=format&fit=crop";
@@ -2012,24 +3067,43 @@ function updatePlayerUI(song) {
         donorSection.style.display = 'none';
         messageSection.style.display = 'none';
         coverWrapper.classList.remove('spinning');
-        liveBadge.style.display = 'none';
         if (slider) {
             slider.value = 0;
             slider.style.background = `linear-gradient(to right, var(--pineapple-orange) 0%, var(--pineapple-white) 0%)`;
+            slider.style.display = 'block';
+        }
+        if (separator) {
+            separator.style.display = 'none';
         }
         
         document.getElementById('current-time-display').textContent = '0:00';
         document.getElementById('total-time-display').textContent = '0:00';
+
+        // Ẩn countdown khi không còn bài nào
+        const dashCountdown = document.getElementById('dash-live-countdown');
+        if (dashCountdown) dashCountdown.classList.remove('visible');
         
+        // Ẩn cảnh báo nhạy cảm trên dashboard
+        const warningEl = document.getElementById('dash-sensitive-warning');
+        if (warningEl) warningEl.classList.remove('visible');
+        
+        const featuresRow = document.getElementById('control-features-row');
+        if (featuresRow) featuresRow.style.display = 'none';
+
         updateBypassButtonUI();
+        updateForceExtensionButtonUI();
+        updateVoteSkipButtonUI();
         return;
     }
 
     cover.src = song.thumbnail;
     title.textContent = song.title;
     
-    document.getElementById('current-donor-name').textContent = song.donorName;
-    document.getElementById('current-donor-amount').textContent = song.amount.toLocaleString('vi-VN') + ' VNĐ';
+    if (song.isOwnerAdd) {
+        donorSection.innerHTML = `<i class="fa-solid fa-user-shield"></i> <span id="current-donor-name">Chủ kênh thêm</span>`;
+    } else {
+        donorSection.innerHTML = `<span id="current-donor-name">${song.donorName}</span> <span style="color: var(--pineapple-text);">đã tặng</span> <span id="current-donor-amount">${song.amount.toLocaleString('vi-VN')} VNĐ</span>`;
+    }
     donorSection.style.display = 'flex';
 
     if (song.message) {
@@ -2040,9 +3114,32 @@ function updatePlayerUI(song) {
     }
 
     coverWrapper.classList.add('spinning');
-    liveBadge.style.display = 'flex';
     
+    // Cập nhật cảnh báo nhạy cảm trên dashboard
+    const warningEl = document.getElementById('dash-sensitive-warning');
+    const warningMsgEl = document.getElementById('dash-sensitive-message');
+    if (warningEl) {
+        const warningConfig = sensitiveVideosConfig[song.videoId] || (song.videoId === 'Wv7t22rx7Ik' ? {
+            message: "T19: Nội dung chuẩn bị phát không phù hợp với người có vấn đề tâm lý. Hãy cân nhắc trước khi nghe.",
+            duration: 5
+        } : null);
+
+        if (song.videoId && warningConfig) {
+            if (warningMsgEl) {
+                warningMsgEl.textContent = warningConfig.message || "Cảnh báo: Video này chứa nội dung nhạy cảm.";
+            }
+            warningEl.classList.add('visible');
+        } else {
+            warningEl.classList.remove('visible');
+        }
+    }
+    
+    const featuresRow = document.getElementById('control-features-row');
+    if (featuresRow) featuresRow.style.display = 'flex';
+
     updateBypassButtonUI();
+    updateForceExtensionButtonUI();
+    updateVoteSkipButtonUI();
 }
 
 // --- CHUYỂN ĐỔI TAB NỘI DUNG DASHBOARD ---
@@ -2065,9 +3162,32 @@ function switchTab(tabId) {
             btn.classList.remove('active');
         }
     });
+
+    // toggleContentProtection is no longer supported
 }
 
-// --- BẬT / TẮT DARK MODE DASHBOARD ---
+// --- CHUYỂN ĐỔI PHÂN KHU CẤU HÌNH (SUB-TABS SETTINGS) ---
+function switchSettingsSection(sectionId) {
+    const sections = document.querySelectorAll('.settings-section');
+    const buttons = document.querySelectorAll('.settings-tab-btn');
+    
+    sections.forEach(sec => {
+        if (sec.id === `settings-sec-${sectionId}`) {
+            sec.style.display = 'flex';
+        } else {
+            sec.style.display = 'none';
+        }
+    });
+    
+    buttons.forEach(btn => {
+        if (btn.getAttribute('onclick') === `switchSettingsSection('${sectionId}')`) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+}
+
 function toggleDarkMode(isDark) {
     if (isDark) {
         document.body.classList.add('dark-mode');
@@ -2082,12 +3202,85 @@ function toggleDarkMode(isDark) {
     }
 }
 
+// --- ÁP DỤNG TRẠNG THÁI VÔ HIỆU HÓA HOẠT ĐỘNG KHI BẬT FOCUS MODE ---
+function applyDashboardFocusModeState(enabled) {
+    if (enabled) {
+        document.body.classList.add('focus-mode-active');
+    } else {
+        document.body.classList.remove('focus-mode-active');
+    }
+
+    const selectors = [
+        '#btn-play-pause',
+        '#btn-skip',
+        '#btn-bypass-limit',
+        '#progress-slider',
+        '#volume-slider',
+        '#card-quick-add input',
+        '#card-quick-add button',
+        '#card-youtube-dashboard select',
+        '#card-youtube-dashboard button',
+        '#card-time-limit input',
+        '#card-time-limit button',
+        '#queue-sort-select',
+        '#btn-test-mode'
+    ].join(', ');
+
+    const elements = document.querySelectorAll(selectors);
+    elements.forEach(el => {
+        if (el.id !== 'focus-mode-toggle-switch') {
+            el.disabled = enabled;
+        }
+    });
+}
+
+// --- BẬT / TẮT CHẾ ĐỘ TẬP TRUNG (FOCUS MODE) ---
+function toggleFocusMode(enabled) {
+    state.focusMode = enabled;
+    localStorage.setItem('dua_focus_mode', enabled);
+    publishMqtt('focus_mode', { value: enabled });
+    
+    applyDashboardFocusModeState(enabled);
+    
+    if (enabled) {
+        logSystem("Đã BẬT chế độ Tập trung: Tạm dừng tự động chuyển bài khi có nhạc mới.", "system");
+        showDashboardSystemAlert("Chế độ Tập trung", "Đã BẬT: Hàng đợi sẽ được giữ lại, không tự động phát bài mới.");
+        
+        // Tạm dừng bài hát đang phát nếu có
+        if (state.currentSong && state.isPlaying) {
+            state.wasPlayingBeforeFocusMode = true;
+            sendControlCommand('pause');
+            state.isPlaying = false;
+            updatePlayPauseButtonUI(false);
+            logSystem("Tự động tạm dừng bài hát hiện tại do kích hoạt Chế độ Tập trung.", "system");
+        } else {
+            state.wasPlayingBeforeFocusMode = false;
+        }
+    } else {
+        logSystem("Đã TẮT chế độ Tập trung.", "system");
+        showDashboardSystemAlert("Chế độ Tập trung", "Đã TẮT.");
+        
+        // Nếu trước đó bài hát đang phát dở bị tạm dừng do Focus Mode, tự động phát lại
+        if (state.currentSong && state.wasPlayingBeforeFocusMode) {
+            sendControlCommand('play');
+            state.isPlaying = true;
+            updatePlayPauseButtonUI(true);
+            logSystem("Tự động tiếp tục phát lại bài hát đang phát dở sau khi TẮT Chế độ Tập trung.", "system");
+        } else if (!state.currentSong && state.queue.length > 0) {
+            // Tự động chạy nhạc nếu hàng đợi có bài hát mà trình phát đang trống
+            playNextInQueue();
+            logSystem("Tự động phát bài hát mới từ hàng đợi sau khi TẮT Chế độ Tập trung.", "system");
+        }
+        state.wasPlayingBeforeFocusMode = false;
+    }
+}
+
 // --- CẬP NHẬT NÚT VÔ CÙNG (BYPASS LIMIT) TRÊN PLAYER CONTROL ---
 function updateBypassButtonUI() {
     const btn = document.getElementById('btn-bypass-limit');
     if (!btn) return;
     
-    if (state.currentSong && state.maxDurationEnabled) {
+    if (state.currentSong) {
         btn.style.display = 'inline-flex';
         if (state.bypassCurrentSongDuration) {
             btn.classList.add('active-bypass');
@@ -2099,6 +3292,50 @@ function updateBypassButtonUI() {
     } else {
         btn.style.display = 'none';
     }
+}
+
+// --- CẬP NHẬT NÚT GIA HẠN THỦ CÔNG (FORCE EXTENSION) TRÊN PLAYER CONTROL ---
+function updateForceExtensionButtonUI() {
+    const btn = document.getElementById('btn-force-extension');
+    if (!btn) return;
+    
+    if (state.currentSong && state.extensionEnabled && isExtensionAllowedForSong(state.currentSong)) {
+        btn.style.display = 'inline-flex';
+        if (state.currentSong.extensionForceShow) {
+            btn.classList.add('active-extension');
+            btn.innerHTML = `Đang Gia hạn TG`;
+            btn.title = "Đang buộc hiển thị mã gia hạn trên Overlay";
+        } else {
+            btn.classList.remove('active-extension');
+            btn.innerHTML = `Gia hạn TG`;
+            btn.title = "Hiện mã gia hạn trên Overlay";
+        }
+    } else {
+        btn.style.display = 'none';
+    }
+}
+
+function toggleForceExtension() {
+    if (!state.currentSong) return;
+    
+    state.currentSong.extensionForceShow = !state.currentSong.extensionForceShow;
+    
+    // Save to trigger setter or update UI
+    state.currentSong = state.currentSong;
+    
+    // Sync to overlay
+    const payloadRaw = localStorage.getItem('dua_current_song');
+    if (payloadRaw) {
+        try {
+            const payload = JSON.parse(payloadRaw);
+            payload.extensionForceShow = state.currentSong.extensionForceShow;
+            localStorage.setItem('dua_current_song', JSON.stringify(payload));
+            publishMqtt('current_song', payload);
+        } catch(e) {}
+    }
+    
+    updateForceExtensionButtonUI();
+    logSystem(`${state.currentSong.extensionForceShow ? '🔔 Đã hiển thị' : '🔕 Đã ẩn'} mã gia hạn trên Overlay.`);
 }
 
 // --- HIỂN THỊ THÔNG BÁO DONATE MỚI TRÊN DASHBOARD ---
@@ -2222,12 +3459,12 @@ async function sendZyPageSongEnd(song) {
             timestamp: Date.now()
         });
         
-        // Dọn dẹp các khóa quá hạn 24 giờ
+        // Dọn dẹp các khóa quá hạn 7 ngày
         const now = Date.now();
-        state.endedKeys = state.endedKeys.filter(item => now - item.timestamp < 24 * 60 * 60 * 1000);
+        state.endedKeys = state.endedKeys.filter(item => now - item.timestamp < 7 * 24 * 60 * 60 * 1000);
         
-        // Giới hạn lịch sử tối đa 200 khóa
-        if (state.endedKeys.length > 200) {
+        // Giới hạn lịch sử tối đa 1000 khóa
+        if (state.endedKeys.length > 1000) {
             state.endedKeys.shift();
         }
         localStorage.setItem('dua_ended_keys', JSON.stringify(state.endedKeys));
@@ -2362,8 +3599,18 @@ function extractZyPageDomainAndToken(input) {
     input = input.trim();
     let domain = 'https://zypage.com';
     let token = '';
+    let pathType = 'donate-music';
     
+    let splitter = '';
     if (input.includes('donate-music/')) {
+        splitter = 'donate-music/';
+        pathType = 'donate-music';
+    } else if (input.includes('donate-message/')) {
+        splitter = 'donate-message/';
+        pathType = 'donate-message';
+    }
+    
+    if (splitter) {
         try {
             const urlObj = new URL(input);
             domain = urlObj.origin;
@@ -2372,13 +3619,482 @@ function extractZyPageDomainAndToken(input) {
             if (match) domain = match[1];
         }
         
-        const parts = input.split('donate-music/');
+        const parts = input.split(splitter);
         token = parts[parts.length - 1].split('/')[0].split('?')[0];
     } else {
         token = input;
     }
     
-    return { domain, token };
+    return { domain, token, pathType };
+}
+
+// ==========================================
+// QUẢN LÝ LỜI NHẮN DONATE & LỊCH SỬ 7 NGÀY
+// ==========================================
+function hasSongLink(message) {
+    if (!message) return false;
+    const urlRegex = /https?:\/\/[^\s<>"']+/gi;
+    const urlMatches = message.match(urlRegex) || [];
+    for (const url of urlMatches) {
+        if (url.includes('soundcloud.com') || parseYoutubeId(url)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function formatMessageWithLinks(msg, donorName, donorAmount) {
+    if (!msg) return '';
+    
+    const escapedMsg = msg
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+        
+    const urlRegex = /https?:\/\/[^\s<>"']+/gi;
+    return escapedMsg.replace(urlRegex, (url) => {
+        return `<a href="${url}" target="_blank" onclick="event.stopPropagation()" style="color: var(--pineapple-orange); text-decoration: underline;">${url}</a>`;
+    });
+}
+
+async function quickAddSongFromHistory(type, videoId, scUrl, donorNameEncoded, donorAmount) {
+    const donorName = decodeURIComponent(donorNameEncoded);
+    try {
+        logSystem(`Đang lấy thông tin bài hát từ lịch sử donate của <strong>${donorName}</strong>...`, 'system');
+        const meta = await fetchSongMetadata(type, videoId || null, scUrl || null);
+        const uniqueKey = `msg_manual_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+        const msgItem = {
+            id: uniqueKey,
+            musicKey: uniqueKey,
+            isZyPage: true,
+            fromMessage: true,
+            type: type,
+            videoId: videoId || null,
+            spotifyId: null,
+            soundcloudUrl: scUrl || null,
+            title: meta.title,
+            thumbnail: meta.thumbnail,
+            donorName: donorName,
+            amount: Number(donorAmount) || 0,
+            message: "",
+            start: 0,
+            end: null,
+            timestamp: Date.now(),
+            localAddedAt: Date.now()
+        };
+        
+        insertSongSmartly(msgItem);
+        broadcastNewDonationAlert(msgItem);
+        saveQueue();
+        sortAndRefreshQueue();
+        logSystem(`Đã thêm bài hát từ tin nhắn: <strong>${meta.title}</strong>`, 'queue');
+        showDashboardSystemAlert("Đã thêm nhạc", `Đã thêm bài hát: <strong>${meta.title}</strong>`, 'HÀNG ĐỢI');
+        if (!state.currentSong && !state.focusMode) {
+            playNextInQueue();
+        }
+    } catch (e) {
+        alert("Lỗi khi thêm bài hát: " + e.message);
+    }
+}
+window.quickAddSongFromHistory = quickAddSongFromHistory;
+
+function handleNewDonation(donation, shouldAlert = true) {
+    if (!donation || !donation.name) return;
+    
+    // Check if donation already exists in our history
+    let history = getDonationHistory();
+    const existingIndex = history.findIndex(item => 
+        item.id === donation.id || 
+        (item.name === donation.name && item.amount === donation.amount && Math.abs(item.timestamp - donation.timestamp) < 5000)
+    );
+    
+    if (existingIndex !== -1) {
+        // Nếu đã tồn tại nhưng lần này có kèm link nhạc mà trong lịch sử chưa lưu, hãy cập nhật lại
+        if (donation.songLink && !history[existingIndex].songLink) {
+            history[existingIndex].songLink = donation.songLink;
+            history[existingIndex].isMusicOrder = true;
+            saveDonationHistory(history);
+            renderDonationHistory();
+        }
+        return;
+    }
+    
+    // Mark as new/unread
+    donation.isNew = true;
+    donation.timestamp = donation.timestamp || Date.now();
+    
+    // Add to history
+    history.unshift(donation);
+    
+    // Filter out donations older than 30 days (1 month)
+    const oneMonthAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    history = history.filter(item => item.timestamp >= oneMonthAgo);
+    
+    // Save to localStorage
+    saveDonationHistory(history);
+    
+    // Chỉ kích hoạt thông báo góc nếu rất mới (dưới 2 phút) và được yêu cầu
+    const isVeryRecent = Math.abs(Date.now() - donation.timestamp) < 120000;
+    if (shouldAlert && isVeryRecent) {
+        const minAmount = state.zypageMinMessageAmount !== undefined ? state.zypageMinMessageAmount : 49000;
+        const hasLink = hasSongLink(donation.message);
+        const willBeSong = (donation.isMusicOrder || (hasLink && donation.amount >= minAmount));
+        
+        if (!willBeSong) {
+            showDashboardNewDonationAlert({
+                id: donation.id,
+                donorName: donation.name,
+                amount: donation.amount,
+                title: donation.message || '(Không có lời nhắn)',
+                position: 'DONATE',
+                timestamp: donation.timestamp
+            });
+        }
+    }
+    renderDonationHistory();
+}
+
+function getDonationHistory() {
+    const raw = localStorage.getItem('dua_donation_history');
+    if (!raw) return [];
+    try {
+        const parsed = JSON.parse(raw);
+        const oneMonthAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+        return parsed.filter(item => item.timestamp >= oneMonthAgo);
+    } catch (e) {
+        return [];
+    }
+}
+
+function saveDonationHistory(history) {
+    localStorage.setItem('dua_donation_history', JSON.stringify(history));
+}
+
+const donationSongMetadataCache = new Map();
+try {
+    const cached = sessionStorage.getItem('dua_donation_song_meta_cache');
+    if (cached) {
+        const parsed = JSON.parse(cached);
+        for (const k in parsed) {
+            donationSongMetadataCache.set(k, parsed[k]);
+        }
+    }
+} catch (e) {}
+
+function extractSongLinkFromMessage(msg) {
+    if (!msg) return null;
+    const urlRegex = /https?:\/\/[^\s<>"']+/gi;
+    const matches = msg.match(urlRegex);
+    if (!matches) return null;
+    for (const url of matches) {
+        if (parseYoutubeId(url) || url.includes('soundcloud.com')) {
+            return url;
+        }
+    }
+    return null;
+}
+
+function getOrFetchSongMetadata(url, onFetched) {
+    if (donationSongMetadataCache.has(url)) {
+        return donationSongMetadataCache.get(url);
+    }
+    
+    // Đánh dấu đang tải
+    donationSongMetadataCache.set(url, { loading: true });
+    
+    let fetchUrl = `https://noembed.com/embed?url=${encodeURIComponent(url)}`;
+    if (url.includes('soundcloud.com')) {
+        fetchUrl = `https://soundcloud.com/oembed?format=json&url=${encodeURIComponent(url)}`;
+    }
+    
+    fetch(fetchUrl)
+        .then(res => res.json())
+        .then(data => {
+            const meta = {
+                title: data.title || 'Bài hát từ link đính kèm',
+                thumbnail: data.thumbnail_url || 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=200&auto=format&fit=crop',
+                author: data.author_name || (url.includes('soundcloud.com') ? 'SoundCloud' : 'YouTube Artist'),
+                loading: false
+            };
+            donationSongMetadataCache.set(url, meta);
+            try {
+                const obj = {};
+                donationSongMetadataCache.forEach((v, k) => { obj[k] = v; });
+                sessionStorage.setItem('dua_donation_song_meta_cache', JSON.stringify(obj));
+            } catch (e) {}
+            onFetched();
+        })
+        .catch(err => {
+            console.error("Lỗi lấy metadata oEmbed cho:", url, err);
+            donationSongMetadataCache.set(url, {
+                title: 'Đường dẫn bài hát',
+                thumbnail: 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=200&auto=format&fit=crop',
+                author: url.includes('soundcloud.com') ? 'SoundCloud' : 'YouTube',
+                loading: false
+            });
+            onFetched();
+        });
+        
+    return { loading: true };
+}
+
+let currentDonationSearchQuery = '';
+
+function onDonationSearchInput(query) {
+    currentDonationSearchQuery = String(query).trim().toLowerCase();
+    renderDonationHistory();
+}
+window.onDonationSearchInput = onDonationSearchInput;
+
+function renderDonationHistory() {
+    const container = document.getElementById('donation-history-list');
+    if (!container) return;
+    
+    const fullHistory = getDonationHistory();
+    const totalRevenue = fullHistory.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+    const totalCount = fullHistory.length;
+    
+    const statsLine = document.getElementById('donation-stats-line');
+    if (statsLine) {
+        statsLine.textContent = `Tổng doanh thu: ${totalRevenue.toLocaleString('vi-VN')} VNĐ | Số lượt donate: ${totalCount}`;
+    }
+    
+    let history = [...fullHistory];
+    
+    // Lọc lịch sử nếu có từ khóa tìm kiếm
+    if (currentDonationSearchQuery) {
+        history = history.filter(item => {
+            const date = new Date(item.timestamp);
+            const timeStr = `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')} ${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}`.toLowerCase();
+            
+            const name = String(item.name || '').toLowerCase();
+            const amount = String(item.amount || '').toLowerCase();
+            const amountFormatted = (item.amount ? item.amount.toLocaleString('vi-VN') : '').toLowerCase();
+            const message = String(item.message || '').toLowerCase();
+            
+            return name.includes(currentDonationSearchQuery) ||
+                   amount.includes(currentDonationSearchQuery) ||
+                   amountFormatted.includes(currentDonationSearchQuery) ||
+                   message.includes(currentDonationSearchQuery) ||
+                   timeStr.includes(currentDonationSearchQuery);
+        });
+    }
+    
+    if (history.length === 0) {
+        if (currentDonationSearchQuery) {
+            container.innerHTML = `
+                <div class="empty-history-notice">
+                    <i class="fa-solid fa-magnifying-glass empty-history-icon"></i>
+                    <div class="empty-history-title">Không tìm thấy kết quả</div>
+                    <div class="empty-history-subtitle">Thử tìm kiếm bằng từ khóa khác xem sao.</div>
+                </div>
+            `;
+        } else {
+            container.innerHTML = `
+                <div class="empty-history-notice">
+                    <i class="fa-solid fa-envelope-open-text empty-history-icon"></i>
+                    <div class="empty-history-title">Chưa có lời nhắn nào</div>
+                    <div class="empty-history-subtitle">Các lời nhắn donate trong 30 ngày qua sẽ xuất hiện ở đây.</div>
+                </div>
+            `;
+        }
+        return;
+    }
+    
+    container.innerHTML = '';
+    history.forEach(item => {
+        const el = document.createElement('div');
+        el.className = `donation-history-item${item.isNew ? ' new-donation' : ''}`;
+        el.title = "Click để đánh dấu đã đọc";
+        el.onclick = () => {
+            markDonationAsRead(item.id);
+        };
+        
+        const date = new Date(item.timestamp);
+        const timeStr = `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')} ${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+        
+        // Kiểm tra xem tin nhắn có chứa nhạc đính kèm không
+        let songLink = item.songLink || extractSongLinkFromMessage(item.message);
+        if (songLink && !songLink.startsWith('http')) {
+            const ytId = parseYoutubeId(songLink);
+            if (ytId) {
+                songLink = `https://www.youtube.com/watch?v=${ytId}`;
+            }
+        }
+        let attachmentHtml = '';
+        if (songLink) {
+            const meta = getOrFetchSongMetadata(songLink, () => {
+                renderDonationHistory();
+            });
+            
+            if (meta.loading) {
+                attachmentHtml = `
+                    <div class="song-attachment-loading" onclick="event.stopPropagation()">
+                        <i class="fa-solid fa-spinner fa-spin"></i> Đang tải thông tin nhạc...
+                    </div>
+                `;
+            } else {
+                const videoId = parseYoutubeId(songLink);
+                const scUrl = songLink.includes('soundcloud.com') ? songLink.split(/[\s?#]/)[0] : null;
+                const type = videoId ? 'youtube' : (scUrl ? 'soundcloud' : '');
+                
+                attachmentHtml = `
+                    <div class="donation-song-attachment" onclick="event.stopPropagation()">
+                        <img class="song-attachment-thumb" src="${meta.thumbnail}">
+                        <div class="song-attachment-info">
+                            <div class="song-attachment-title" title="${meta.title}">${meta.title}</div>
+                            <div class="song-attachment-author" title="${meta.author}">${meta.author}</div>
+                        </div>
+                        <button class="song-attachment-add-btn" onclick="window.quickAddSongFromHistory('${type}', '${videoId || ''}', '${scUrl || ''}', '${encodeURIComponent(item.name)}', ${item.amount})">
+                            Thêm nhanh
+                        </button>
+                    </div>
+                `;
+            }
+        }
+        
+        el.innerHTML = `
+            <div class="donation-history-meta">
+                <span class="donation-history-donor">
+                    <strong>${item.name}</strong>
+                </span>
+                <span class="donation-history-time">${timeStr}</span>
+            </div>
+            <div class="donation-amount-badge">${item.amount.toLocaleString('vi-VN')} VNĐ</div>
+            ${item.message ? `<div class="donation-history-message">${formatMessageWithLinks(item.message, item.name, item.amount)}</div>` : '<div class="donation-history-message" style="opacity: 0.5;">(Không có lời nhắn)</div>'}
+            ${attachmentHtml}
+        `;
+        
+        container.appendChild(el);
+    });
+
+    renderRecentDonationsDashboard();
+}
+
+function renderRecentDonationsDashboard() {
+    const container = document.getElementById('recent-donations-container');
+    if (!container) return;
+
+    const history = getDonationHistory();
+    // Lấy tối đa 2 donate gần nhất
+    const recent = history.slice(0, 2);
+
+    if (recent.length === 0) {
+        container.innerHTML = `
+            <div style="font-size: 0.85rem; color: var(--pineapple-text); opacity: 0.6; text-align: center; padding: 0.5rem 0;">
+                Chưa nhận được donate nào
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = '';
+    recent.forEach(item => {
+        let songLink = item.songLink || extractSongLinkFromMessage(item.message);
+        let songTitleHtml = '';
+
+        if (songLink) {
+            if (!songLink.startsWith('http')) {
+                const ytId = parseYoutubeId(songLink);
+                if (ytId) songLink = `https://www.youtube.com/watch?v=${ytId}`;
+            }
+            const meta = getOrFetchSongMetadata(songLink, () => {
+                renderRecentDonationsDashboard();
+            });
+            if (meta && !meta.loading) {
+                songTitleHtml = `<div style="font-size: 0.85rem; font-weight: 800; color: var(--pineapple-orange-dark, #D97706); margin-bottom: 0.2rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${meta.title}">🎵 ${meta.title}</div>`;
+            } else {
+                songTitleHtml = `<div style="font-size: 0.85rem; font-weight: 800; color: var(--pineapple-orange-dark, #D97706); margin-bottom: 0.2rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">🎵 Đang tải tên bài hát...</div>`;
+            }
+        }
+
+        const itemEl = document.createElement('div');
+        itemEl.className = 'recent-donation-item';
+        itemEl.style.cssText = 'background: var(--pineapple-yellow-light); border: 2px solid var(--pineapple-border-color); border-radius: 12px; padding: 0.6rem 0.8rem; box-shadow: 2px 2px 0px var(--pineapple-shadow); display: flex; flex-direction: column; gap: 0.15rem;';
+
+        itemEl.innerHTML = `
+            ${songTitleHtml}
+            <div style="display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 800; color: var(--pineapple-text);">
+                <span>${item.name}</span>
+                <span style="color: #10B981;">+${item.amount.toLocaleString('vi-VN')} ₫</span>
+            </div>
+            ${item.message ? `<div style="font-size: 0.8rem; color: var(--pineapple-text); opacity: 0.85; line-height: 1.3; word-break: break-word; white-space: pre-wrap;">${item.message}</div>` : ''}
+        `;
+        container.appendChild(itemEl);
+    });
+}
+
+function markDonationAsRead(id) {
+    let history = getDonationHistory();
+    const index = history.findIndex(item => item.id === id);
+    if (index !== -1) {
+        history[index].isNew = false;
+        saveDonationHistory(history);
+        renderDonationHistory();
+    }
+}
+
+function markAllDonationsAsRead() {
+    let history = getDonationHistory();
+    let changed = false;
+    history.forEach(item => {
+        if (item.isNew) {
+            item.isNew = false;
+            changed = true;
+        }
+    });
+    if (changed) {
+        saveDonationHistory(history);
+        renderDonationHistory();
+    }
+}
+window.markAllDonationsAsRead = markAllDonationsAsRead;
+
+function clearAllDonationHistory() {
+    if (confirm("Bạn có chắc chắn muốn xóa toàn bộ lịch sử lời nhắn donate?")) {
+        saveDonationHistory([]);
+        renderDonationHistory();
+    }
+}
+
+let fsAlertTimeout = null;
+function showFullscreenDonationAlert(donation) {
+    const overlay = document.getElementById('fullscreen-donation-alert');
+    if (!overlay) return;
+    
+    const amountEl = document.getElementById('fs-alert-amount');
+    const senderEl = document.getElementById('fs-alert-sender');
+    const messageEl = document.getElementById('fs-alert-message-box');
+    
+    if (amountEl) amountEl.textContent = donation.amount.toLocaleString('vi-VN');
+    if (senderEl) senderEl.textContent = donation.name;
+    if (messageEl) {
+        messageEl.textContent = donation.message ? `"${donation.message}"` : '(Không có lời nhắn)';
+    }
+    
+    overlay.style.display = 'flex';
+    
+    if (fsAlertTimeout) {
+        clearTimeout(fsAlertTimeout);
+    }
+    
+    fsAlertTimeout = setTimeout(() => {
+        closeFullscreenDonationAlert();
+    }, 10000);
+}
+
+function closeFullscreenDonationAlert() {
+    const overlay = document.getElementById('fullscreen-donation-alert');
+    if (overlay) {
+        overlay.style.display = 'none';
+    }
+    if (fsAlertTimeout) {
+        clearTimeout(fsAlertTimeout);
+        fsAlertTimeout = null;
+    }
+    renderDonationHistory();
 }
 
 // Kết nối Live với ZyPage
@@ -2389,11 +4105,11 @@ async function connectZyPageLive(isAutoReconnect = false) {
 
     const inputVal = urlInput.value.trim();
     if (!inputVal) {
-        if (!isAutoReconnect) alert("Vui lòng điền link trang donate-music ZyPage trước!");
+        if (!isAutoReconnect) alert("Vui lòng điền link trang ZyPage trước!");
         return;
     }
 
-    const { domain, token } = extractZyPageDomainAndToken(inputVal);
+    const { domain, token, pathType } = extractZyPageDomainAndToken(inputVal);
     if (!token || token.length < 10) {
         alert("Link ZyPage hoặc Shop Token không đúng định dạng!");
         return;
@@ -2411,9 +4127,11 @@ async function connectZyPageLive(isAutoReconnect = false) {
         state.zypageToken = token;
         state.zypageShopId = shopId;
         state.zypageDomain = domain;
+        state.zypagePathType = pathType;
         localStorage.setItem('dua_zypage_token', token);
         localStorage.setItem('dua_zypage_shop_id', shopId);
         localStorage.setItem('dua_zypage_domain', domain);
+        localStorage.setItem('dua_zypage_path_type', pathType);
         saveConfigToAppData(inputVal, shopId);
         startFirebaseListener(shopId, token);
         return;
@@ -2421,7 +4139,7 @@ async function connectZyPageLive(isAutoReconnect = false) {
 
     try {
         // Tải mã nguồn trang ZyPage để bóc tách Shop ID (sử dụng proxy có fallback)
-        const resJson = await fetchWithCorsProxy(`${domain}/donate-music/${token}`);
+        const resJson = await fetchWithCorsProxy(`${domain}/${pathType}/${token}`);
         
         if (!resJson.contents) {
             throw new Error("Không lấy được nội dung trang.");
@@ -2444,9 +4162,11 @@ async function connectZyPageLive(isAutoReconnect = false) {
         state.zypageToken = token;
         state.zypageShopId = shopId;
         state.zypageDomain = domain;
+        state.zypagePathType = pathType;
         localStorage.setItem('dua_zypage_token', token);
         localStorage.setItem('dua_zypage_shop_id', shopId);
         localStorage.setItem('dua_zypage_domain', domain);
+        localStorage.setItem('dua_zypage_path_type', pathType);
         saveConfigToAppData(inputVal, shopId);
 
         // Khởi động cổng lắng nghe Firebase Realtime Database
@@ -2499,6 +4219,141 @@ function startFirebaseListener(shopId, token) {
 
             if (val.type === 'donateMusicLoad' || val.type === 'add') {
                 logSystem("Phát hiện có lượt donate nhạc mới! Đang đồng bộ...", 'queue');
+                
+                // Trích xuất trực tiếp từ Firebase Event Data nếu là sự kiện 'add'
+                if (val.type === 'add' && val.data) {
+                    let isExtended = false;
+                    try {
+                        const amountStr = String(val.data.amount || '0').replace(/[^0-9]/g, '');
+                        const donateAmount = Number(amountStr) || 0;
+                        const message = String(val.data.text || val.data.message || '').trim();
+                        const isOfficial = !!(val.data.music || val.data.type === 'music');
+                        
+                        let firebaseSongLink = null;
+                        if (isOfficial && val.data.music) {
+                            if (typeof val.data.music === 'string') {
+                                firebaseSongLink = val.data.music;
+                            } else if (typeof val.data.music === 'object') {
+                                firebaseSongLink = val.data.music.id || val.data.music.url;
+                            }
+                        }
+                        
+                        const donation = {
+                            id: val.data.id || val.data.key || `donate_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+                            name: val.data.name || 'Khách',
+                            amount: donateAmount,
+                            message: message,
+                            timestamp: normalizeTimestamp(val.data.time || val.data.timestamp || Date.now()),
+                            isMusicOrder: isOfficial,
+                            songLink: firebaseSongLink
+                        };
+                        if (checkAndApplyVoteSkip(donation)) {
+                            isExtended = true;
+                        } else if (checkAndApplyExtension(donation)) {
+                            isExtended = true;
+                        } else {
+                            handleNewDonation(donation, true);
+                        }
+                    } catch (e) {
+                        console.error("Lỗi khi ghi nhận donate từ Firebase Event:", e);
+                    }
+
+                    if (isExtended) {
+                        return;
+                    }
+
+                    try {
+                        const isOfficial = !!(val.data.music || val.data.type === 'music');
+                        if (isOfficial) {
+                            logSystem(`[Realtime Firebase] Lượt donate từ <strong>${val.data.name || 'Khách'}</strong> là order nhạc chính thức. Bỏ qua bóc tách tin nhắn.`, 'system');
+                        }
+                        const amountStr = String(val.data.amount || '0').replace(/[^0-9]/g, '');
+                        const donateAmount = Number(amountStr) || 0;
+                        const minAmount = state.zypageMinMessageAmount !== undefined ? state.zypageMinMessageAmount : 49000;
+                        
+                        if (!isOfficial && donateAmount >= minAmount) {
+                            const message = String(val.data.text || val.data.message || '').trim();
+                            if (message) {
+                                // Tìm link nhạc trong message
+                                const urlRegex = /https?:\/\/[^\s<>"']+/gi;
+                                const urlMatches = message.match(urlRegex) || [];
+                                let type = null;
+                                let videoId = null;
+                                let soundcloudUrl = null;
+
+                                for (const url of urlMatches) {
+                                    if (url.includes('soundcloud.com')) {
+                                        soundcloudUrl = url.split(/[\s?#]/)[0];
+                                        type = 'soundcloud';
+                                        break;
+                                    }
+                                    const ytId = parseYoutubeId(url);
+                                    if (ytId) {
+                                        videoId = ytId;
+                                        type = 'youtube';
+                                        break;
+                                    }
+                                }
+
+                                if (type) {
+                                    const eventVal = val.value || val.data.time || Date.now();
+                                    const songTimestamp = normalizeTimestamp(eventVal);
+                                    const musicKey = `msg_live_${eventVal}_${songTimestamp}`;
+                                    
+                                    // Bỏ qua nếu đã phát trước đó hoặc đã tồn tại trong queue
+                                    const isEnded = state.endedKeys.some(e => e.key === musicKey);
+                                    const isExist = state.queue.some(q => 
+                                        q.id === musicKey || 
+                                        (q.type === type && (
+                                            (type === 'youtube' && q.videoId === videoId) ||
+                                            (type === 'soundcloud' && q.soundcloudUrl === soundcloudUrl)
+                                        ) && q.timestamp === songTimestamp)
+                                    );
+
+                                    if (!isEnded && !isExist) {
+                                        // Lấy thông tin bài hát (tiêu đề, thumbnail) trước khi đưa vào hàng đợi
+                                        fetchSongMetadata(type, videoId, soundcloudUrl).then((meta) => {
+                                            const msgItem = {
+                                                id: musicKey,
+                                                musicKey: musicKey,
+                                                isZyPage: true,
+                                                fromMessage: true,
+                                                type: type,
+                                                videoId: videoId || null,
+                                                spotifyId: null,
+                                                soundcloudUrl: soundcloudUrl || null,
+                                                title: meta.title,
+                                                thumbnail: meta.thumbnail,
+                                                donorName: val.data.name || 'Khách ZyPage',
+                                                amount: donateAmount,
+                                                message: message,
+                                                start: 0,
+                                                end: null,
+                                                timestamp: songTimestamp,
+                                                localAddedAt: Date.now()
+                                            };
+
+                                            insertSongSmartly(msgItem);
+                                            broadcastNewDonationAlert(msgItem);
+                                            logSystem(`[Realtime Firebase] Phát hiện link nhạc trong tin nhắn donate của <strong>${msgItem.donorName}</strong>: ${msgItem.title}`, 'queue');
+                                            
+                                            // Cập nhật giao diện queue
+                                            sortAndRefreshQueue();
+                                            if (!state.currentSong && !state.focusMode) {
+                                                playNextInQueue();
+                                            }
+                                        }).catch((err) => {
+                                            console.error("Lỗi lấy metadata cho bài hát từ tin nhắn realtime:", err);
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                    } catch (err) {
+                        console.error("Lỗi xử lý trích xuất link nhạc realtime:", err);
+                    }
+                }
+                
                 syncQueueFromZyPageApi(shopId);
             } else if (val.type === 'donateMusicPause') {
                 togglePlayPause();
@@ -2559,7 +4414,7 @@ function disconnectZyPageLive() {
 }
 
 // Gọi API lấy hàng đợi bài hát mới nhất từ máy chủ ZyPage
-async function syncQueueFromZyPageApi(shopId) {
+async function syncQueueFromZyPageApi(shopId, isManual = false) {
     if (state.isSyncingQueue) {
         state.syncQueuePending = true;
         return;
@@ -2568,11 +4423,17 @@ async function syncQueueFromZyPageApi(shopId) {
 
     try {
         const getUrl = `${state.zypageDomain}/api/get_data_by_id?table=shop&data=donate&id=${shopId}&v=${Date.now()}`;
+        logSystem(`[ZyPage API] Đang gửi yêu cầu đồng bộ tới ZyPage${isManual ? ' (Thủ công)' : ''}: ${getUrl}`, 'system');
         
         const resJson = await fetchWithCorsProxy(getUrl);
-        if (!resJson.contents) return;
+        if (!resJson.contents) {
+            logSystem(`[ZyPage API] Không nhận được phản hồi nội dung từ proxy cho URL: ${getUrl}`, 'error');
+            return;
+        }
 
         const contents = JSON.parse(resJson.contents);
+        logSystem(`[ZyPage API] Phản hồi JSON nhận được từ ZyPage:<br><pre style="background: rgba(0,0,0,0.05); padding: 8px; border-radius: 8px; overflow-x: auto; max-height: 200px; font-family: monospace; font-size: 0.75rem; text-align: left; margin: 5px 0; border: 1px solid var(--pineapple-border-color); white-space: pre-wrap; word-break: break-all;">${JSON.stringify(contents, null, 2)}</pre>`, 'system');
+        
         let shopData = contents.data;
         if (typeof shopData === 'string') {
             shopData = JSON.parse(shopData);
@@ -2589,11 +4450,7 @@ async function syncQueueFromZyPageApi(shopId) {
         }
 
         const musicList = donateObj?.music?.list || {};
-
-        if (Object.keys(musicList).length === 0) {
-            logSystem("Không tìm thấy bài hát nào trong hàng đợi trên trang ZyPage của bạn.", "system");
-            return;
-        }
+        const plainDonateList = donateObj?.list || {};
 
         let addedCount = 0;
         let maxTimestamp = state.lastSyncedDonateTime;
@@ -2601,17 +4458,48 @@ async function syncQueueFromZyPageApi(shopId) {
         Object.entries(musicList).forEach(([key, item]) => {
             if (!item.music || !item.music.id) return;
 
-            const songTimestamp = normalizeTimestamp(item.order.time);
+            const songTimestamp = normalizeTimestamp(item.order?.time || item.music?.key || key);
 
-            // Chỉ lấy bài hát mới được donate trong khoảng thời gian ngắn, bỏ qua các bài đã đồng bộ trước đó
-            if (songTimestamp <= state.lastSyncedDonateTime) {
+            // Ghi nhận donate nhạc vào Lịch sử & Thông báo
+            let isExtended = false;
+            if (item.order) {
+                try {
+                    const donation = {
+                        id: item.music?.key || key,
+                        name: item.order.name || 'Khách ZyPage',
+                        amount: Number(item.order.amount) || 0,
+                        message: item.order.message || '',
+                        timestamp: songTimestamp,
+                        isMusicOrder: true,
+                        songLink: item.music.id
+                    };
+                    if (checkAndApplyVoteSkip(donation)) {
+                        isExtended = true;
+                    } else if (checkAndApplyExtension(donation)) {
+                        isExtended = true;
+                    } else if (donation.name) {
+                        handleNewDonation(donation, true);
+                    }
+                } catch (e) {
+                    console.error("Lỗi khi ghi nhận donate từ musicList:", e);
+                }
+            }
+
+            if (isExtended) {
                 return;
             }
 
-            // Bỏ qua các bài hát có thời gian donate quá 15 phút trước để tránh nhận nhầm lệnh cũ
-            const now = Date.now();
-            if (now - songTimestamp > 15 * 60 * 1000) {
-                return;
+            if (!isManual) {
+                // Chỉ lấy bài hát mới được donate trong khoảng thời gian ngắn, bỏ qua các bài đã đồng bộ trước đó
+                if (songTimestamp <= state.lastSyncedDonateTime) {
+                    return;
+                }
+
+                // Bỏ qua các bài hát có thời gian donate quá 7 ngày trước để tránh nhận nhầm lệnh cũ
+                const now = Date.now();
+                if (now - songTimestamp > 7 * 24 * 60 * 60 * 1000) {
+                    return;
+                }
             }
 
             if (songTimestamp > maxTimestamp) {
@@ -2638,18 +4526,18 @@ async function syncQueueFromZyPageApi(shopId) {
 
             const musicKey = item.music.key || key;
             
-            // Bỏ qua các bài hát đã phát xong hoặc bị xóa trước đó (sử dụng some để check dạng Object)
-            if (state.endedKeys.some(e => e.key === String(musicKey))) {
+            // Bỏ qua nếu không phải đồng bộ thủ công và bài hát đã phát xong hoặc bị xóa trước đó
+            if (!isManual && state.endedKeys.some(e => e.key === String(musicKey))) {
                 return;
             }
 
-            const uniqueKey = musicKey || item.order.time || (videoId || spotifyId || soundcloudUrl);
+            const uniqueKey = musicKey || item.order?.time || (videoId || spotifyId || soundcloudUrl);
             const isExist = state.queue.some(q => q.id === uniqueKey || 
                 (q.type === type && (
                     (type === 'youtube' && q.videoId === videoId) ||
                     (type === 'spotify' && q.spotifyId === spotifyId) ||
                     (type === 'soundcloud' && q.soundcloudUrl === soundcloudUrl)
-                ) && q.timestamp === normalizeTimestamp(item.order.time))
+                ) && q.timestamp === songTimestamp)
             );
 
             if (!isExist) {
@@ -2665,12 +4553,12 @@ async function syncQueueFromZyPageApi(shopId) {
                     thumbnail: item.music.thumbnail || (type === 'youtube' 
                         ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` 
                         : "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=200&auto=format&fit=crop"),
-                    donorName: item.order.name || 'Khách ZyPage',
-                    amount: Number(item.order.amount) || 0,
-                    message: item.order.message || '',
+                    donorName: item.order?.name || 'Khách ZyPage',
+                    amount: Number(item.order?.amount) || 0,
+                    message: item.order?.message || '',
                     start: Number(item.music.start) || 0,
-                    end: Number(item.music.end) || null,
-                    timestamp: normalizeTimestamp(item.order.time),
+                    end: null, // Bỏ qua trường end từ ZyPage để tránh xung đột với giới hạn của Introvert Player
+                    timestamp: songTimestamp,
                     localAddedAt: Date.now()
                 };
 
@@ -2679,6 +4567,148 @@ async function syncQueueFromZyPageApi(shopId) {
                 addedCount++;
             }
         });
+
+        // --- QUÉT TIN NHẮN DONATE THƯỜNG ĐỂ TÌM LINK NHẠC ---
+        // Người donate paste link YouTube/SoundCloud trực tiếp vào message thay vì dùng tính năng order nhạc
+        const plainDonatePromises = Object.entries(plainDonateList).map(async ([key, item]) => {
+            if (!item) return;
+
+            const rawMsg = item.text || item.message || '';
+            const message = String(rawMsg).trim();
+            const songTimestamp = normalizeTimestamp(item.time);
+
+            // Ghi nhận tất cả donate thường vào Lịch sử & Thông báo
+            let isExtended = false;
+            try {
+                const donation = {
+                    id: key,
+                    name: item.name || 'Khách ZyPage',
+                    amount: Number(item.amount) || 0,
+                    message: message,
+                    timestamp: songTimestamp
+                };
+                if (checkAndApplyVoteSkip(donation)) {
+                    isExtended = true;
+                } else if (checkAndApplyExtension(donation)) {
+                    isExtended = true;
+                } else if (donation.name) {
+                    handleNewDonation(donation, true);
+                }
+            } catch (e) {
+                console.error("Lỗi khi ghi nhận donate từ plainDonateList:", e);
+            }
+
+            if (isExtended) return;
+
+            if (!rawMsg) return;
+            if (!message) return;
+
+            // Chỉ xử lý donate từ số tiền tối thiểu cấu hình trở lên mới được parse link nhạc
+            const minAmount = state.zypageMinMessageAmount !== undefined ? state.zypageMinMessageAmount : 49000;
+            const donateAmount = Number(item.amount) || 0;
+            if (donateAmount < minAmount) return;
+
+            // Nếu đây là lượt donate order nhạc chính thức (có trường music hoặc type là music),
+            // ta bỏ qua việc trích xuất link từ tin nhắn để tránh thêm 2 bài hát cho 1 lượt donate
+            if (item.music || item.type === 'music') return;
+
+            // Kiểm tra chéo với danh sách musicList để chắc chắn lượt donate này không chứa order nhạc chính thức
+            const hasOrderedMusic = Object.values(musicList).some(m => {
+                const mTime = normalizeTimestamp(m.order?.time || m.music?.key);
+                return mTime === songTimestamp;
+            });
+            if (hasOrderedMusic) return;
+
+            if (!isManual) {
+                if (songTimestamp <= state.lastSyncedDonateTime) return;
+
+                const now = Date.now();
+                if (now - songTimestamp > 7 * 24 * 60 * 60 * 1000) return;
+            }
+
+            if (songTimestamp > maxTimestamp) {
+                maxTimestamp = songTimestamp;
+            }
+
+            // Trích xuất link URL đầu tiên trong message (YouTube hoặc SoundCloud)
+            const urlRegex = /https?:\/\/[^\s<>"']+/gi;
+            const urlMatches = message.match(urlRegex) || [];
+
+            let type = null;
+            let videoId = null;
+            let soundcloudUrl = null;
+
+            for (const url of urlMatches) {
+                if (url.includes('soundcloud.com')) {
+                    soundcloudUrl = url.split(/[\s?#]/)[0]; // Loại bỏ query params và hash
+                    type = 'soundcloud';
+                    break;
+                }
+                const ytId = parseYoutubeId(url);
+                if (ytId) {
+                    videoId = ytId;
+                    type = 'youtube';
+                    break;
+                }
+            }
+
+            if (!type) return; // Message không có link nhạc hợp lệ
+
+            // Sử dụng key + timestamp làm musicKey duy nhất (vì không có music.key)
+            const musicKey = `msg_${key}_${songTimestamp}`;
+
+            // Bỏ qua nếu không phải đồng bộ thủ công và bài hát đã phát xong hoặc bị xóa trước đó
+            if (!isManual && state.endedKeys.some(e => e.key === musicKey)) return;
+
+            const uniqueKey = musicKey;
+            const isExist = state.queue.some(q => 
+                q.id === uniqueKey || 
+                (q.type === type && (
+                    (type === 'youtube' && q.videoId === videoId) ||
+                    (type === 'soundcloud' && q.soundcloudUrl === soundcloudUrl)
+                ) && q.timestamp === songTimestamp)
+            );
+
+            if (!isExist) {
+                try {
+                    // Lấy thông tin bài hát (tiêu đề, thumbnail) trước khi đưa vào hàng đợi
+                    const meta = await fetchSongMetadata(type, videoId, soundcloudUrl);
+
+                    const msgItem = {
+                        id: uniqueKey,
+                        musicKey: musicKey,
+                        isZyPage: true,
+                        fromMessage: true, // Đánh dấu bài hát được trích xuất từ tin nhắn donate
+                        type: type,
+                        videoId: videoId || null,
+                        spotifyId: null,
+                        soundcloudUrl: soundcloudUrl || null,
+                        title: meta.title,
+                        thumbnail: meta.thumbnail,
+                        donorName: item.name || 'Khách ZyPage',
+                        amount: Number(item.amount) || 0,
+                        message: message,
+                        start: 0,
+                        end: null,
+                        timestamp: songTimestamp,
+                        localAddedAt: Date.now()
+                    };
+
+                    insertSongSmartly(msgItem);
+                    broadcastNewDonationAlert(msgItem);
+                    logSystem(`Phát hiện link nhạc trong tin nhắn donate của <strong>${msgItem.donorName}</strong>: ${msgItem.title}`, 'queue');
+                    addedCount++;
+                } catch (err) {
+                    console.error("Lỗi lấy metadata cho bài hát từ tin nhắn trong danh sách đồng bộ:", err);
+                }
+            }
+        });
+
+        await Promise.all(plainDonatePromises);
+
+        if (Object.keys(musicList).length === 0 && Object.keys(plainDonateList).length === 0) {
+            logSystem("Không tìm thấy bài hát nào trong hàng đợi trên trang ZyPage của bạn.", "system");
+        }
 
         if (maxTimestamp > state.lastSyncedDonateTime) {
             state.lastSyncedDonateTime = maxTimestamp;
@@ -2690,11 +4720,14 @@ async function syncQueueFromZyPageApi(shopId) {
             showDashboardSystemAlert("Đồng bộ ZyPage", `Đã đồng bộ thành công thêm <strong>${addedCount}</strong> bài hát mới vào hàng đợi!`, 'HÀNG ĐỢI');
             sortAndRefreshQueue();
 
-            if (!state.currentSong) {
+            if (!state.currentSong && !state.focusMode) {
                 playNextInQueue();
             }
         } else {
             logSystem("Hàng đợi đã được cập nhật đồng bộ hoàn toàn.", "system");
+            if (isManual) {
+                showDashboardSystemAlert("Đồng bộ ZyPage", "Hàng đợi đã được đồng bộ hoàn toàn. Không có bài hát mới nào cần thêm.", "ĐỒNG BỘ");
+            }
         }
 
     } catch (err) {
@@ -2735,6 +4768,10 @@ window.addEventListener('storage', (e) => {
         try {
             const data = JSON.parse(e.newValue);
             if (!data) return;
+            
+            if (data.currentTime !== undefined) {
+                state.lastReportedTime = data.currentTime;
+            }
 
             const isPlayingChanged = state.isPlaying !== data.isPlaying;
             state.isPlaying = data.isPlaying;
@@ -2748,6 +4785,17 @@ window.addEventListener('storage', (e) => {
                         matchedQueueSong.duration = data.duration;
                     }
                     renderQueue();
+                    updateForceExtensionButtonUI();
+
+                    // Ghi lại vào localStorage để đồng bộ đồng nhất
+                    const payloadRaw = localStorage.getItem('dua_current_song');
+                    if (payloadRaw) {
+                        try {
+                            const payload = JSON.parse(payloadRaw);
+                            payload.duration = data.duration;
+                            localStorage.setItem('dua_current_song', JSON.stringify(payload));
+                        } catch(e) {}
+                    }
                 } else if (isPlayingChanged) {
                     renderQueue();
                 }
@@ -2759,7 +4807,12 @@ window.addEventListener('storage', (e) => {
             const currentTimeDisplay = document.getElementById('current-time-display');
             const totalTimeDisplay = document.getElementById('total-time-display');
 
-            if (data.duration > 0) {
+            const isLive = !!data.isLive || (!data.duration || data.duration <= 0);
+
+            if (!isLive) {
+                if (progressSlider) progressSlider.style.display = 'block';
+                if (currentTimeDisplay) currentTimeDisplay.style.display = 'inline';
+                if (totalTimeDisplay) totalTimeDisplay.style.display = 'inline';
                 let startPoint = 0;
                 let limitDuration = data.duration;
                 
@@ -2771,7 +4824,7 @@ window.addEventListener('storage', (e) => {
                         endPoint = Math.min(endPoint, state.currentSong.end);
                     }
                     
-                    const maxDur = calculateMaxDurationForSong(state.currentSong.amount);
+                    const maxDur = state.bypassCurrentSongDuration ? 0 : calculateMaxDurationForSong(state.currentSong);
                     if (maxDur > 0) {
                         endPoint = Math.min(endPoint, startPoint + maxDur);
                     }
@@ -2791,6 +4844,57 @@ window.addEventListener('storage', (e) => {
 
                 if (currentTimeDisplay) currentTimeDisplay.textContent = formatTime(elapsedTime);
                 if (totalTimeDisplay) totalTimeDisplay.textContent = formatTime(limitDuration);
+                
+                const dashCountdown = document.getElementById('dash-live-countdown');
+                if (dashCountdown) dashCountdown.classList.remove('visible');
+            } else {
+                if (progressSlider) progressSlider.style.display = 'none';
+                if (currentTimeDisplay) currentTimeDisplay.style.display = 'none';
+                if (totalTimeDisplay) {
+                    totalTimeDisplay.textContent = "LIVE";
+                    totalTimeDisplay.style.display = 'inline';
+                }
+                
+                // Live Stream handling
+                let limitDuration = 0;
+                if (state.currentSong) {
+                    const startPoint = state.currentSong.start || 0;
+                    if (state.currentSong.end && state.currentSong.end > startPoint) {
+                        limitDuration = state.currentSong.end - startPoint;
+                    }
+                    const maxDur = state.bypassCurrentSongDuration ? 0 : calculateMaxDurationForSong(state.currentSong);
+                    if (maxDur > 0) {
+                        limitDuration = maxDur;
+                    }
+                }
+
+                const elapsedTime = data.currentTime; // livePlayTime from overlay
+
+                // Cập nhật countdown badge trên dashboard
+                const dashCountdown = document.getElementById('dash-live-countdown');
+                const dashCdTime = document.getElementById('dash-cd-time');
+
+                if (limitDuration > 0) {
+                    const displayElapsedTime = Math.min(limitDuration, elapsedTime);
+                    if (progressSlider) {
+                        const pct = (displayElapsedTime / limitDuration) * 100;
+                        progressSlider.value = pct;
+                        progressSlider.style.background = `linear-gradient(to right, var(--pineapple-orange) 0%, var(--pineapple-orange) ${pct}%, var(--pineapple-white) ${pct}%, var(--pineapple-white) 100%)`;
+                    }
+                    // Hiện countdown với thời gian còn lại
+                    if (dashCountdown && dashCdTime) {
+                        const remaining = Math.max(0, limitDuration - displayElapsedTime);
+                        dashCdTime.textContent = formatTime(Math.ceil(remaining));
+                        dashCountdown.classList.add('visible');
+                    }
+                } else {
+                    if (progressSlider) {
+                        progressSlider.value = 100;
+                        progressSlider.style.background = `var(--pineapple-orange)`;
+                    }
+                    // Ẩn countdown khi không có giới hạn
+                    if (dashCountdown) dashCountdown.classList.remove('visible');
+                }
             }
 
         } catch (err) {
@@ -2800,6 +4904,13 @@ window.addEventListener('storage', (e) => {
         try {
             const data = JSON.parse(e.newValue);
             if (data && data.type === 'ended') {
+                if (data.eventId) {
+                    if (state.lastHandledEndedEventId === data.eventId) {
+                        console.log("Ignoring duplicate ended event from storage:", data.eventId);
+                        return;
+                    }
+                    state.lastHandledEndedEventId = data.eventId;
+                }
                 if (Date.now() - state.lastSwitchTime < 1500) {
                     console.log("Ignoring fake ended event (manual song switch)...");
                     return;
@@ -2810,10 +4921,27 @@ window.addEventListener('storage', (e) => {
                 if (songId) {
                     removeSongFromQueue(songId, false);
                 }
-                playNextInQueue();
+                if (state.focusMode) {
+                    state.currentSong = null;
+                    updatePlayerUI(null);
+                    publishMqtt('current_song', null);
+                    sendControlCommand('stop');
+                    logSystem("Bài hát đã kết thúc. Hàng đợi tạm giữ do đang bật chế độ Tập trung.");
+                } else {
+                    playNextInQueue();
+                }
             }
         } catch (err) {
             console.error("Error parsing overlay event:", err);
+        }
+    } else if (e.key === 'dua_overlay_error') {
+        try {
+            const data = JSON.parse(e.newValue);
+            if (data && data.type === 'player_error') {
+                handlePlayerError(data.code, data.title);
+            }
+        } catch (err) {
+            console.error("Error parsing overlay error event:", err);
         }
     }
 });
@@ -2895,9 +5023,12 @@ function initMqtt() {
         publishMqtt('opacity_change', { opacity: state.opacity });
         publishMqtt('theme_change', { theme: state.theme });
         publishMqtt('alert_action_text', { text: state.alertActionText });
+        publishMqtt('hide_empty_overlay', { value: state.hideEmptyOverlay });
+        publishMqtt('focus_mode', { value: state.focusMode });
+        publishMqtt('focus_mode_message', { text: state.focusModeMessage });
         sendControlCommand('volume', state.volume);
         
-        if (state.currentSong) {
+        if (state.currentSong && !document.getElementById('resume-playback-modal')) {
             const nextSong = state.queue.find(s => String(s.id) !== String(state.currentSong.id));
             const payloadSong = {
                 id: state.currentSong.id,
@@ -2910,13 +5041,20 @@ function initMqtt() {
                 donorName: state.currentSong.donorName,
                 amount: state.currentSong.amount,
                 message: state.currentSong.message,
+                isOwnerAdd: state.currentSong.isOwnerAdd || false,
                 start: state.currentSong.start || 0,
                 end: state.currentSong.end || null,
                 skipSegments: state.skipSegments || [],
-                maxDuration: state.bypassCurrentSongDuration ? 0 : calculateMaxDurationForSong(state.currentSong.amount),
+                maxDuration: state.bypassCurrentSongDuration ? 0 : calculateMaxDurationForSong(state.currentSong),
+                extensionCode: state.currentSong.extensionCode || null,
+                extendedDuration: state.currentSong.extendedDuration || 0,
+                voteSkipActive: state.currentSong.voteSkipActive || false,
+                voteAmount: state.currentSong.voteAmount || 0,
+                voteSkipTarget: state.currentSong.voteSkipTarget || (state.currentSong.isOwnerAdd ? state.voteSkipDefaultAmount : (state.currentSong.amount || state.voteSkipDefaultAmount)),
                 nextSongTitle: nextSong ? nextSong.title : null,
                 nextSongDonor: nextSong ? nextSong.donorName : null,
-                nextSongAmount: nextSong ? nextSong.amount : null
+                nextSongAmount: nextSong ? nextSong.amount : null,
+                nextSongIsOwnerAdd: nextSong ? (nextSong.isOwnerAdd || false) : false
             };
             publishMqtt('current_song', payloadSong);
             sendControlCommand(state.isPlaying ? 'play' : 'pause');
@@ -2928,6 +5066,10 @@ function initMqtt() {
 }
 
 function publishMqtt(type, payload) {
+    // Không log spammy ticks để tránh rác log
+    if (type !== 'progress' && type !== 'overlay_state') {
+        logSystem(`[Tập lệnh thực thi] Gửi đi: <strong>${type}</strong> ${payload ? `[${JSON.stringify(payload)}]` : ''}`, 'system');
+    }
     if (window.electronAPI && typeof window.electronAPI.sendWsMessage === 'function') {
         window.electronAPI.sendWsMessage({ type: type, data: payload });
     }
@@ -2938,8 +5080,26 @@ function handleMqttMessage(topic, messageStrOrObj) {
         const payload = typeof messageStrOrObj === 'string' ? JSON.parse(messageStrOrObj) : messageStrOrObj;
         if (!payload) return;
 
+        // Cập nhật nhịp tim kết nối của OBS Overlay
+        state.lastOverlayHeartbeat = Date.now();
+
+        // Không log overlay_state hoặc progress định kỳ để tránh rác log
+        if (payload.type !== 'overlay_state' && payload.type !== 'progress' && payload.type !== 'status') {
+            logSystem(`[Tập lệnh thực thi] Nhận lại: <strong>${payload.type}</strong> ${payload.data ? `[${JSON.stringify(payload.data)}]` : ''}`, 'system');
+        }
+
         if (payload.type === 'request_sync') {
             logSystem("Nhận yêu cầu đồng bộ cấu hình từ Overlay.");
+            
+            if (state.pendingOverlayReset) {
+                state.pendingOverlayReset = false;
+                logSystem("Phát hiện lượt reset overlay chưa thực hiện khi mở app. Đang gửi lệnh reset...");
+                triggerResetOverlay();
+                return;
+            }
+            
+            // Gửi queue hiện tại
+            publishMqtt('queue_change', state.queue);
             // Gửi theme hiện tại
             publishMqtt('theme_change', { theme: state.theme });
             // Gửi opacity hiện tại
@@ -2950,12 +5110,20 @@ function handleMqttMessage(topic, messageStrOrObj) {
             sendControlCommand('volume', state.volume);
             // Gửi giới hạn thời gian phát hiện tại (tôn trọng bypass)
             const currentDur = state.bypassCurrentSongDuration ? 0 : 
-                (state.currentSong ? calculateMaxDurationForSong(state.currentSong.amount) : (state.maxDurationEnabled ? state.maxDuration : 0));
+                (state.currentSong ? calculateMaxDurationForSong(state.currentSong) : (state.maxDurationEnabled ? state.maxDuration : 0));
             publishMqtt('max_duration', { value: currentDur });
             // Gửi alert action text
             publishMqtt('alert_action_text', { text: state.alertActionText });
-            // Gửi bài hát hiện tại (nếu có)
-            if (state.currentSong) {
+            // Gửi trạng thái ẩn/hiện overlay khi hết nhạc
+            publishMqtt('hide_empty_overlay', { value: state.hideEmptyOverlay });
+            // Gửi trạng thái chế độ Tập trung
+            publishMqtt('focus_mode', { value: state.focusMode });
+            // Gửi lời hiển thị khi bật Tập trung
+            publishMqtt('focus_mode_message', { text: state.focusModeMessage });
+            // Gửi link Gist JSON cảnh báo nhạy cảm
+            publishMqtt('sensitive_videos_url', { url: state.sensitiveVideosUrl });
+            // Gửi bài hát hiện tại (nếu có) - chỉ gửi khi không ở trong trạng thái chờ lựa chọn phát tiếp
+            if (state.currentSong && !document.getElementById('resume-playback-modal')) {
                 // Gửi lời hiển thị khi hết nhạc
                 publishMqtt('empty_queue_message', { text: state.emptyQueueMessage });
                 
@@ -2971,13 +5139,20 @@ function handleMqttMessage(topic, messageStrOrObj) {
                     donorName: state.currentSong.donorName,
                     amount: state.currentSong.amount,
                     message: state.currentSong.message,
+                    isOwnerAdd: state.currentSong.isOwnerAdd || false,
                     start: state.currentSong.start || 0,
                     end: state.currentSong.end || null,
                     skipSegments: state.skipSegments || [],
-                    maxDuration: state.bypassCurrentSongDuration ? 0 : calculateMaxDurationForSong(state.currentSong.amount),
+                    maxDuration: state.bypassCurrentSongDuration ? 0 : calculateMaxDurationForSong(state.currentSong),
+                    extensionCode: state.currentSong.extensionCode || null,
+                    extendedDuration: state.currentSong.extendedDuration || 0,
+                    voteSkipActive: state.currentSong.voteSkipActive || false,
+                    voteAmount: state.currentSong.voteAmount || 0,
+                    voteSkipTarget: state.currentSong.voteSkipTarget || (state.currentSong.isOwnerAdd ? state.voteSkipDefaultAmount : (state.currentSong.amount || state.voteSkipDefaultAmount)),
                     nextSongTitle: nextSong ? nextSong.title : null,
                     nextSongDonor: nextSong ? nextSong.donorName : null,
-                    nextSongAmount: nextSong ? nextSong.amount : null
+                    nextSongAmount: nextSong ? nextSong.amount : null,
+                    nextSongIsOwnerAdd: nextSong ? (nextSong.isOwnerAdd || false) : false
                 };
                 publishMqtt('current_song', payloadSong);
                 sendControlCommand(state.isPlaying ? 'play' : 'pause');
@@ -2988,6 +5163,10 @@ function handleMqttMessage(topic, messageStrOrObj) {
         } else if (payload.type === 'overlay_state') {
             const data = payload.state;
             if (!data) return;
+            
+            if (data.currentTime !== undefined) {
+                state.lastReportedTime = data.currentTime;
+            }
 
             const isPlayingChanged = state.isPlaying !== data.isPlaying;
             state.isPlaying = data.isPlaying;
@@ -3001,6 +5180,17 @@ function handleMqttMessage(topic, messageStrOrObj) {
                         matchedQueueSong.duration = data.duration;
                     }
                     renderQueue();
+                    updateForceExtensionButtonUI();
+
+                    // Ghi lại vào localStorage để đồng bộ đồng nhất
+                    const payloadRaw = localStorage.getItem('dua_current_song');
+                    if (payloadRaw) {
+                        try {
+                            const payload = JSON.parse(payloadRaw);
+                            payload.duration = data.duration;
+                            localStorage.setItem('dua_current_song', JSON.stringify(payload));
+                        } catch(e) {}
+                    }
                 } else if (isPlayingChanged) {
                     renderQueue();
                 }
@@ -3012,7 +5202,12 @@ function handleMqttMessage(topic, messageStrOrObj) {
             const currentTimeDisplay = document.getElementById('current-time-display');
             const totalTimeDisplay = document.getElementById('total-time-display');
 
-            if (data.duration > 0) {
+            const isLive = !!data.isLive || (!data.duration || data.duration <= 0);
+
+            if (!isLive) {
+                if (progressSlider) progressSlider.style.display = 'block';
+                if (currentTimeDisplay) currentTimeDisplay.style.display = 'inline';
+                if (totalTimeDisplay) totalTimeDisplay.style.display = 'inline';
                 let startPoint = 0;
                 let limitDuration = data.duration;
                 
@@ -3024,7 +5219,7 @@ function handleMqttMessage(topic, messageStrOrObj) {
                         endPoint = Math.min(endPoint, state.currentSong.end);
                     }
                     
-                    const maxDur = state.bypassCurrentSongDuration ? 0 : calculateMaxDurationForSong(state.currentSong.amount);
+                    const maxDur = state.bypassCurrentSongDuration ? 0 : calculateMaxDurationForSong(state.currentSong);
                     if (maxDur > 0) {
                         endPoint = Math.min(endPoint, startPoint + maxDur);
                     }
@@ -3044,11 +5239,69 @@ function handleMqttMessage(topic, messageStrOrObj) {
 
                 if (currentTimeDisplay) currentTimeDisplay.textContent = formatTime(elapsedTime);
                 if (totalTimeDisplay) totalTimeDisplay.textContent = formatTime(limitDuration);
+
+                // Ẩn countdown khi phát nhạc thường
+                const dashCountdown = document.getElementById('dash-live-countdown');
+                if (dashCountdown) dashCountdown.classList.remove('visible');
+            } else {
+                if (progressSlider) progressSlider.style.display = 'none';
+                if (currentTimeDisplay) currentTimeDisplay.style.display = 'none';
+                if (totalTimeDisplay) {
+                    totalTimeDisplay.textContent = "LIVE";
+                    totalTimeDisplay.style.display = 'inline';
+                }
+                
+                // Live Stream handling via MQTT
+                let limitDuration = 0;
+                if (state.currentSong) {
+                    const startPoint = state.currentSong.start || 0;
+                    if (state.currentSong.end && state.currentSong.end > startPoint) {
+                        limitDuration = state.currentSong.end - startPoint;
+                    }
+                    const maxDur = state.bypassCurrentSongDuration ? 0 : calculateMaxDurationForSong(state.currentSong);
+                    if (maxDur > 0) {
+                        limitDuration = maxDur;
+                    }
+                }
+
+                const elapsedTime = data.currentTime; // livePlayTime from overlay
+
+                // Cập nhật countdown badge trên dashboard
+                const dashCountdown = document.getElementById('dash-live-countdown');
+                const dashCdTime = document.getElementById('dash-cd-time');
+
+                if (limitDuration > 0) {
+                    const displayElapsedTime = Math.min(limitDuration, elapsedTime);
+                    if (progressSlider) {
+                        const pct = (displayElapsedTime / limitDuration) * 100;
+                        progressSlider.value = pct;
+                        progressSlider.style.background = `linear-gradient(to right, var(--pineapple-orange) 0%, var(--pineapple-orange) ${pct}%, var(--pineapple-white) ${pct}%, var(--pineapple-white) 100%)`;
+                    }
+                    // Hiện countdown với thời gian còn lại
+                    if (dashCountdown && dashCdTime) {
+                        const remaining = Math.max(0, limitDuration - displayElapsedTime);
+                        dashCdTime.textContent = formatTime(Math.ceil(remaining));
+                        dashCountdown.classList.add('visible');
+                    }
+                } else {
+                    if (progressSlider) {
+                        progressSlider.value = 100;
+                        progressSlider.style.background = `var(--pineapple-orange)`;
+                    }
+                    // Ẩn countdown khi không có giới hạn
+                    if (dashCountdown) dashCountdown.classList.remove('visible');
+                }
             }
-            
         } else if (payload.type === 'overlay_event') {
             const event = payload.event;
             if (event && event.type === 'ended') {
+                if (event.eventId) {
+                    if (state.lastHandledEndedEventId === event.eventId) {
+                        console.log("Ignoring duplicate ended event from WebSocket:", event.eventId);
+                        return;
+                    }
+                    state.lastHandledEndedEventId = event.eventId;
+                }
                 if (Date.now() - state.lastSwitchTime < 1500) {
                     console.log("Ignoring fake ended event from MQTT (manual song switch)...");
                     return;
@@ -3059,7 +5312,17 @@ function handleMqttMessage(topic, messageStrOrObj) {
                 if (songId) {
                     removeSongFromQueue(songId, false);
                 }
-                playNextInQueue();
+                if (state.focusMode) {
+                    state.currentSong = null;
+                    updatePlayerUI(null);
+                    publishMqtt('current_song', null);
+                    sendControlCommand('stop');
+                    logSystem("Bài hát đã kết thúc. Hàng đợi tạm giữ do đang bật chế độ Tập trung.");
+                } else {
+                    playNextInQueue();
+                }
+            } else if (event && event.type === 'player_error') {
+                handlePlayerError(event.code, event.title);
             }
         }
     } catch (e) {
@@ -3076,7 +5339,11 @@ async function saveConfigToAppData(url, shopId) {
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ zypageUrl: url, zypageShopId: shopId })
+            body: JSON.stringify({ 
+                zypageUrl: url, 
+                zypageShopId: shopId,
+                zypageMinMessageAmount: state.zypageMinMessageAmount !== undefined ? state.zypageMinMessageAmount : 49000
+            })
         });
         console.log("Đã lưu cấu hình ZyPage vào AppData thành công.");
     } catch (e) {
@@ -3087,6 +5354,7 @@ async function saveConfigToAppData(url, shopId) {
 async function loadConfigFromAppData() {
     const zypageInput = document.getElementById('zypage-url');
     const zypageShopIdInput = document.getElementById('zypage-shop-id');
+    const minAmountInput = document.getElementById('zypage-min-amount-input');
     
     try {
         const response = await fetch(getApiUrl('/api/config'));
@@ -3100,6 +5368,14 @@ async function loadConfigFromAppData() {
                 state.zypageShopId = config.zypageShopId;
                 localStorage.setItem('dua_zypage_shop_id', config.zypageShopId);
             }
+            
+            const savedMinAmount = config.zypageMinMessageAmount !== undefined ? Number(config.zypageMinMessageAmount) : 49000;
+            state.zypageMinMessageAmount = savedMinAmount;
+            localStorage.setItem('dua_zypage_min_message_amount', savedMinAmount);
+            if (minAmountInput) {
+                minAmountInput.value = savedMinAmount;
+            }
+
             if (config.zypageUrl) {
                 const { domain, token } = extractZyPageDomainAndToken(config.zypageUrl);
                 state.zypageToken = token;
@@ -3120,10 +5396,37 @@ async function loadConfigFromAppData() {
     if (zypageShopIdInput && state.zypageShopId) {
         zypageShopIdInput.value = state.zypageShopId;
     }
+    
+    const localMinAmount = localStorage.getItem('dua_zypage_min_message_amount');
+    state.zypageMinMessageAmount = localMinAmount !== null ? Number(localMinAmount) : 49000;
+    if (minAmountInput) {
+        minAmountInput.value = state.zypageMinMessageAmount;
+    }
+
     if (zypageInput && state.zypageToken) {
-        zypageInput.value = `${state.zypageDomain}/donate-music/${state.zypageToken}`;
+        const pathType = localStorage.getItem('dua_zypage_path_type') || 'donate-music';
+        zypageInput.value = `${state.zypageDomain}/${pathType}/${state.zypageToken}`;
         connectZyPageLive(true);
     }
+
+    // Tải danh sách video nhạy cảm trực tuyến và cập nhật giao diện
+    fetchSensitiveVideosConfig().then(() => {
+        updatePlayerUI(state.currentSong);
+    });
+    // Tự động tải lại mỗi 10 phút
+    setInterval(fetchSensitiveVideosConfig, 10 * 60 * 1000);
+}
+
+function onMinAmountConfigChange(value) {
+    const amount = isNaN(value) || value === '' ? 49000 : Number(value);
+    state.zypageMinMessageAmount = amount;
+    localStorage.setItem('dua_zypage_min_message_amount', amount);
+    
+    const urlInput = document.getElementById('zypage-url');
+    const url = urlInput ? urlInput.value.trim() : '';
+    saveConfigToAppData(url, state.zypageShopId);
+    
+    logSystem(`[Cấu hình] Thay đổi số tiền tối thiểu nhận nhạc từ tin nhắn: <strong>${amount.toLocaleString('vi-VN')} VNĐ</strong>`, 'system');
 }
 
 // --- YÊU CẦU OVERLAY LOAD LẠI TRANG (RESET) ---
@@ -3133,39 +5436,63 @@ function triggerResetOverlay() {
 }
 
 // --- HIỂN THỊ KẾT QUẢ TÌM KIẾM YOUTUBE ---
-function renderSearchResults(videos) {
-    const container = document.getElementById('quick-add-search-results');
+function renderSearchResults(videos, containerId = 'qa-search-list') {
+    const container = document.getElementById(containerId);
     if (!container) return;
     
     container.innerHTML = '';
     
+    if (!videos || videos.length === 0) {
+        container.innerHTML = '<div style="padding: 10px; text-align: center; color: #6B7280; font-weight: 700;">Không tìm thấy video nào!</div>';
+        return;
+    }
+    
+    const isGrid = containerId === 'qa-recommendations-list' || containerId === 'qa-playlists-list';
+    
     videos.forEach(video => {
         const item = document.createElement('div');
-        item.className = 'search-result-item';
         
-        item.innerHTML = `
-            <div class="search-result-thumb">
-                <img src="${video.thumbnail}" alt="thumb">
-            </div>
-            <div class="search-result-info">
-                <div class="search-result-title" title="${video.title}">${video.title}</div>
-                <div class="search-result-meta">
-                    <span>${video.author}</span>
-                    <span style="display: flex; align-items: center; gap: 5px;">
-                        ${video.views ? `
-                        <span class="search-result-views" style="display: inline-flex; align-items: center; gap: 0.15rem; color: #9CA3AF; margin-right: 0.3rem;" title="Lượt xem: ${video.views}">
-                            <i class="fa-regular fa-eye" style="font-size: 0.7rem;"></i>
-                            ${formatViewsCompact(video.views)}
-                        </span>
-                        ` : ''}
-                        <span class="search-result-duration">${video.duration}</span>
-                    </span>
+        if (isGrid) {
+            item.className = 'grid-result-item';
+            item.innerHTML = `
+                <div class="grid-result-thumb-wrapper">
+                    <img src="${video.thumbnail}" alt="thumb">
+                    <span class="grid-result-duration">${video.duration}</span>
                 </div>
-            </div>
-            <button class="search-result-btn" title="Thêm vào hàng đợi">
-                <i class="fa-solid fa-plus"></i>
-            </button>
-        `;
+                <div class="grid-result-info">
+                    <div class="grid-result-title" title="${video.title}">${video.title}</div>
+                    <div class="grid-result-meta" title="${video.author} • ${video.views || ''}">
+                        <span>${video.author}</span>
+                        ${video.views ? `• <span>${formatViewsCompact(video.views)} views</span>` : ''}
+                    </div>
+                </div>
+            `;
+        } else {
+            item.className = 'search-result-item';
+            item.innerHTML = `
+                <div class="search-result-thumb">
+                    <img src="${video.thumbnail}" alt="thumb">
+                </div>
+                <div class="search-result-info">
+                    <div class="search-result-title" title="${video.title}">${video.title}</div>
+                    <div class="search-result-meta">
+                        <span>${video.author}</span>
+                        <span style="display: flex; align-items: center; gap: 5px;">
+                            ${video.views ? `
+                            <span class="search-result-views" style="display: inline-flex; align-items: center; gap: 0.15rem; color: #9CA3AF; margin-right: 0.3rem;" title="Lượt xem: ${video.views}">
+                                <i class="fa-regular fa-eye" style="font-size: 0.7rem;"></i>
+                                ${formatViewsCompact(video.views)}
+                            </span>
+                            ` : ''}
+                            <span class="search-result-duration">${video.duration}</span>
+                        </span>
+                    </div>
+                </div>
+                <button class="search-result-btn" title="Thêm vào hàng đợi">
+                    <i class="fa-solid fa-plus"></i>
+                </button>
+            `;
+        }
         
         // Đăng ký sự kiện click chọn bài
         const addBtn = item.querySelector('.search-result-btn');
@@ -3174,7 +5501,9 @@ function renderSearchResults(videos) {
             addSearchResultToQueue(video);
         };
         
-        addBtn.addEventListener('click', selectAction);
+        if (addBtn) {
+            addBtn.addEventListener('click', selectAction);
+        }
         item.addEventListener('click', selectAction);
         
         container.appendChild(item);
@@ -3183,8 +5512,9 @@ function renderSearchResults(videos) {
 
 // --- THÊM BÀI HÁT TỪ KẾT QUẢ TÌM KIẾM VÀO HÀNG ĐỢI ---
 function addSearchResultToQueue(video) {
+    if (state.focusMode) return;
     const nameInput = document.getElementById('quick-donor-name');
-    const donorName = (nameInput && nameInput.value.trim()) ? nameInput.value.trim() : "Introvert";
+    const donorName = (nameInput && nameInput.value.trim()) ? nameInput.value.trim() : "Em Dứa";
     
     const amountInput = document.getElementById('quick-donor-amount');
     const donorAmount = (amountInput && amountInput.value.trim() !== '') ? Number(amountInput.value) : 100000000;
@@ -3219,18 +5549,479 @@ function addSearchResultToQueue(video) {
     logSystem(`Đã thêm nhanh bài hát từ tìm kiếm: <strong>${video.title}</strong>`, 'queue');
     showDashboardSystemAlert("Đã thêm nhạc nhanh", `Đã thêm nhanh bài hát: <strong>${video.title}</strong>`, 'HÀNG ĐỢI');
     
-    // Xóa trống dữ liệu nhập và ẩn dropdown
+    // Xóa trống dữ liệu nhập và ẩn dropdown/popover
     const urlInput = document.getElementById('donor-url');
     if (urlInput) urlInput.value = '';
     if (nameInput) nameInput.value = '';
     if (amountInput) amountInput.value = '';
     
+    const quickAddPopover = document.getElementById('quick-add-popover');
+    if (quickAddPopover) quickAddPopover.classList.remove('visible');
+
     const container = document.getElementById('quick-add-search-results');
     if (container) container.style.display = 'none';
     
-    if (!state.currentSong) {
+    if (!state.currentSong && !state.focusMode) {
         playNextInQueue();
     }
 }
 
+// ==========================================
+// YOUTUBE ACCOUNT SYNC UI LOGIC (OPTION 2)
+// ==========================================
 
+let isYtLoggedIn = false;
+let hasLoadedRecommendations = false;
+let hasLoadedPlaylists = false;
+let activeQuickAddTab = 'recommendations';
+
+async function checkYoutubeAuth() {
+    if (!window.electronAPI || typeof window.electronAPI.ytCheckAuth !== 'function') {
+        return;
+    }
+    
+    try {
+        const result = await window.electronAPI.ytCheckAuth();
+        const avatarImg = document.getElementById('yt-user-avatar');
+        const nameText = document.getElementById('yt-user-name');
+        const statusBadge = document.getElementById('yt-status-badge');
+        const btnLogin = document.getElementById('btn-yt-login');
+        const btnLogout = document.getElementById('btn-yt-logout');
+        const ytDashboard = document.getElementById('card-youtube-dashboard');
+        
+        if (result && result.loggedIn) {
+            isYtLoggedIn = true;
+            if (ytDashboard) ytDashboard.style.display = 'flex';
+            if (nameText) nameText.textContent = result.displayName || 'YouTube Account';
+            if (avatarImg) {
+                if (result.avatarUrl) {
+                    avatarImg.src = Math.max(0, result.avatarUrl.indexOf('http')) === 0 ? result.avatarUrl : '';
+                    avatarImg.style.display = 'block';
+                } else {
+                    avatarImg.style.display = 'none';
+                }
+            }
+            if (statusBadge) {
+                statusBadge.textContent = 'Đã kết nối';
+                statusBadge.className = 'status-badge connected';
+                statusBadge.style.backgroundColor = '#10B981'; // green
+            }
+            if (btnLogin) btnLogin.style.display = 'none';
+            if (btnLogout) btnLogout.style.display = 'block';
+            
+            // Auto switch to recommendations on startup
+            switchQuickAddTab('recommendations');
+        } else {
+            isYtLoggedIn = false;
+            if (ytDashboard) ytDashboard.style.display = 'none';
+            if (nameText) nameText.textContent = 'Chưa kết nối tài khoản';
+            if (avatarImg) {
+                avatarImg.style.display = 'none';
+                avatarImg.src = '';
+            }
+            if (statusBadge) {
+                statusBadge.textContent = 'Chưa kết nối';
+                statusBadge.className = 'status-badge disconnected';
+                statusBadge.style.backgroundColor = '#EF4444'; // red
+            }
+            if (btnLogin) btnLogin.style.display = 'block';
+            if (btnLogout) btnLogout.style.display = 'none';
+            
+            // Clear content if logged out
+            hasLoadedRecommendations = false;
+            hasLoadedPlaylists = false;
+            const recList = document.getElementById('qa-recommendations-list');
+            if (recList) recList.innerHTML = '';
+            const plistSelect = document.getElementById('qa-playlist-select');
+            if (plistSelect) plistSelect.innerHTML = '<option value="">-- Chọn Playlist --</option>';
+            const plistList = document.getElementById('qa-playlists-list');
+            if (plistList) plistList.innerHTML = '';
+        }
+    } catch (e) {
+        console.error("Lỗi khi kiểm tra đăng nhập YouTube:", e);
+    }
+}
+
+async function loginYoutube() {
+    if (!window.electronAPI || typeof window.electronAPI.ytLogin !== 'function') {
+        alert("Tính năng này chỉ khả dụng khi chạy trên ứng dụng máy tính (Electron)!");
+        return;
+    }
+    
+    try {
+        logSystem("Đang mở cửa sổ đăng nhập YouTube...", 'system');
+        const result = await window.electronAPI.ytLogin();
+        if (result && result.success) {
+            logSystem("Đăng nhập YouTube thành công!", 'system');
+            showDashboardSystemAlert("Đồng bộ YouTube", "Đăng nhập YouTube thành công và đã kết nối!", "HỆ THỐNG");
+        } else {
+            logSystem(`Đăng nhập YouTube thất bại hoặc bị đóng: ${result.error || ''}`, 'system');
+        }
+        await checkYoutubeAuth();
+    } catch (e) {
+        console.error("Lỗi khi đăng nhập YouTube:", e);
+    }
+}
+
+async function logoutYoutube() {
+    if (!window.electronAPI || typeof window.electronAPI.ytLogout !== 'function') {
+        return;
+    }
+    
+    if (!confirm("Bạn có chắc chắn muốn đăng xuất tài khoản YouTube khỏi ứng dụng?")) {
+        return;
+    }
+    
+    try {
+        logSystem("Đang đăng xuất tài khoản YouTube...", 'system');
+        const result = await window.electronAPI.ytLogout();
+        if (result && result.success) {
+            logSystem("Đã đăng xuất tài khoản YouTube thành công.", 'system');
+            showDashboardSystemAlert("Đồng bộ YouTube", "Đã ngắt kết nối tài khoản YouTube thành công.", "HỆ THỐNG");
+        }
+        await checkYoutubeAuth();
+    } catch (e) {
+        console.error("Lỗi khi đăng xuất YouTube:", e);
+    }
+}
+
+function switchQuickAddTab(tabName) {
+    activeQuickAddTab = tabName;
+    
+    // Switch active class on tab buttons
+    const tabs = ['recommendations', 'playlists'];
+    tabs.forEach(t => {
+        const btn = document.getElementById(`qa-tab-btn-${t}`);
+        const content = document.getElementById(`qa-content-${t}`);
+        if (btn) {
+            if (t === tabName) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        }
+        if (content) {
+            if (t === tabName) {
+                content.style.display = 'block';
+            } else {
+                content.style.display = 'none';
+            }
+        }
+    });
+    
+    if (tabName === 'recommendations') {
+        if (!isYtLoggedIn) {
+            const container = document.getElementById('qa-recommendations-list');
+            if (container) {
+                container.innerHTML = `
+                    <div style="padding: 20px 10px; text-align: center; color: #6B7280; font-weight: 700;">
+                        <i class="fa-solid fa-triangle-exclamation" style="font-size: 1.5rem; color: var(--pineapple-orange); margin-bottom: 0.5rem; display: block;"></i>
+                        Vui lòng kết nối tài khoản YouTube trong phần Cấu hình để xem gợi ý cá nhân hóa!
+                    </div>
+                `;
+            }
+            return;
+        }
+        if (!hasLoadedRecommendations) {
+            loadRecommendations();
+        }
+    } else if (tabName === 'playlists') {
+        if (!isYtLoggedIn) {
+            const container = document.getElementById('qa-playlists-list');
+            if (container) {
+                container.innerHTML = `
+                    <div style="padding: 20px 10px; text-align: center; color: #6B7280; font-weight: 700;">
+                        <i class="fa-solid fa-triangle-exclamation" style="font-size: 1.5rem; color: var(--pineapple-orange); margin-bottom: 0.5rem; display: block;"></i>
+                        Vui lòng kết nối tài khoản YouTube trong phần Cấu hình để đồng bộ danh sách phát!
+                    </div>
+                `;
+            }
+            return;
+        }
+        if (!hasLoadedPlaylists) {
+            refreshQuickAddPlaylists();
+        }
+    }
+}
+
+async function loadRecommendations() {
+    const container = document.getElementById('qa-recommendations-list');
+    if (!container) return;
+    
+    container.innerHTML = '<div style="padding: 10px; text-align: center; font-weight: 700; color: var(--pineapple-text);"><i class="fa-solid fa-spinner fa-spin"></i> Đang tải gợi ý từ YouTube...</div>';
+    
+    try {
+        const result = await window.electronAPI.ytGetRecommendations();
+        if (result && result.success) {
+            hasLoadedRecommendations = true;
+            renderSearchResults(result.videos, 'qa-recommendations-list');
+        } else {
+            container.innerHTML = `<div style="padding: 10px; text-align: center; color: var(--pineapple-error); font-weight: 700;">Lỗi: ${result.error || 'Không thể lấy dữ liệu gợi ý'}</div>`;
+        }
+    } catch (e) {
+        container.innerHTML = `<div style="padding: 10px; text-align: center; color: var(--pineapple-error); font-weight: 700;">Lỗi kết nối mạng: ${e.message}</div>`;
+    }
+}
+
+async function refreshRecommendations() {
+    hasLoadedRecommendations = false;
+    await loadRecommendations();
+}
+
+async function refreshQuickAddPlaylists() {
+    const select = document.getElementById('qa-playlist-select');
+    const container = document.getElementById('qa-playlists-list');
+    if (!select || !container) return;
+    
+    select.innerHTML = '<option value="">-- Đang tải danh sách phát... --</option>';
+    container.innerHTML = '';
+    
+    try {
+        const result = await window.electronAPI.ytGetPlaylists();
+        if (result && result.success && result.playlists && result.playlists.length > 0) {
+            hasLoadedPlaylists = true;
+            select.innerHTML = '<option value="">-- Chọn Playlist --</option>';
+            result.playlists.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.playlistId;
+                opt.textContent = `${p.title} (${p.videoCount} video)`;
+                select.appendChild(opt);
+            });
+        } else {
+            select.innerHTML = '<option value="">-- Lỗi tải danh sách phát --</option>';
+            container.innerHTML = `<div style="padding: 10px; text-align: center; color: var(--pineapple-error); font-weight: 700;">Lỗi: ${result?.error || 'Không tìm thấy playlist cá nhân nào'}</div>`;
+        }
+    } catch (e) {
+        select.innerHTML = '<option value="">-- Lỗi kết nối mạng --</option>';
+        container.innerHTML = `<div style="padding: 10px; text-align: center; color: var(--pineapple-error); font-weight: 700;">Lỗi: ${e.message}</div>`;
+    }
+}
+
+async function loadQuickAddPlaylistVideos(playlistId) {
+    const container = document.getElementById('qa-playlists-list');
+    if (!container) return;
+    
+    if (!playlistId) {
+        container.innerHTML = '';
+        return;
+    }
+    
+    container.innerHTML = '<div style="padding: 10px; text-align: center; font-weight: 700; color: var(--pineapple-text);"><i class="fa-solid fa-spinner fa-spin"></i> Đang tải danh sách video...</div>';
+    
+    try {
+        const result = await window.electronAPI.ytGetPlaylistVideos(playlistId);
+        if (result && result.success) {
+            renderSearchResults(result.videos, 'qa-playlists-list');
+        } else {
+            container.innerHTML = `<div style="padding: 10px; text-align: center; color: var(--pineapple-error); font-weight: 700;">Lỗi: ${result.error || 'Không thể tải video trong playlist này'}</div>`;
+        }
+    } catch (e) {
+        container.innerHTML = `<div style="padding: 10px; text-align: center; color: var(--pineapple-error); font-weight: 700;">Lỗi kết nối mạng: ${e.message}</div>`;
+    }
+}
+
+// --- LOGIC NHẬT KÝ THAY ĐỔI (CHANGELOG) ---
+function closeChangelogModal() {
+    const modal = document.getElementById('changelog-modal');
+    if (modal) modal.style.display = 'none';
+}
+
+function showChangelogModal(version, changelogHtml) {
+    const modal = document.getElementById('changelog-modal');
+    const versionTitle = document.getElementById('changelog-version-title');
+    const contentArea = document.getElementById('changelog-content-area');
+    
+    if (modal && contentArea) {
+        if (versionTitle) versionTitle.textContent = `Phiên bản v${version}`;
+        contentArea.innerHTML = changelogHtml || `<p>Đã cập nhật ứng dụng thành công lên phiên bản v${version}.</p>`;
+        modal.style.display = 'flex';
+    }
+}
+
+async function loadChangelogForVersion(version) {
+    try {
+        const response = await fetch('CHANGELOG.md');
+        if (!response.ok) throw new Error("Could not load CHANGELOG.md");
+        const text = await response.text();
+        
+        const cleanVer = version.replace(/^v/, '');
+        const lines = text.split('\n');
+        let capturing = false;
+        let changelogLines = [];
+        
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (line.startsWith('## ') && line.includes(`[${cleanVer}]`)) {
+                capturing = true;
+                continue;
+            }
+            
+            if (capturing) {
+                if (line.startsWith('## ')) {
+                    break;
+                }
+                changelogLines.push(lines[i]);
+            }
+        }
+        
+        if (changelogLines.length > 0) {
+            return changelogLines.join('\n').trim();
+        }
+        return null;
+    } catch (err) {
+        console.error("Error loading/parsing changelog:", err);
+        return null;
+    }
+}
+
+function convertChangelogMarkdownToHtml(markdownText) {
+    if (!markdownText) return '';
+    
+    const lines = markdownText.split('\n');
+    let html = '';
+    let inList = false;
+    
+    const parseMarkdownStyles = (text) => {
+        let result = text;
+        // Hỗ trợ ảnh ![alt](url)
+        result = result.replace(/!\[(.*?)\]\((.*?)\)/g, '<img src="$2" alt="$1" style="max-width: 100%; height: auto; border-radius: 8px; margin: 0.5rem auto; box-shadow: 0 4px 10px rgba(0,0,0,0.1); border: 2px solid var(--pineapple-border-color); display: block;">');
+        // Hỗ trợ chữ in đậm **text**
+        result = result.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        return result;
+    };
+    
+    for (let line of lines) {
+        let trimmed = line.trim();
+        
+        if (trimmed.startsWith('### ')) {
+            if (inList) {
+                html += '</ul>';
+                inList = false;
+            }
+            html += `<h3 class="changelog-h3">${trimmed.substring(4)}</h3>`;
+        } else if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+            if (!inList) {
+                html += '<ul class="changelog-ul">';
+                inList = true;
+            }
+            let itemContent = trimmed.substring(2);
+            itemContent = parseMarkdownStyles(itemContent);
+            html += `<li class="changelog-li">${itemContent}</li>`;
+        } else {
+            if (trimmed === '') {
+                if (inList) {
+                    html += '</ul>';
+                    inList = false;
+                }
+            } else {
+                if (inList) {
+                    html += '</ul>';
+                    inList = false;
+                }
+                let paraContent = parseMarkdownStyles(trimmed);
+                html += `<p class="changelog-p">${paraContent}</p>`;
+            }
+        }
+    }
+    if (inList) {
+        html += '</ul>';
+    }
+    return html;
+}
+
+// --- GIÁM SÁT TRẠNG THÁI KẾT NỐI DỊCH VỤ ---
+state.lastOverlayHeartbeat = 0;
+state.internetConnected = true;
+
+let lastNetworkCheckTime = 0;
+async function checkNetworkConnection() {
+    if (Date.now() - lastNetworkCheckTime < 20000) return;
+    lastNetworkCheckTime = Date.now();
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 4000);
+        // Kiểm tra kết nối tới Raw GitHub Gist URL
+        await fetch('https://raw.githubusercontent.com', { method: 'HEAD', mode: 'no-cors', signal: controller.signal });
+        clearTimeout(timeoutId);
+        state.internetConnected = true;
+    } catch (e) {
+        state.internetConnected = false;
+    }
+}
+
+async function startServiceMonitorLoop() {
+    setInterval(async () => {
+        // 1. Kiểm tra mạng & Gist
+        await checkNetworkConnection();
+        const netBadge = document.getElementById('monitor-internet');
+        if (netBadge) {
+            if (state.internetConnected) {
+                netBadge.className = 'status-badge connected';
+                netBadge.textContent = 'ĐANG HOẠT ĐỘNG';
+            } else {
+                netBadge.className = 'status-badge disconnected';
+                netBadge.textContent = 'MẤT KẾT NỐI';
+            }
+        }
+
+        // 2. Kiểm tra ZyPage Sync
+        const zyBadge = document.getElementById('monitor-zypage');
+        if (zyBadge) {
+            if (state.zypageConnected) {
+                zyBadge.className = 'status-badge connected';
+                zyBadge.textContent = 'ĐÃ KẾT NỐI';
+            } else {
+                zyBadge.className = 'status-badge disconnected';
+                zyBadge.textContent = 'NGẮT KẾT NỐI';
+            }
+        }
+
+        // 3. Kiểm tra YouTube Account Login
+        const ytBadge = document.getElementById('monitor-youtube');
+        if (ytBadge) {
+            if (isYtLoggedIn) {
+                ytBadge.className = 'status-badge connected';
+                ytBadge.textContent = 'ĐÃ ĐĂNG NHẬP';
+            } else {
+                ytBadge.className = 'status-badge disconnected';
+                ytBadge.textContent = 'CHƯA LIÊN KẾT';
+            }
+        }
+
+        // 4. Kiểm tra OBS Overlay (WS)
+        const obsBadge = document.getElementById('monitor-obs');
+        if (obsBadge) {
+            const isObsConnected = state.lastOverlayHeartbeat && (Date.now() - state.lastOverlayHeartbeat < 7000);
+            if (isObsConnected) {
+                obsBadge.className = 'status-badge connected';
+                obsBadge.textContent = 'ĐÃ KẾT NỐI';
+            } else {
+                obsBadge.className = 'status-badge disconnected';
+                obsBadge.textContent = 'CHƯA KẾT NỐI';
+            }
+        }
+    }, 2000);
+}
+
+// Lệnh đồng bộ thủ công ZyPage bỏ qua bộ lọc thời gian để kéo các bài hát còn đọng
+function triggerManualZyPageSync() {
+    if (!state.zypageShopId) {
+        alert("Vui lòng thiết lập cấu hình đồng bộ ZyPage trước trong phần Cài đặt!");
+        return;
+    }
+
+    const btn = document.getElementById('btn-manual-sync');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang tải...';
+    }
+
+    logSystem("Bắt đầu kích hoạt đồng bộ thủ công hàng đợi ZyPage...", "system");
+
+    syncQueueFromZyPageApi(state.zypageShopId, true).finally(() => {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-rotate"></i> Đồng bộ ZyPage';
+        }
+    });
+}
