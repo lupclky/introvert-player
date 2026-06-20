@@ -2352,7 +2352,7 @@
 
         /* Tự động mở rộng chiều dọc cho các theme trừ classic và classic-dark khi hiện bảng gia hạn / vote skip */
         body:not(.theme-classic):not(.theme-classic-dark) #obs-player-widget.obs-ext-active {
-            min-height: 185px;
+            min-height: 210px;
         }
         body.theme-classic #obs-player-widget.obs-voteskip-active,
         body.theme-classic-dark #obs-player-widget.obs-voteskip-active {
@@ -2586,25 +2586,25 @@
         }
 
         .obs-ext-instruction {
-            font-size: 0.85rem;
-            font-weight: 600;
-            color: rgba(255, 255, 255, 0.9);
-            line-height: 1.4;
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: rgba(255, 255, 255, 0.95);
+            line-height: 1.45;
             flex-shrink: 0;
         }
 
         .obs-ext-rate {
-            font-size: 0.9rem;
-            font-weight: 800;
+            font-size: 1.25rem;
+            font-weight: 900;
             color: #FFD060;
             letter-spacing: 0.5px;
         }
 
         .obs-ext-code-block {
             background: rgba(255, 208, 96, 0.1);
-            border: 1.5px solid rgba(255, 208, 96, 0.55);
+            border: 2px solid rgba(255, 208, 96, 0.6);
             border-radius: 10px;
-            padding: 7px 10px;
+            padding: 5px 10px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -2612,10 +2612,10 @@
         }
 
         .obs-ext-code-value {
-            font-family: 'Courier New', monospace;
-            font-size: 1.55rem;
-            font-weight: 900;
-            letter-spacing: 5px;
+            font-family: var(--font-title, 'Inter', 'Outfit', sans-serif);
+            font-size: 2.2rem;
+            font-weight: 950;
+            letter-spacing: 4px;
             color: #FFE566;
             text-shadow: 0 0 14px rgba(255, 229, 102, 0.65);
             text-transform: uppercase;
@@ -3552,6 +3552,218 @@
             box-shadow: 0 0 10px rgba(2, 132, 199, 0.15) !important;
         }
 
+        /* ==================== LUCKY ROLL OVERLAY STYLES ==================== */
+        .obs-lucky-roll-overlay {
+            position: absolute;
+            top: -6px;
+            left: -6px;
+            width: calc(100% + 12px);
+            height: calc(100% + 18px);
+            z-index: 550;
+            display: none;
+            box-sizing: border-box;
+            background: linear-gradient(135deg, #090d16 0%, #111029 50%, #200a2b 100%);
+            border: 4px solid var(--theme-border-color, #2D2727);
+            border-radius: 24px;
+            box-shadow: 6px 6px 0px var(--theme-border-color, #2D2727);
+            padding: 16px 20px;
+            flex-direction: column;
+            align-items: stretch;
+            justify-content: center;
+            overflow: hidden;
+            font-family: 'Outfit', sans-serif;
+            color: #ffffff;
+        }
+
+        .obs-lucky-roll-overlay.active {
+            display: flex;
+        }
+
+        /* Tự động tăng chiều cao cho Player Widget khi Lucky Roll hoạt động */
+        body:not(.theme-classic):not(.theme-classic-dark) #obs-player-widget.lucky-active {
+            min-height: 220px !important;
+        }
+
+        /* Status & Title Panel */
+        .lucky-roll-status-panel {
+            text-align: center;
+            flex-shrink: 0;
+            z-index: 20;
+        }
+
+        .lucky-roll-slot-title {
+            font-size: 0.95rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: #fb7185;
+            text-shadow: 0 0 8px rgba(251, 113, 133, 0.5);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: all 0.3s ease;
+        }
+        
+        .lucky-roll-slot-title.countdown-mode {
+            color: #facc15;
+            text-shadow: 0 0 12px rgba(250, 204, 21, 0.8);
+        }
+
+        .lucky-roll-countdown-number {
+            font-size: 1.8rem;
+            font-weight: 900;
+            color: #facc15;
+            text-shadow: 0 0 12px rgba(250, 204, 21, 0.7);
+            margin-top: 4px;
+            display: none;
+        }
+
+        .lucky-roll-countdown-number.visible {
+            display: block;
+            animation: countdown-pulse 1s infinite alternate;
+        }
+
+        @keyframes countdown-pulse {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.06); }
+        }
+
+        /* 3D Picker Container (iOS UIPickerView style) */
+        .lucky-roll-picker-container {
+            position: relative;
+            height: 120px;
+            margin-top: 8px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 16px;
+        }
+
+        /* Selection Indicator Lines */
+        .lucky-roll-selection-indicator {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 50px;
+            transform: translateY(-50%);
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+            background: rgba(255, 255, 255, 0.03);
+            pointer-events: none;
+            z-index: 15;
+        }
+
+        /* Fade Out Masks (Top & Bottom) */
+        .lucky-roll-mask-top,
+        .lucky-roll-mask-bottom {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 38px;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .lucky-roll-mask-top {
+            top: 0;
+            background: linear-gradient(to bottom, #090d16 0%, rgba(9, 13, 22, 0) 100%);
+        }
+        .lucky-roll-mask-bottom {
+            bottom: 0;
+            background: linear-gradient(to top, #090d16 0%, rgba(9, 13, 22, 0) 100%);
+        }
+
+        /* 3D Viewport Screen */
+        .lucky-roll-slot-screen {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            overflow: hidden;
+            perspective: 800px;
+            background: rgba(8, 12, 22, 0.95);
+            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.9);
+        }
+
+        /* 3D Cylinder Container */
+        .lucky-roll-slot-items {
+            position: absolute;
+            width: 100%;
+            height: 50px;
+            top: 50%;
+            margin-top: -25px; /* Center perfectly */
+            transform-style: preserve-3d;
+            transform-origin: 50% 50% -240px; /* Radius R = 240px */
+            left: 0;
+        }
+
+        /* 3D Slot Item */
+        .lucky-slot-item {
+            position: absolute;
+            width: 100%;
+            height: 50px;
+            top: 0;
+            left: 0;
+            backface-visibility: hidden;
+            transform-origin: 50% 50% -240px;
+            padding: 0 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-sizing: border-box;
+        }
+
+        .lucky-slot-thumb {
+            width: 36px;
+            height: 36px;
+            object-fit: cover;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            flex-shrink: 0;
+        }
+
+        .lucky-slot-details {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .lucky-slot-song-title {
+            font-size: 0.95rem;
+            font-weight: 750;
+            color: #ffffff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            line-height: 1.2;
+        }
+
+        .lucky-slot-donor-name {
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: #94a3b8;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            line-height: 1.2;
+        }
+        
+        .obs-lucky-roll-overlay.winner-flash {
+            animation: lucky-winner-flash-anim 0.2s ease-out 3;
+        }
+        
+        @keyframes lucky-winner-flash-anim {
+            0%, 100% { border-color: var(--theme-border-color, #2D2727); box-shadow: 6px 6px 0px var(--theme-border-color, #2D2727); }
+            50% { border-color: #facc15; box-shadow: 0 0 30px #facc15; }
+        }
+
+
         /* ==================== REDESIGNED UP NEXT OVERLAYS (PHASE 1 & 2) ==================== */
         .obs-next-song-fullscreen {
             position: absolute;
@@ -4307,6 +4519,21 @@
                 Order nhạc tự động Zypage 50k
             </div>
 
+            <!-- Giao diện quay số Lucky Roll (quay số ngẫu nhiên chọn bài tiếp theo) -->
+            <div id="obs-lucky-roll-overlay" class="obs-lucky-roll-overlay">
+                <div class="lucky-roll-dice-wrapper">
+                    <i class="fa-solid fa-dice"></i>
+                </div>
+                <div class="lucky-roll-slot-wrapper">
+                    <div class="lucky-roll-slot-title">
+                        <i class="fa-solid fa-clover"></i> Đang quay số Lucky...
+                    </div>
+                    <div class="lucky-roll-slot-screen">
+                        <div id="lucky-roll-slot-items" class="lucky-roll-slot-items"></div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Giao diện tràn overlay khi bài tiếp theo chuẩn bị phát (Phase 2: 15s -> 0s) -->
             <div id="obs-next-song-fullscreen" class="obs-next-song-fullscreen">
                 <div class="next-fullscreen-container">
@@ -4395,9 +4622,6 @@
             <!-- ===== BẢNG GIA HẠN THỜI GIAN (nằm trong widget, đè lên player) ===== -->
             <div id="obs-extension-code-container" class="obs-ext-panel" style="display: none;">
                 <div class="obs-ext-inner">
-                    <div class="obs-ext-header">
-                        <span class="obs-ext-header-title">GIA HẠN THỜI GIAN</span>
-                    </div>
                     <div class="obs-ext-instruction">
                         Chỉ cần donate với nội dung tin nhắn bên dưới để được gia hạn thêm thời gian phát nội dung
                     </div>
@@ -4450,6 +4674,9 @@
     <div id="obs-soundcloud-area" style="position: absolute; top: -9999px; left: -9999px; width: 300px; height: 300px; z-index: -1; overflow: hidden; pointer-events: none;">
         <iframe id="obs-soundcloud-player" src="about:blank" style="width: 100%; height: 100%; border: none;" allow="autoplay"></iframe>
     </div>
+
+    <!-- Khung Direct Audio Stream (chỉ phát ngầm dự phòng) -->
+    <audio id="obs-direct-audio-player" style="display: none;" allow="autoplay"></audio>
 
     <script>
         // Tự động chuyển hướng từ 127.0.0.1 sang localhost để tránh lệch origin localStorage
@@ -4596,6 +4823,11 @@
         let stuckStateStartTime = null;
         let lastWarnedSongId = null;
         let warningCountdownInterval = null;
+        let voteSkipCountdownInterval = null;
+        let localVoteSkipSuccessHandled = false;
+        let isLuckyRolling = false;
+        let luckyRollCompleted = false;
+        let luckyRollCurrentSongId = null;
         let warningSongId = null;
         let alertTimeout = null;
         let playbackMonitorInterval = null;
@@ -4610,6 +4842,8 @@
         let syncInterval = null;
         let isSponsorBlockNotificationActive = false;
         let sbToastTimeout = null;
+        let isExtensionNotificationActive = false;
+        let extensionToastTimeout = null;
         let localIsResuming = false;
         let resumeTargetTime = 0;
         let resumeTimeoutId = null;
@@ -4641,6 +4875,12 @@
         let currentSoundCloudUrl = null;
         let isSoundCloudSdkLoaded = false;
         let soundCloudDuration = 0;
+
+        // yt-dlp direct stream bypass variables
+        let directAudioPlayer = null;
+        let isDirectAudioPlaying = false;
+        let currentDirectVideoId = null;
+        let directAudioDuration = 0;
 
         // Biến quản lý phase ngăn kéo "Tiếp theo"
         let currentDrawerText = "";
@@ -4737,6 +4977,7 @@
         }
 
         function updateNextSongSequence(remainingTime, song) {
+            if (localVoteSkipSuccessHandled) return;
             const drawer = document.getElementById('obs-next-song-drawer');
             const modal = document.getElementById('obs-next-songs-modal');
             const fullscreenCard = document.getElementById('obs-next-song-fullscreen');
@@ -4747,8 +4988,19 @@
             const hasAlert = alertBox && alertBox.classList.contains('active');
             const hasNoNext = !song || !song.nextSongTitle;
             
-            if (hasAlert || isSponsorBlockNotificationActive || hasNoNext || remainingTime < 0) {
-                drawer.classList.remove('show');
+            if (hasAlert || isSponsorBlockNotificationActive || isExtensionNotificationActive || hasNoNext || remainingTime < 0) {
+                // Lucky mode: bridge the gap between countdown ending and Lucky Roll starting.
+                // Keep fullscreenCard visible (don't flash black) while waiting for the new song
+                // to arrive in localStorage and trigger runLuckyRollAnimation.
+                const isLuckyModeNow = song && (song.luckyMode === true || localStorage.getItem('dua_lucky_mode') === 'true');
+                if (isLuckyModeNow && remainingTime < 0 && remainingTime >= -5 && !isLuckyRolling && fullscreenCard.classList.contains('active')) {
+                    // Keep the card visible; Lucky Roll will take over momentarily
+                    return;
+                }
+
+                if (!isSponsorBlockNotificationActive && !isExtensionNotificationActive) {
+                    drawer.classList.remove('show');
+                }
                 modal.classList.remove('show');
                 fullscreenCard.classList.remove('active');
                 if (widget) {
@@ -4761,8 +5013,10 @@
             const currentTheme = localStorage.getItem('dua_theme') || 'pineapple';
             const isClassic = ['classic', 'classic-dark'].includes(currentTheme);
             
-            // Phase 1: 30s left to 15s left -> Show 3 next songs
-            if (remainingTime <= 30 && remainingTime > 15) {
+            const isLuckyMode = (song.luckyMode === true || localStorage.getItem('dua_lucky_mode') === 'true');
+            
+            // Phase 1: 30s left to 15s left -> Show 3 next songs (Skip this phase entirely if lucky mode is active)
+            if (!isLuckyMode && remainingTime <= 30 && remainingTime > 15) {
                 fullscreenCard.classList.remove('active');
                 
                 let queue = [];
@@ -4783,7 +5037,9 @@
                 
                 if (isClassic) {
                     modal.classList.remove('show');
-                    drawer.classList.remove('show');
+                    if (!isSponsorBlockNotificationActive && !isExtensionNotificationActive) {
+                        drawer.classList.remove('show');
+                    }
                     
                     const classicQueueEl = document.getElementById('obs-classic-queue');
                     if (classicQueueEl) {
@@ -4836,7 +5092,9 @@
                         widget.classList.remove('show-queue');
                         widget.classList.remove('next-fullscreen-active');
                     }
-                    drawer.classList.remove('show');
+                    if (!isSponsorBlockNotificationActive && !isExtensionNotificationActive) {
+                        drawer.classList.remove('show');
+                    }
                     
                     const listEl = document.getElementById('obs-next-songs-list');
                     if (listEl) {
@@ -4891,9 +5149,11 @@
                     modal.classList.add('show');
                 }
             }
-            // Phase 2: 15s left to 0s left -> Show Fullscreen card
-            else if (remainingTime <= 15 && remainingTime >= 0) {
-                drawer.classList.remove('show');
+            // Phase 2: Show Fullscreen card (starts at 30s for Lucky mode, 15s for Normal mode)
+            else if (remainingTime <= (isLuckyMode ? 30 : 15) && remainingTime >= 0) {
+                if (!isSponsorBlockNotificationActive && !isExtensionNotificationActive) {
+                    drawer.classList.remove('show');
+                }
                 modal.classList.remove('show');
                 if (widget) {
                     widget.classList.remove('show-queue');
@@ -4912,7 +5172,28 @@
                 if (song && song.id) {
                     idx = queue.findIndex(s => String(s.id) === String(song.id));
                 }
-                const nextSong = idx !== -1 ? queue[idx + 1] : queue[0];
+                
+                // Determine the correct next song object
+                let nextSong = null;
+                if (isLuckyMode && song.nextSongId) {
+                    nextSong = queue.find(s => String(s.id) === String(song.nextSongId));
+                }
+                if (!nextSong) {
+                    nextSong = idx !== -1 ? queue[idx + 1] : queue[0];
+                }
+                
+                // Fallback nextSong object if nextSong is not in queue yet (e.g. queue empty / not synced yet)
+                if (!nextSong && song.nextSongTitle) {
+                    nextSong = {
+                        title: song.nextSongTitle,
+                        donorName: song.nextSongDonor,
+                        amount: song.nextSongAmount,
+                        isOwnerAdd: song.nextSongIsOwnerAdd,
+                        thumbnail: song.nextSongThumbnail,
+                        type: song.nextSongType,
+                        videoId: song.nextSongVideoId
+                    };
+                }
                 
                 if (nextSong) {
                     const thumbEl = document.getElementById('next-fullscreen-thumb');
@@ -4995,7 +5276,9 @@
             }
             // Idle state
             else {
-                drawer.classList.remove('show');
+                if (!isSponsorBlockNotificationActive && !isExtensionNotificationActive) {
+                    drawer.classList.remove('show');
+                }
                 modal.classList.remove('show');
                 fullscreenCard.classList.remove('active');
                 if (widget) {
@@ -5014,6 +5297,11 @@
             if (!nextSongDrawer || !nextTextEl || !nextTagEl) return;
             
             isSponsorBlockNotificationActive = true;
+            isExtensionNotificationActive = false;
+            if (extensionToastTimeout) {
+                clearTimeout(extensionToastTimeout);
+                extensionToastTimeout = null;
+            }
             
             // Clear any active transitions/text
             nextSongDrawer.classList.remove('show');
@@ -5037,6 +5325,47 @@
                     nextTagEl.textContent = 'TIẾP THEO';
                     nextTextEl.textContent = '';
                     isSponsorBlockNotificationActive = false;
+                }, 400); // Wait for slide up transition to finish
+            }, 4000); // Display for 4 seconds
+        }
+
+        function triggerExtensionSuccessToast(mins) {
+            const nextSongDrawer = document.getElementById('obs-next-song-drawer');
+            const nextTextEl = document.getElementById('obs-next-text');
+            const nextTagEl = document.getElementById('obs-next-tag');
+            const nextDonorInfo = document.getElementById('obs-next-donor-info');
+            
+            if (!nextSongDrawer || !nextTextEl || !nextTagEl) return;
+            
+            isExtensionNotificationActive = true;
+            isSponsorBlockNotificationActive = false;
+            if (sbToastTimeout) {
+                clearTimeout(sbToastTimeout);
+                sbToastTimeout = null;
+            }
+            
+            // Clear any active transitions/text
+            nextSongDrawer.classList.remove('show');
+            
+            setTimeout(() => {
+                nextTagEl.style.display = 'none';
+                if (nextDonorInfo) nextDonorInfo.style.setProperty('display', 'none', 'important');
+                nextTextEl.textContent = `Thành công +${mins} phút`;
+                nextTextEl.classList.remove('marquee');
+                nextTextEl.style.animationDuration = '0s';
+                
+                nextSongDrawer.classList.add('show');
+            }, 100);
+            
+            if (extensionToastTimeout) clearTimeout(extensionToastTimeout);
+            extensionToastTimeout = setTimeout(() => {
+                nextSongDrawer.classList.remove('show');
+                
+                setTimeout(() => {
+                    nextTagEl.style.display = '';
+                    nextTagEl.textContent = 'TIẾP THEO';
+                    nextTextEl.textContent = '';
+                    isExtensionNotificationActive = false;
                 }, 400); // Wait for slide up transition to finish
             }, 4000); // Display for 4 seconds
         }
@@ -5070,7 +5399,7 @@
             const currentLimit = song.maxDuration || 0;
             if (currentLimit <= 0) return false;
             
-            return (realDuration - currentLimit) > 240;
+            return (realDuration - currentLimit) > 0;
         }
 
         // Khởi tạo trạng thái YouTube API
@@ -5106,7 +5435,6 @@
             }
         }
 
-        // Hàm áp dụng âm lượng mục tiêu vào player (dùng nhiều nơi)
         function applyTargetVolume() {
             let activeVol = localIsResuming ? 0 : targetVolume;
             if (overlayPlayer && typeof overlayPlayer.setVolume === 'function') {
@@ -5114,6 +5442,9 @@
             }
             if (soundCloudWidget && typeof soundCloudWidget.setVolume === 'function') {
                 try { soundCloudWidget.setVolume(activeVol); } catch(e){}
+            }
+            if (directAudioPlayer) {
+                try { directAudioPlayer.volume = activeVol / 100; } catch(e){}
             }
         }
 
@@ -5371,6 +5702,7 @@
                 currentTime: currentTime,
                 duration: duration,
                 isPlaying: isPlaying,
+                isDirectStream: isDirectAudioPlaying,
                 timestamp: Date.now()
             }));
 
@@ -5378,7 +5710,8 @@
                 publishMqtt('overlay_state', {
                     currentTime: currentTime,
                     duration: duration,
-                    isPlaying: isPlaying
+                    isPlaying: isPlaying,
+                    isDirectStream: isDirectAudioPlaying
                 });
                 window.lastMqttPublishTime = Date.now();
             }
@@ -5441,6 +5774,128 @@
             }
         }
 
+        function initDirectAudioPlayer() {
+            if (!directAudioPlayer) {
+                directAudioPlayer = document.getElementById('obs-direct-audio-player');
+                if (!directAudioPlayer) return;
+                
+                // Trình theo dõi sự kiện của thẻ <audio> ẩn
+                directAudioPlayer.addEventListener('timeupdate', () => {
+                    if (isDirectAudioPlaying) {
+                        const currentTime = directAudioPlayer.currentTime;
+                        const duration = directAudioPlayer.duration || 0;
+                        currentPlayback.currentTime = currentTime;
+                        currentPlayback.duration = duration;
+                        updateTrackProgress(currentTime, duration, true);
+                    }
+                });
+
+                directAudioPlayer.addEventListener('ended', () => {
+                    if (isDirectAudioPlaying) {
+                        console.log("Direct Audio: Kết thúc bài hát.");
+                        stopDirectAudioStream();
+                        triggerEndedEvent();
+                    }
+                });
+
+                directAudioPlayer.addEventListener('pause', () => {
+                    if (isDirectAudioPlaying) {
+                        currentPlayback.isPlaying = false;
+                        updateTrackProgress(directAudioPlayer.currentTime, directAudioPlayer.duration || 0, false);
+                    }
+                });
+
+                directAudioPlayer.addEventListener('play', () => {
+                    if (isDirectAudioPlaying) {
+                        currentPlayback.isPlaying = true;
+                        updateTrackProgress(directAudioPlayer.currentTime, directAudioPlayer.duration || 0, true);
+                    }
+                });
+                
+                directAudioPlayer.addEventListener('loadedmetadata', () => {
+                    if (isDirectAudioPlaying) {
+                        directAudioDuration = directAudioPlayer.duration;
+                        currentPlayback.duration = directAudioDuration;
+                        console.log("Direct Audio Metadata loaded. Duration:", directAudioDuration);
+                    }
+                });
+            }
+        }
+
+        function resolveAndPlayDirectStream(videoId, startTime) {
+            initDirectAudioPlayer();
+            if (!directAudioPlayer) {
+                console.error("Direct Audio Player element not found.");
+                triggerEndedEvent();
+                return;
+            }
+
+            console.log("Resolving direct audio stream for YouTube Video ID:", videoId);
+            
+            const streamApiUrl = `/api/yt-stream?videoId=${videoId}`;
+            
+            isDirectAudioPlaying = true;
+            currentDirectVideoId = videoId;
+            lastSongLoadStartTimestamp = Date.now(); // reset watchdog load timestamp
+
+            // Pause other players
+            if (overlayPlayer && typeof overlayPlayer.pauseVideo === 'function') {
+                try { overlayPlayer.pauseVideo(); } catch(e){}
+            }
+
+            fetch(streamApiUrl)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (!isDirectAudioPlaying || currentDirectVideoId !== videoId) {
+                        // Song changed or bypass stopped in the meantime
+                        return;
+                    }
+                    if (data.success && data.url) {
+                        console.log("Successfully resolved direct stream url:", data.url);
+                        directAudioPlayer.src = data.url;
+                        directAudioPlayer.currentTime = startTime || 0;
+                        
+                        let activeVol = localIsResuming ? 0 : targetVolume;
+                        directAudioPlayer.volume = activeVol / 100;
+                        
+                        directAudioPlayer.play()
+                            .then(() => {
+                                console.log("Direct stream audio playback started.");
+                                currentPlayback.isPlaying = true;
+                                lastSongLoadStartTimestamp = 0; // stop loading watchdog
+                                startVolumeEnforcer();
+                            })
+                            .catch(err => {
+                                console.error("Error playing direct audio stream:", err);
+                                triggerEndedEvent();
+                            });
+                    } else {
+                        throw new Error(data.error || "Unknown resolution error");
+                    }
+                })
+                .catch(err => {
+                    console.error("Failed to resolve direct audio stream:", err);
+                    stopDirectAudioStream();
+                    triggerEndedEvent();
+                });
+        }
+
+        function stopDirectAudioStream() {
+            isDirectAudioPlaying = false;
+            currentDirectVideoId = null;
+            if (directAudioPlayer) {
+                try {
+                    directAudioPlayer.pause();
+                    directAudioPlayer.src = '';
+                } catch(e) {}
+            }
+        }
+
         // Hàm khởi tạo iframe trình phát YouTube
         function initOverlayPlayer(videoId, startTime) {
             lastSongLoadStartTimestamp = Date.now();
@@ -5483,8 +5938,26 @@
                     },
                     'onStateChange': onPlayerStateChange,
                     'onError': (event) => {
-                        console.error("Overlay Player: Lỗi tải video YouTube (Mã lỗi: " + event.data + "). Tự động chuyển bài tiếp theo...");
+                        console.error("Overlay Player: Lỗi tải video YouTube (Mã lỗi: " + event.data + ").");
                         
+                        const bypassEnabled = localStorage.getItem('dua_yt_bypass_enabled') !== 'false';
+                        if (bypassEnabled && (event.data === 150 || event.data === 101 || event.data === 2 || event.data === 100)) {
+                            console.log("Overlay Player: Kích hoạt chế độ phát nhạc dự phòng bằng Direct Stream...");
+                            let currentId = currentVideoId || videoId;
+                            let currentStart = startTime || 0;
+                            try {
+                                const songRaw = localStorage.getItem('dua_current_song');
+                                if (songRaw) {
+                                    const songObj = JSON.parse(songRaw);
+                                    if (songObj.videoId) currentId = songObj.videoId;
+                                    currentStart = songObj.start || 0;
+                                }
+                            } catch(e) {}
+                            resolveAndPlayDirectStream(currentId, currentStart);
+                            return;
+                        }
+
+                        console.log("Overlay Player: Tự động chuyển bài tiếp theo...");
                         let songTitle = "Không rõ";
                         try {
                             const songRaw = localStorage.getItem('dua_current_song');
@@ -5511,33 +5984,195 @@
             });
         }
 
+        function triggerVoteSkipSuccessFlow() {
+            if (localVoteSkipSuccessHandled) return;
+            localVoteSkipSuccessHandled = true;
+            lastCommandType = 'pause'; // Chặn auto-play enforcer
+            const widget = document.getElementById('obs-player-widget');
+            
+            // 1. Tạm dừng phát tất cả các player ngay lập tức
+            try {
+                if (overlayPlayer && typeof overlayPlayer.pauseVideo === 'function') overlayPlayer.pauseVideo();
+                if (soundCloudWidget) soundCloudWidget.pause();
+                if (spotifyEmbedController) spotifyEmbedController.pause();
+                if (directAudioPlayer) directAudioPlayer.pause();
+            } catch(e) {}
+
+            // Hiện màn hình báo vote skip thành công
+            const successOverlay = document.getElementById('obs-voteskip-success-overlay');
+            if (successOverlay) {
+                successOverlay.classList.add('active');
+            }
+
+            // 2. Tìm bài hát tiếp theo
+            let queue = [];
+            try {
+                const rawQueue = localStorage.getItem('dua_queue');
+                if (rawQueue) {
+                    queue = JSON.parse(rawQueue);
+                }
+            } catch (e) {}
+
+            let idx = -1;
+            const currentSongRaw = localStorage.getItem('dua_current_song');
+            if (currentSongRaw) {
+                try {
+                    const song = JSON.parse(currentSongRaw);
+                    if (song && song.id) {
+                        idx = queue.findIndex(s => String(s.id) === String(song.id));
+                    }
+                } catch(e) {}
+            }
+            let nextSong = null;
+            if (idx !== -1) {
+                nextSong = queue[idx + 1] || null;
+            } else if (queue.length > 0) {
+                // Dự phòng thông minh: nếu không tìm thấy bài hiện tại trong hàng đợi
+                const firstInQueue = queue[0];
+                const song = currentSongRaw ? JSON.parse(currentSongRaw) : null;
+                if (song && firstInQueue && String(firstInQueue.id) === String(song.id)) {
+                    nextSong = queue[1] || null;
+                } else {
+                    nextSong = firstInQueue;
+                }
+            }
+
+            // Xóa đếm ngược cũ nếu có
+            if (voteSkipCountdownInterval) {
+                clearInterval(voteSkipCountdownInterval);
+                voteSkipCountdownInterval = null;
+            }
+
+            // Trì hoãn 2 giây rồi hiện đếm ngược 15s nếu có bài tiếp theo
+            setTimeout(() => {
+                if (successOverlay) {
+                    successOverlay.classList.remove('active');
+                }
+
+                if (nextSong) {
+                    const fullscreenCard = document.getElementById('obs-next-song-fullscreen');
+                    const thumbEl = document.getElementById('next-fullscreen-thumb');
+                    const titleEl = document.getElementById('next-fullscreen-title');
+                    const donorNameEl = document.getElementById('next-fullscreen-donor-name');
+                    const donorAmountEl = document.getElementById('next-fullscreen-donor-amount');
+                    const countdownEl = document.getElementById('next-fullscreen-countdown');
+
+                    if (widget) {
+                        widget.classList.remove('show-queue');
+                        widget.classList.add('next-fullscreen-active');
+                    }
+
+                    // Cập nhật thông tin bài tiếp theo
+                    if (thumbEl) {
+                        const targetSrc = nextSong.thumbnail || (nextSong.type === 'youtube'
+                            ? `https://img.youtube.com/vi/${nextSong.videoId}/hqdefault.jpg`
+                            : 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=200&auto=format&fit=crop');
+                        thumbEl.src = targetSrc;
+                    }
+
+                    if (titleEl) {
+                        const currentTheme = localStorage.getItem('dua_theme') || 'pineapple';
+                        const isClassic = ['classic', 'classic-dark'].includes(currentTheme);
+                        if (!isClassic) {
+                            const containerEl = document.getElementById('next-fullscreen-title-container');
+                            applyMarquee(containerEl, titleEl, nextSong.title || 'Không rõ tên bài hát', 30);
+                        } else {
+                            titleEl.textContent = nextSong.title || 'Không rõ tên bài hát';
+                        }
+                    }
+
+                    if (nextSong.isOwnerAdd) {
+                        const storedMsg = localStorage.getItem('dua_empty_queue_message') || 'Order nhạc tự động Zypage 50k';
+                        if (donorNameEl) {
+                            donorNameEl.textContent = storedMsg;
+                            donorNameEl.style.setProperty('max-width', 'none', 'important');
+                            donorNameEl.style.setProperty('white-space', 'normal', 'important');
+                        }
+                        if (donorAmountEl) {
+                            donorAmountEl.style.setProperty('display', 'none', 'important');
+                        }
+                    } else {
+                        const targetDonorName = nextSong.donorName || 'Khách';
+                        if (donorNameEl) {
+                            donorNameEl.textContent = targetDonorName;
+                            donorNameEl.style.removeProperty('max-width');
+                            donorNameEl.style.removeProperty('white-space');
+                        }
+                        const targetAmount = (nextSong.amount && Number(nextSong.amount) > 0)
+                            ? Number(nextSong.amount).toLocaleString('vi-VN') + ' ₫'
+                            : '0 ₫';
+                        if (donorAmountEl) {
+                            donorAmountEl.textContent = targetAmount;
+                            donorAmountEl.style.removeProperty('display');
+                        }
+                    }
+
+                    if (fullscreenCard) {
+                        fullscreenCard.classList.add('active');
+                    }
+
+                    // Chạy đếm ngược 15s
+                    let timeLeft = 15;
+                    if (countdownEl) {
+                        countdownEl.textContent = `Phát sau ${formatTime(timeLeft)}`;
+                    }
+
+                    voteSkipCountdownInterval = setInterval(() => {
+                        timeLeft--;
+                        if (timeLeft <= 0) {
+                            clearInterval(voteSkipCountdownInterval);
+                            voteSkipCountdownInterval = null;
+                            if (fullscreenCard) {
+                                fullscreenCard.classList.remove('active');
+                            }
+                            if (widget) {
+                                widget.classList.remove('next-fullscreen-active');
+                            }
+                            triggerEndedEvent();
+                        } else {
+                            if (countdownEl) {
+                                countdownEl.textContent = `Phát sau ${formatTime(timeLeft)}`;
+                            }
+                        }
+                    }, 1000);
+
+                } else {
+                    // Không có bài tiếp theo -> kết thúc ngay (gửi triggerEndedEvent về app.js)
+                    triggerEndedEvent();
+                }
+            }, 2000);
+        }
+
         function executeControlCommand(command) {
+            if (localVoteSkipSuccessHandled && (command.type === 'play' || command.type === 'pause' || command.type === 'seek')) {
+                console.log("Overlay: Vote skip success flow is active, ignoring command:", command.type);
+                return;
+            }
+
             if (command.type === 'extended') {
                 const details = command.value;
                 if (details) {
-                    const donorName = details.donorName || 'Khách';
-                    const amount = Number(details.amount) || 0;
                     const seconds = Number(details.seconds) || 360;
                     const mins = (seconds / 60).toFixed(1).replace(/\.0$/, '');
                     
-                    const flash = document.createElement('div');
-                    flash.className = 'obs-extended-flash';
-                    flash.innerHTML = `<span>➕ ${donorName} (+${mins}p)</span>`;
+                    // Hide the extension container immediately
+                    const extContainerGlobal = document.getElementById('obs-extension-code-container');
+                    if (extContainerGlobal) {
+                        extContainerGlobal.style.display = 'none';
+                    }
+                    const widget = document.getElementById('obs-player-widget');
+                    if (widget) {
+                        widget.classList.remove('obs-ext-active');
+                    }
                     
-                    document.body.appendChild(flash);
-                    
-                    setTimeout(() => {
-                        flash.remove();
-                    }, 4000);
+                    // Trigger the drawer success toast
+                    triggerExtensionSuccessToast(mins);
                 }
                 return;
             }
 
             if (command.type === 'vote_skip_success') {
-                const successOverlay = document.getElementById('obs-voteskip-success-overlay');
-                if (successOverlay) {
-                    successOverlay.classList.add('active');
-                }
+                triggerVoteSkipSuccessFlow();
                 return;
             }
 
@@ -5570,6 +6205,7 @@
                     if (overlayPlayer && typeof overlayPlayer.pauseVideo === 'function') overlayPlayer.pauseVideo();
                     if (soundCloudWidget) soundCloudWidget.pause();
                     if (spotifyEmbedController) spotifyEmbedController.pause();
+                    if (directAudioPlayer) directAudioPlayer.pause();
                 } catch(e){}
                 // Hiện overlay chờ với nội dung phù hợp
                 const waitWidget = document.getElementById('obs-player-widget');
@@ -5625,6 +6261,23 @@
                 }
             } else {
                 // YouTube
+                if (isDirectAudioPlaying && directAudioPlayer) {
+                    if (command.type === 'play') {
+                        directAudioPlayer.play().catch(e => console.error("directAudioPlayer.play error:", e));
+                        lastCommandType = 'play';
+                    } else if (command.type === 'pause') {
+                        directAudioPlayer.pause();
+                        lastCommandType = 'pause';
+                    } else if (command.type === 'seek') {
+                        directAudioPlayer.currentTime = command.value;
+                        lastCommandType = 'seek';
+                    } else if (command.type === 'stop') {
+                        stopDirectAudioStream();
+                        lastCommandType = 'stop';
+                    }
+                    return;
+                }
+
                 if (!overlayPlayer || typeof overlayPlayer.getPlayerState !== 'function') return;
                 const playerState = overlayPlayer.getPlayerState();
                 if (command.type === 'play') {
@@ -5668,6 +6321,8 @@
             if (playbackMonitorInterval) clearInterval(playbackMonitorInterval);
 
             playbackMonitorInterval = setInterval(() => {
+                if (isLuckyRolling) return;
+                if (isDirectAudioPlaying) return;
                 if (!overlayPlayer || typeof overlayPlayer.getCurrentTime !== 'function') return;
 
                 try {
@@ -5765,6 +6420,7 @@
                             duration: isLive ? 0 : duration,
                             isLive: isLive,
                             isPlaying: isPlaying,
+                            isDirectStream: isDirectAudioPlaying,
                             timestamp: now
                         }));
 
@@ -5774,7 +6430,8 @@
                                 currentTime: isLive ? livePlayTime : currentTime,
                                 duration: isLive ? 0 : duration,
                                 isLive: isLive,
-                                isPlaying: isPlaying
+                                isPlaying: isPlaying,
+                                isDirectStream: isDirectAudioPlaying
                             });
                             window.lastMqttPublishTime = now;
                         }
@@ -5914,6 +6571,59 @@
         }
 
         function triggerEndedEvent() {
+            // Kiểm tra xem có đang ở chế độ Lucky và chưa quay số không
+            let isLuckyMode = false;
+            let currentSong = null;
+            try {
+                const songRaw = localStorage.getItem('dua_current_song');
+                if (songRaw) {
+                    currentSong = JSON.parse(songRaw);
+                    isLuckyMode = (currentSong.luckyMode === true || localStorage.getItem('dua_lucky_mode') === 'true');
+                }
+            } catch(e){}
+
+            if (isLuckyMode && !luckyRollCompleted && !isLuckyRolling && currentSong && currentSong.nextSongTitle) {
+                isLuckyRolling = true;
+                luckyRollCurrentSongId = currentSong.id;
+                
+                // Tạm dừng phát tất cả các player ngay lập tức để quay số
+                try {
+                    if (overlayPlayer && typeof overlayPlayer.pauseVideo === 'function') overlayPlayer.pauseVideo();
+                    if (soundCloudWidget) soundCloudWidget.pause();
+                    if (spotifyEmbedController) spotifyEmbedController.pause();
+                    if (directAudioPlayer) directAudioPlayer.pause();
+                } catch(e){}
+                stopDirectAudioStream();
+
+                // Tìm bài hát thắng cuộc
+                let queue = [];
+                try {
+                    const rawQueue = localStorage.getItem('dua_queue');
+                    if (rawQueue) queue = JSON.parse(rawQueue);
+                } catch (e) {}
+
+                let winningSong = null;
+                if (currentSong.nextSongId && Array.isArray(queue)) {
+                    winningSong = queue.find(s => s && String(s.id) === String(currentSong.nextSongId));
+                }
+                if (!winningSong) {
+                    winningSong = {
+                        id: currentSong.nextSongId,
+                        title: currentSong.nextSongTitle,
+                        donorName: currentSong.nextSongDonor,
+                        amount: currentSong.nextSongAmount,
+                        isOwnerAdd: currentSong.nextSongIsOwnerAdd,
+                        thumbnail: currentSong.nextSongThumbnail,
+                        type: currentSong.nextSongType,
+                        videoId: currentSong.nextSongVideoId
+                    };
+                }
+
+                // Chạy hiệu ứng quay số
+                runLuckyRollAnimation(winningSong);
+                return; // Thoát sớm, chưa gửi sự kiện ended
+            }
+
             if (playbackMonitorInterval) {
                 clearInterval(playbackMonitorInterval);
                 playbackMonitorInterval = null;
@@ -5963,7 +6673,7 @@
                 startVolumeEnforcer();
             } else if (event.data === YT.PlayerState.PAUSED) {
                 // Nếu bị tạm dừng ngoài ý muốn (không phải do lệnh pause/stop từ dashboard), tự động phát tiếp
-                if (lastCommandType !== 'pause' && lastCommandType !== 'stop' && lastCommandType !== 'waiting_resume' && !warningCountdownInterval) {
+                if (lastCommandType !== 'pause' && lastCommandType !== 'stop' && lastCommandType !== 'waiting_resume' && !warningCountdownInterval && !isLuckyRolling) {
                     console.log("Overlay Player: Phát hiện trình phát bị tạm dừng ngoài ý muốn. Đang tự động phát lại...");
                     event.target.playVideo();
                 }
@@ -5996,14 +6706,127 @@
             }
         }
 
+        function createSlotItemHtml(song) {
+            if (!song) return '';
+            const title = song.title || 'Không rõ tên bài hát';
+            let donor = song.donorName || 'Khách';
+            if (song.isOwnerAdd) {
+                donor = localStorage.getItem('dua_empty_queue_message') || 'Order nhạc tự động Zypage 50k';
+            }
+            const amountStr = (!song.isOwnerAdd && song.amount && Number(song.amount) > 0)
+                ? ` · ${Number(song.amount).toLocaleString('vi-VN')} ₫`
+                : '';
+            const thumb = song.thumbnail || 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=200&auto=format&fit=crop';
+            
+            return `
+                <div class="lucky-slot-item">
+                    <img class="lucky-slot-thumb" src="${thumb}" alt="Cover">
+                    <div class="lucky-slot-details">
+                        <div class="lucky-slot-song-title" title="${title}">${title}</div>
+                        <div class="lucky-slot-donor-name">
+                            <i class="fa-solid fa-heart"></i> ${donor}${amountStr}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function runLuckyRollAnimation(winningSong) {
+            const overlay = document.getElementById('obs-lucky-roll-overlay');
+            const slotItemsContainer = document.getElementById('lucky-roll-slot-items');
+            const widget = document.getElementById('obs-player-widget');
+            if (!overlay || !slotItemsContainer) {
+                isLuckyRolling = false;
+                updateOverlayUI();
+                return;
+            }
+
+            // Tự động tăng chiều cao cho Player Widget khi Lucky Roll hoạt động
+            if (widget) {
+                widget.classList.add('lucky-active');
+            }
+
+            // Show overlay
+            overlay.classList.add('active');
+            overlay.classList.remove('winner-flash');
+
+            // Build candidates list from queue
+            let queue = [];
+            try {
+                const rawQueue = localStorage.getItem('dua_queue');
+                if (rawQueue) {
+                    queue = JSON.parse(rawQueue);
+                }
+            } catch (e) {
+                console.error("Lucky Roll: Error reading queue:", e);
+            }
+            if (!Array.isArray(queue)) queue = [];
+
+            // Filter out winning song from candidates to make the roll interesting
+            let candidates = queue.filter(s => s && String(s.id) !== String(winningSong ? winningSong.id : ''));
+            
+            // If no candidates, use some fallback mock songs or just the winning song
+            if (candidates.length === 0) {
+                candidates = [
+                    { title: "Alan Walker - Faded", donorName: "Khách", thumbnail: "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=200" },
+                    { title: "Chill Lofi Beats", donorName: "Viewer", thumbnail: "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=200" }
+                ];
+            }
+
+            // Create a reel of items (e.g. 15 items)
+            // The last item must be the winning song!
+            const totalItems = 15;
+            let reelHtml = '';
+            
+            for (let i = 0; i < totalItems - 1; i++) {
+                const randomSong = candidates[Math.floor(Math.random() * candidates.length)];
+                reelHtml += createSlotItemHtml(randomSong);
+            }
+            // Add the winner at the end
+            reelHtml += createSlotItemHtml(winningSong);
+
+            slotItemsContainer.innerHTML = reelHtml;
+            slotItemsContainer.style.transition = 'none';
+            slotItemsContainer.style.top = '0px';
+
+            // Force reflow
+            void slotItemsContainer.offsetHeight;
+
+            // Trigger scroll animation
+            // Slot item height is 90px. To align the last item perfectly:
+            // top should slide up to -((totalItems - 1) * 90)px
+            const targetTop = -((totalItems - 1) * 90);
+            
+            slotItemsContainer.style.transition = 'top 3.5s cubic-bezier(0.1, 0.8, 0.1, 1)';
+            slotItemsContainer.style.top = `${targetTop}px`;
+
+            // After roll stops
+            setTimeout(() => {
+                // Add winner flash
+                overlay.classList.add('winner-flash');
+
+                // Wait 1.5s more for user to see the winner
+                setTimeout(() => {
+                    // Do NOT hide the overlay yet to prevent black screen flash.
+                    // It will be hidden in updateOverlayUI() once the new song actually arrives.
+                    isLuckyRolling = false;
+                    luckyRollCompleted = true;
+                    
+                    // Phát tín hiệu kết thúc bài về Dashboard sau khi quay số xong để chuyển bài
+                    triggerEndedEvent();
+                }, 1500);
+            }, 3500);
+        }
+
         // Cập nhật Giao diện Overlay
         function updateOverlayUI() {
+            if (isLuckyRolling) return;
             try {
                 // Kiểm tra lệnh điều khiển trước
                 checkControlCommands();
 
                 // LOADER WATCHDOG: Skip the song if loading takes more than 15 seconds
-                if (lastSongLoadStartTimestamp > 0 && (Date.now() - lastSongLoadStartTimestamp > 15000)) {
+                if (!isDirectAudioPlaying && lastSongLoadStartTimestamp > 0 && (Date.now() - lastSongLoadStartTimestamp > 15000)) {
                     console.error("Overlay Player: Loader Watchdog triggered (song loading timed out >15s). Skipping song...");
                     lastSongLoadStartTimestamp = 0;
                     triggerEndedEvent();
@@ -6043,6 +6866,16 @@
                     if (warningOverlay) warningOverlay.classList.remove('active');
                     
                     widget.classList.remove('playing');
+                    
+                    // Reset lucky roll state
+                    isLuckyRolling = false;
+                    luckyRollCompleted = false;
+                    luckyRollCurrentSongId = null;
+                    const lOverlay = document.getElementById('obs-lucky-roll-overlay');
+                    if (lOverlay) {
+                        lOverlay.classList.remove('active', 'winner-flash');
+                    }
+                    widget.classList.remove('lucky-active');
                     
                     const hideEmpty = localStorage.getItem('dua_hide_empty_overlay') === 'true';
                     const isFocus = localStorage.getItem('dua_focus_mode') === 'true';
@@ -6087,6 +6920,7 @@
                     if (soundCloudWidget) {
                         try { soundCloudWidget.pause(); } catch(e){}
                     }
+                    stopDirectAudioStream();
                     
                     lastSongId = 'no_song';
                     currentVideoId = null;
@@ -6114,6 +6948,38 @@
                 }
 
                 const data = JSON.parse(dataRaw);
+
+                const isLuckyNewSong = (lastSongId !== data.id);
+                if (isLuckyNewSong) {
+                    luckyRollCompleted = false;
+                    luckyRollCurrentSongId = null;
+                    
+                    // Tắt overlay quay số Lucky Roll nếu bài mới đã tải xong
+                    const lOverlay = document.getElementById('obs-lucky-roll-overlay');
+                    if (lOverlay) {
+                        lOverlay.classList.remove('active', 'winner-flash');
+                    }
+                    const widget = document.getElementById('obs-player-widget');
+                    if (widget) {
+                        widget.classList.remove('lucky-active');
+                    }
+                    const fullscreenCard = document.getElementById('obs-next-song-fullscreen');
+                    if (fullscreenCard) {
+                        fullscreenCard.classList.remove('active');
+                    }
+                }
+                
+                // Fallback for vote skip success in case the control command was missed/delayed
+                if (data && data.voteSkipSuccess === true && !localVoteSkipSuccessHandled) {
+                    console.log("Overlay: Detected voteSkipSuccess in state payload, triggering success flow...");
+                    triggerVoteSkipSuccessFlow();
+                }
+                
+                // Return early if vote skip success flow is handled and active for this song
+                // to avoid clearing the countdown timer or interfering with the transition UI.
+                if (localVoteSkipSuccessHandled && data && data.id === lastSongId) {
+                    return;
+                }
                 
                 // Cập nhật mã gia hạn thời gian
                 const extContainerGlobal = document.getElementById('obs-extension-code-container');
@@ -6132,6 +6998,22 @@
                     const warningOverlay = document.getElementById('obs-warning-overlay');
                     if (warningOverlay) {
                         warningOverlay.classList.remove('active');
+                    }
+                }
+
+                if (voteSkipCountdownInterval) {
+                    clearInterval(voteSkipCountdownInterval);
+                    voteSkipCountdownInterval = null;
+                    const successOverlay = document.getElementById('obs-voteskip-success-overlay');
+                    if (successOverlay) {
+                        successOverlay.classList.remove('active');
+                    }
+                    const fullscreenCard = document.getElementById('obs-next-song-fullscreen');
+                    if (fullscreenCard) {
+                        fullscreenCard.classList.remove('active');
+                    }
+                    if (widget) {
+                        widget.classList.remove('next-fullscreen-active');
                     }
                 }
                 
@@ -6272,9 +7154,15 @@
 
                 // Cập nhật thông tin bài hát
                 if (isNewSong) {
+                    localVoteSkipSuccessHandled = false;
                     const successOverlay = document.getElementById('obs-voteskip-success-overlay');
                     if (successOverlay) {
                         successOverlay.classList.remove('active');
+                    }
+                    const fullscreenCard = document.getElementById('obs-next-song-fullscreen');
+                    if (fullscreenCard) {
+                        fullscreenCard.classList.remove('active');
+                        widget.classList.remove('next-fullscreen-active');
                     }
                     if (resumeTimeoutId) {
                         clearTimeout(resumeTimeoutId);
@@ -6297,7 +7185,6 @@
                     const isClassic = ['classic', 'classic-dark'].includes(currentTheme);
                     
                     // Kiểm tra xem thẻ "Bài tiếp theo" có đang hiển thị trước đó không để đồng bộ hoạt ảnh morph
-                    const fullscreenCard = document.getElementById('obs-next-song-fullscreen');
                     const wasFullscreenActive = fullscreenCard && fullscreenCard.classList.contains('active') && !isClassic;
                     
                     const playerMain = document.getElementById('obs-player-main');
@@ -6311,7 +7198,6 @@
                     
                     if (isClassic) {
                         const obsCoverWrapper = document.getElementById('obs-cover-wrapper');
-                        const widget = document.getElementById('obs-player-widget');
                         const details = document.querySelector('.obs-details');
                         if (obsCoverWrapper && widget) {
                             // Bước 1: Nhấc cần gạt, dừng quay đĩa
@@ -6440,6 +7326,7 @@
                     if (soundCloudWidget) {
                         try { soundCloudWidget.pause(); } catch(e){}
                     }
+                    stopDirectAudioStream();
                     
                     // Phát Spotify
                     if (isNewSong || currentVideoId !== data.spotifyId) {
@@ -6455,6 +7342,7 @@
                     if (spotifyEmbedController) {
                         try { spotifyEmbedController.pause(); } catch(e){}
                     }
+                    stopDirectAudioStream();
                     
                     // Phát SoundCloud
                     if (isNewSong || currentVideoId !== data.soundcloudUrl) {
@@ -6473,6 +7361,7 @@
                     
                     if (isPlayerReady) {
                         if (currentVideoId !== data.videoId || isNewSong) {
+                            stopDirectAudioStream();
                             currentVideoId = data.videoId;
                             targetVolume = localStorage.getItem('dua_volume') !== null ? parseInt(localStorage.getItem('dua_volume')) : targetVolume;
                             if (overlayPlayer && typeof overlayPlayer.loadVideoById === 'function') {
@@ -6522,7 +7411,11 @@
                         isPlaying = currentPlayback.isPlaying;
                     } else {
                         // YouTube
-                        if (overlayPlayer && typeof overlayPlayer.getCurrentTime === 'function' && typeof overlayPlayer.getPlayerState === 'function') {
+                        if (isDirectAudioPlaying && directAudioPlayer) {
+                            currentTime = directAudioPlayer.currentTime;
+                            duration = directAudioPlayer.duration || 0;
+                            isPlaying = !directAudioPlayer.paused;
+                        } else if (overlayPlayer && typeof overlayPlayer.getCurrentTime === 'function' && typeof overlayPlayer.getPlayerState === 'function') {
                             const playerState = overlayPlayer.getPlayerState();
                             if (playerState === YT.PlayerState.PLAYING || playerState === YT.PlayerState.PAUSED) {
                                 currentTime = overlayPlayer.getCurrentTime();
@@ -6649,19 +7542,18 @@
                         if (data && data.extensionCode) {
                             extCodeValGlobal.textContent = data.extensionCode;
 
-                            // Cập nhật hiển thị rate (xxk / x phút)
+                            // Cập nhật hiển thị rate (ví dụ: 50.000đ / 6 phút)
                             if (extRateEl && data.extensionPrice && data.extensionMinutes) {
-                                const priceK = Math.round(data.extensionPrice / 1000);
-                                extRateEl.textContent = `${priceK}k / ${data.extensionMinutes} phút`;
+                                const priceFormatted = Number(data.extensionPrice).toLocaleString('vi-VN');
+                                extRateEl.textContent = `${priceFormatted}đ / ${data.extensionMinutes} phút`;
                             } else if (extRateEl) {
                                 extRateEl.textContent = '';
                             }
                             
-                            const isManual = !!data.extensionForceShow;
-                            const isAuto = (currentRemainingTime <= 120 && currentRemainingTime > 30);
+                            const isManual = !!data.extensionForceShow && !isExtensionNotificationActive;
                             const allowed = isExtensionAllowedForSong(data, duration);
                             
-                            if (allowed && (isManual || isAuto)) {
+                            if (allowed && isManual) {
                                 extContainerGlobal.style.display = 'flex';
                                 widget.classList.add('obs-ext-active');
                             } else {
@@ -6689,9 +7581,7 @@
                         const voteAmt = data.voteAmount || 0;
                         
                         if (voteSkipText) {
-                            const shortAmt = formatMoneyShort(voteAmt);
-                            const shortTarget = formatMoneyShort(target);
-                            voteSkipText.textContent = `${shortAmt} / ${shortTarget}`;
+                            voteSkipText.textContent = `${voteAmt.toLocaleString('vi-VN')}đ / ${target.toLocaleString('vi-VN')}đ`;
                         }
                         if (voteSkipFill) {
                             const pct = Math.min(100, Math.max(0, (voteAmt / target) * 100));

@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dứa Corner — Trình Giả Lập Donate Nhạc</title>
+    <!-- Google Fonts: Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="glow-bg"></div>
+    <div class="glow-bg-secondary"></div>
+
+    <div class="container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="logo">
+                <i class="fa-solid fa-flask-vial logo-icon"></i>
+                <div class="logo-text">
+                    <h1>Dứa Corner <span>Simulator</span></h1>
+                    <p>Công cụ kiểm thử & giả lập cổng donate cục bộ</p>
+                </div>
+            </div>
+            <div class="status-connection" id="connection-status">
+                <span class="status-dot disconnected"></span>
+                <span class="status-text">Đang kiểm tra kết nối app chính...</span>
+            </div>
+        </header>
+
+        <main class="app-content">
+            <!-- Left Column: Form -->
+            <section class="card glass-panel" id="section-form">
+                <div class="card-header">
+                    <i class="fa-solid fa-paper-plane header-icon"></i>
+                    <h2>Gửi thông tin giả lập</h2>
+                </div>
+                <form id="donate-form" onsubmit="sendDonation(event)">
+                    <!-- Port config -->
+                    <div class="form-group">
+                        <label for="main-app-url">Địa chỉ Introvert Player (Cục bộ):</label>
+                        <div class="input-with-icon">
+                            <i class="fa-solid fa-link input-icon"></i>
+                            <input type="url" id="main-app-url" value="http://127.0.0.1:3000" placeholder="http://127.0.0.1:3000" required>
+                            <button type="button" class="btn-check-url" id="btn-check-conn" onclick="checkConnection()">
+                                <i class="fa-solid fa-rotate"></i> Check
+                            </button>
+                        </div>
+                        <span class="form-help">Địa chỉ HTTP Server của app chính (hiển thị ở log khi bật app).</span>
+                    </div>
+
+                    <!-- Donor Name -->
+                    <div class="form-group">
+                        <label for="donor-name">Tên người donate:</label>
+                        <div class="input-with-icon">
+                            <i class="fa-solid fa-user input-icon"></i>
+                            <input type="text" id="donor-name" placeholder="Ví dụ: Người qua đường, Streamer Fan, ..." required>
+                        </div>
+                    </div>
+
+                    <!-- Amount -->
+                    <div class="form-group">
+                        <label for="donate-amount">Số tiền donate (VNĐ):</label>
+                        <div class="input-with-icon">
+                            <i class="fa-solid fa-money-bill-wave input-icon"></i>
+                            <input type="number" id="donate-amount" placeholder="Ví dụ: 50000" min="0" required>
+                        </div>
+                        <div class="quick-amounts">
+                            <button type="button" class="btn-quick-val" onclick="setAmount(10000)">10k</button>
+                            <button type="button" class="btn-quick-val" onclick="setAmount(20000)">20k</button>
+                            <button type="button" class="btn-quick-val" onclick="setAmount(50000)">50k</button>
+                            <button type="button" class="btn-quick-val" onclick="setAmount(100000)">100k</button>
+                            <button type="button" class="btn-quick-val" onclick="setAmount(200000)">200k</button>
+                        </div>
+                    </div>
+
+                    <!-- Message -->
+                    <div class="form-group">
+                        <label for="donate-message">Lời nhắn donate:</label>
+                        <div class="input-with-icon text-area-wrapper">
+                            <i class="fa-solid fa-comment-dots input-icon"></i>
+                            <textarea id="donate-message" rows="3" placeholder="Nhập tin nhắn hoặc mã code gia hạn..."></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Song Link -->
+                    <div class="form-group">
+                        <label for="song-link">Đường dẫn bài hát (YouTube / SoundCloud):</label>
+                        <div class="input-with-icon">
+                            <i class="fa-solid fa-music input-icon"></i>
+                            <input type="url" id="song-link" placeholder="Dán link bài hát để test order nhạc...">
+                        </div>
+                        <span class="form-help">Bỏ trống nếu chỉ muốn giả lập donate gửi tin nhắn thường.</span>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button type="submit" class="btn-submit" id="btn-submit-form">
+                        <span>Gửi Donate Giả Lập</span>
+                        <i class="fa-solid fa-angles-right btn-icon-arrow"></i>
+                    </button>
+                </form>
+            </section>
+
+            <!-- Right Column: Quick Templates -->
+            <section class="card glass-panel" id="section-templates">
+                <div class="card-header">
+                    <i class="fa-solid fa-wand-magic-sparkles header-icon"></i>
+                    <h2>Mẫu giả lập nhanh (Templates)</h2>
+                </div>
+                <div class="templates-grid">
+                    <!-- Template 1: Normal Donate -->
+                    <div class="template-card" onclick="applyTemplate('normal')">
+                        <div class="template-icon bg-blue"><i class="fa-solid fa-envelope"></i></div>
+                        <div class="template-info">
+                            <h3>Donate tin nhắn thường</h3>
+                            <p>Gửi tin nhắn ủng hộ streamer, không kèm bài hát yêu cầu.</p>
+                        </div>
+                    </div>
+
+                    <!-- Template 2: YouTube Order -->
+                    <div class="template-card" onclick="applyTemplate('yt-order')">
+                        <div class="template-icon bg-red"><i class="fa-brands fa-youtube"></i></div>
+                        <div class="template-info">
+                            <h3>Order nhạc YouTube</h3>
+                            <p>Gửi donate kèm link video YouTube để thêm vào hàng đợi.</p>
+                        </div>
+                    </div>
+
+                    <!-- Template 3: SoundCloud Order -->
+                    <div class="template-card" onclick="applyTemplate('sc-order')">
+                        <div class="template-icon bg-orange"><i class="fa-brands fa-soundcloud"></i></div>
+                        <div class="template-info">
+                            <h3>Order nhạc SoundCloud</h3>
+                            <p>Gửi donate kèm link SoundCloud để thêm vào hàng đợi.</p>
+                        </div>
+                    </div>
+
+                    <!-- Template 4: Vote Skip -->
+                    <div class="template-card" onclick="applyTemplate('vote-skip')">
+                        <div class="template-icon bg-purple"><i class="fa-solid fa-forward-step"></i></div>
+                        <div class="template-info">
+                            <h3>Đóng góp Vote Skip</h3>
+                            <p>Đóng góp tiền vào quỹ skip bài hát đang phát hiện tại.</p>
+                        </div>
+                    </div>
+
+                    <!-- Template 5: Extension -->
+                    <div class="template-card" onclick="applyTemplate('extend')">
+                        <div class="template-icon bg-green"><i class="fa-solid fa-clock-rotate-left"></i></div>
+                        <div class="template-info">
+                            <h3>Gia hạn thời gian phát</h3>
+                            <p>Gia hạn thêm thời gian phát bằng cách dán mã code của bài hát.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Result Status Log -->
+                <div class="log-panel">
+                    <div class="log-header">
+                        <span>Lịch sử gửi (Logs)</span>
+                        <button class="btn-clear-log" onclick="clearLogs()"><i class="fa-solid fa-trash-can"></i> Xóa log</button>
+                    </div>
+                    <div class="log-body" id="log-container">
+                        <div class="log-empty-msg">Chưa có lượt gửi thử nghiệm nào.</div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="toast hidden">
+        <i id="toast-icon" class="fa-solid"></i>
+        <span id="toast-message"></span>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

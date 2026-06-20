@@ -110,6 +110,32 @@ if (!gotTheLock) {
         return;
       }
 
+      // Xử lý API test donate (POST /api/test-donate)
+      if (req.url === '/api/test-donate' && req.method === 'POST') {
+        let body = '';
+        req.setEncoding('utf8');
+        req.on('data', chunk => {
+          body += chunk;
+        });
+        req.on('end', () => {
+          try {
+            const data = JSON.parse(body);
+            if (mainWindow) {
+              mainWindow.webContents.send('test-donate', data);
+            }
+            res.writeHead(200, getCorsHeaders({
+              'Content-Type': 'application/json'
+            }));
+            res.end(JSON.stringify({ success: true }));
+          } catch (err) {
+            console.error('Lỗi API test-donate:', err);
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: err.message }));
+          }
+        });
+        return;
+      }
+
       // Xử lý API phân giải URL rút gọn (GET /api/resolve?url=...)
       if (req.url.startsWith('/api/resolve') && req.method === 'GET') {
         const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
@@ -444,6 +470,51 @@ if (!gotTheLock) {
         return;
       }
 
+      // Xử lý API lấy URL stream trực tiếp từ YouTube (GET /api/yt-stream?videoId=...)
+      if (req.url.startsWith('/api/yt-stream') && req.method === 'GET') {
+        const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
+        const videoId = parsedUrl.searchParams.get('videoId');
+        if (!videoId) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Missing videoId parameter' }));
+          return;
+        }
+
+        const ytDlpPath = path.join(app.getPath('userData'), 'yt-dlp.exe');
+        if (!fs.existsSync(ytDlpPath)) {
+          res.writeHead(503, getCorsHeaders({ 'Content-Type': 'application/json' }));
+          res.end(JSON.stringify({ error: 'yt-dlp.exe is not ready' }));
+          return;
+        }
+
+        const { spawn } = require('child_process');
+        const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
+        
+        // Chạy yt-dlp.exe -g -f ba [url]
+        const proc = spawn(ytDlpPath, ['-g', '-f', 'ba', videoUrl]);
+        let stdout = '';
+        let stderr = '';
+
+        proc.stdout.on('data', data => stdout += data.toString());
+        proc.stderr.on('data', data => stderr += data.toString());
+
+        proc.on('close', code => {
+          if (code === 0) {
+            res.writeHead(200, getCorsHeaders({ 'Content-Type': 'application/json' }));
+            res.end(JSON.stringify({ success: true, url: stdout.trim() }));
+          } else {
+            console.error(`yt-dlp stream resolution failed for ${videoId}:`, stderr);
+            res.writeHead(500, getCorsHeaders({ 'Content-Type': 'application/json' }));
+            res.end(JSON.stringify({ error: `yt-dlp failed: ${stderr.trim()}` }));
+          }
+        });
+        
+        req.on('close', () => {
+          try { proc.kill(); } catch (e) {}
+        });
+        return;
+      }
+
       // Chỉ chấp nhận GET requests cho file tĩnh
       if (req.method !== 'GET') {
         res.writeHead(405, { 'Content-Type': 'text/plain' });
@@ -716,79 +787,261 @@ ipcMain.on('window-control', (event, action) => {
   }
 });
 
+const youtubeSearchCache = new Map();
+const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes cache TTL
+const MAX_CACHE_SIZE = 150;
+
 ipcMain.handle('search-youtube', async (event, query) => {
-  if (currentSearchReq) {
-    try {
-      currentSearchReq.destroy();
-    } catch (e) {}
-    currentSearchReq = null;
+  const cleanQuery = (query || '').trim().toLowerCase();
+  if (!cleanQuery) {
+    return { success: true, videos: [] };
   }
+
+  // Check cache first
+  if (youtubeSearchCache.has(cleanQuery)) {
+    const cached = youtubeSearchCache.get(cleanQuery);
+    if (Date.now() - cached.timestamp < CACHE_TTL_MS) {
+      return cached.data;
+    } else {
+      youtubeSearchCache.delete(cleanQuery);
+    }
+  }
+
+  // Tận dụng play-dl để search nhanh và ổn định hơn, tránh bị YouTube chặn hoặc lỗi DNS/TLS
   try {
-    const url = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}&sp=EgIQAQ%253D%253D`;
-    const cookies = await getYoutubeCookieHeader();
-    
-    let cookieStr = cookies || '';
-    if (!cookieStr.includes('SOCS=')) {
-      if (cookieStr) cookieStr += '; ';
-      cookieStr += 'SOCS=CAESEwgDEgk0ODE3Nzk3OTQaAmVuIAEaBgiA_eWqBg';
-    }
-    
-    const headers = {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      'Accept-Language': 'vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7',
-      'Cookie': cookieStr
-    };
-    
-    const { html } = await fetchHtmlWithRedirects(url, headers);
-    const jsonObj = extractYtInitialData(html);
-    if (!jsonObj) {
-      return { error: "Could not find or parse ytInitialData in response" };
-    }
-    
-    const contents = jsonObj.contents?.twoColumnSearchResultsRenderer?.primaryContents?.sectionListRenderer?.contents;
-    if (!contents) {
-      return { error: "Unexpected JSON structure" };
-    }
-    
-    let items = [];
-    for (const content of contents) {
-      if (content.itemSectionRenderer) {
-        items = content.itemSectionRenderer.contents;
-        break;
+    const play = require('play-dl');
+    const searchResults = await play.search(query, { limit: 15 });
+    const videos = [];
+    for (const v of searchResults) {
+      const videoId = v.id;
+      const title = v.title || '';
+      const thumbnail = v.thumbnails?.[0]?.url || '';
+      const duration = v.durationRaw || '0:00';
+      const author = v.channel?.name || '';
+      const views = v.views ? v.views.toLocaleString('vi-VN') + ' lượt xem' : '';
+      
+      if (videoId && title) {
+        videos.push({
+          videoId,
+          title,
+          thumbnail,
+          duration,
+          author,
+          views,
+          url: `https://www.youtube.com/watch?v=${videoId}`
+        });
       }
     }
     
-    const videos = [];
-    for (const item of items) {
-      if (item.videoRenderer) {
-        const v = item.videoRenderer;
-        const videoId = v.videoId;
-        const title = v.title?.runs?.[0]?.text || '';
-        const thumbnail = v.thumbnail?.thumbnails?.[0]?.url || '';
-        const duration = v.lengthText?.simpleText || '0:00';
-        const author = v.ownerText?.runs?.[0]?.text || '';
-        const views = v.viewCountText?.simpleText || '';
-        
-        if (videoId && title) {
-          videos.push({
-            videoId,
-            title,
-            thumbnail,
-            duration,
-            author,
-            views,
-            url: `https://www.youtube.com/watch?v=${videoId}`
-          });
+    const result = { success: true, videos };
+    
+    // Store in cache
+    if (youtubeSearchCache.size >= MAX_CACHE_SIZE) {
+      const firstKey = youtubeSearchCache.keys().next().value;
+      if (firstKey) youtubeSearchCache.delete(firstKey);
+    }
+    youtubeSearchCache.set(cleanQuery, {
+      timestamp: Date.now(),
+      data: result
+    });
+    
+    return result;
+  } catch (playDlError) {
+    console.warn("[play-dl search failed, falling back to InnerTube/HTML scrape]:", playDlError.message);
+
+    if (currentSearchReq) {
+      try {
+        currentSearchReq.destroy();
+      } catch (e) {}
+      currentSearchReq = null;
+    }
+    
+    // Try InnerTube search API first (blazing fast, ~200-400ms)
+    try {
+      const data = await new Promise((resolve, reject) => {
+        const https = require('https');
+        const postData = JSON.stringify({
+          query: query,
+          context: {
+            client: {
+              clientName: 'WEB',
+              clientVersion: '2.20210621.02.00'
+            }
+          }
+        });
+
+        const reqOpts = {
+          hostname: 'www.youtube.com',
+          port: 443,
+          path: '/youtubei/v1/search',
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Content-Length': Buffer.byteLength(postData),
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+          }
+        };
+
+        const ytReq = https.request(reqOpts, (ytRes) => {
+          let body = '';
+          ytRes.setEncoding('utf8');
+          ytRes.on('data', chunk => body += chunk);
+          ytRes.on('end', () => resolve(body));
+        });
+
+        currentSearchReq = ytReq;
+
+        ytReq.on('error', (err) => {
+          if (ytReq.destroyed) {
+            reject(new Error("SEARCH_ABORTED"));
+          } else {
+            reject(err);
+          }
+        });
+
+        ytReq.write(postData);
+        ytReq.end();
+      });
+
+      const jsonObj = JSON.parse(data);
+      const contents = jsonObj.contents?.twoColumnSearchResultsRenderer?.primaryContents?.sectionListRenderer?.contents;
+      if (!contents) {
+        throw new Error("Unexpected JSON structure in InnerTube response");
+      }
+      
+      let items = [];
+      for (const content of contents) {
+        if (content.itemSectionRenderer) {
+          items = content.itemSectionRenderer.contents;
+          break;
         }
       }
+      
+      const videos = [];
+      for (const item of items) {
+        if (item.videoRenderer) {
+          const v = item.videoRenderer;
+          const videoId = v.videoId;
+          const title = v.title?.runs?.[0]?.text || '';
+          const thumbnail = v.thumbnail?.thumbnails?.[0]?.url || '';
+          const duration = v.lengthText?.simpleText || '0:00';
+          const author = v.ownerText?.runs?.[0]?.text || '';
+          const views = v.viewCountText?.simpleText || '';
+          
+          if (videoId && title) {
+            videos.push({
+              videoId,
+              title,
+              thumbnail,
+              duration,
+              author,
+              views,
+              url: `https://www.youtube.com/watch?v=${videoId}`
+            });
+          }
+        }
+      }
+
+      const result = { success: true, videos: videos.slice(0, 15) };
+      
+      // Store in cache
+      if (youtubeSearchCache.size >= MAX_CACHE_SIZE) {
+        const firstKey = youtubeSearchCache.keys().next().value;
+        if (firstKey) youtubeSearchCache.delete(firstKey);
+      }
+      youtubeSearchCache.set(cleanQuery, {
+        timestamp: Date.now(),
+        data: result
+      });
+      
+      return result;
+
+    } catch (e) {
+      if (e.message === 'SEARCH_ABORTED') {
+        return { success: false, aborted: true };
+      }
+      console.warn("[InnerTube Search failed, falling back to Scrape HTML]:", e.message);
+      
+      // Fallback: Use HTML scrape
+      try {
+        const url = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}&sp=EgIQAQ%253D%253D`;
+        const cookies = await getYoutubeCookieHeader();
+        
+        let cookieStr = cookies || '';
+        if (!cookieStr.includes('SOCS=')) {
+          if (cookieStr) cookieStr += '; ';
+          cookieStr += 'SOCS=CAESEwgDEgk0ODE3Nzk3OTQaAmVuIAEaBgiA_eWqBg';
+        }
+        
+        const headers = {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept-Language': 'vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7',
+          'Cookie': cookieStr
+        };
+        
+        const { html } = await fetchHtmlWithRedirects(url, headers);
+        const jsonObj = extractYtInitialData(html);
+        if (!jsonObj) {
+          return { error: "Could not find or parse ytInitialData in response" };
+        }
+        
+        const contents = jsonObj.contents?.twoColumnSearchResultsRenderer?.primaryContents?.sectionListRenderer?.contents;
+        if (!contents) {
+          return { error: "Unexpected JSON structure" };
+        }
+        
+        let items = [];
+        for (const content of contents) {
+          if (content.itemSectionRenderer) {
+            items = content.itemSectionRenderer.contents;
+            break;
+          }
+        }
+        
+        const videos = [];
+        for (const item of items) {
+          if (item.videoRenderer) {
+            const v = item.videoRenderer;
+            const videoId = v.videoId;
+            const title = v.title?.runs?.[0]?.text || '';
+            const thumbnail = v.thumbnail?.thumbnails?.[0]?.url || '';
+            const duration = v.lengthText?.simpleText || '0:00';
+            const author = v.ownerText?.runs?.[0]?.text || '';
+            const views = v.viewCountText?.simpleText || '';
+            
+            if (videoId && title) {
+              videos.push({
+                videoId,
+                title,
+                thumbnail,
+                duration,
+                author,
+                views,
+                url: `https://www.youtube.com/watch?v=${videoId}`
+              });
+            }
+          }
+        }
+        
+        const result = { success: true, videos: videos.slice(0, 15) };
+        
+        if (youtubeSearchCache.size >= MAX_CACHE_SIZE) {
+          const firstKey = youtubeSearchCache.keys().next().value;
+          if (firstKey) youtubeSearchCache.delete(firstKey);
+        }
+        youtubeSearchCache.set(cleanQuery, {
+          timestamp: Date.now(),
+          data: result
+        });
+        
+        return result;
+      } catch (err) {
+        if (err.message === 'SEARCH_ABORTED') {
+          return { success: false, aborted: true };
+        }
+        return { error: err.message };
+      }
     }
-    
-    return { success: true, videos: videos.slice(0, 15) };
-  } catch (e) {
-    if (e.message === 'SEARCH_ABORTED') {
-      return { success: false, aborted: true };
-    }
-    return { error: e.message };
   }
 });
 
@@ -994,6 +1247,117 @@ async function getSapisidHash() {
   const sha1 = crypto.createHash('sha1').update(msg).digest('hex');
   return `SAPISIDHASH ${time}_${sha1}`;
 }
+
+let ytDlpDownloadProgress = null; // null: idle, 'downloading', or number (0-100), or 'success', or 'error'
+let ytDlpDownloadError = null;
+
+function downloadYtDlpBinary(force = false) {
+  const ytDlpPath = path.join(app.getPath('userData'), 'yt-dlp.exe');
+  if (fs.existsSync(ytDlpPath) && !force) {
+    return Promise.resolve();
+  }
+
+  return new Promise((resolve, reject) => {
+    ytDlpDownloadProgress = 0;
+    ytDlpDownloadError = null;
+    
+    // Broadcast progress
+    function broadcastProgress(progress) {
+      ytDlpDownloadProgress = progress;
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('ytdlp-download-progress', { progress });
+      }
+    }
+
+    broadcastProgress(0);
+
+    const downloadUrl = 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe';
+    
+    function startDownload(url) {
+      const https = require('https');
+      const request = https.get(url, (response) => {
+        // Handle redirect
+        if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
+          return startDownload(response.headers.location);
+        }
+
+        if (response.statusCode !== 200) {
+          const errMsg = `Failed to download: Status Code ${response.statusCode}`;
+          ytDlpDownloadError = errMsg;
+          broadcastProgress(-1);
+          return reject(new Error(errMsg));
+        }
+
+        const totalBytes = parseInt(response.headers['content-length'] || 0, 10);
+        let receivedBytes = 0;
+
+        const file = fs.createWriteStream(ytDlpPath);
+        response.pipe(file);
+
+        response.on('data', (chunk) => {
+          receivedBytes += chunk.length;
+          if (totalBytes > 0) {
+            const pct = Math.round((receivedBytes / totalBytes) * 100);
+            broadcastProgress(pct);
+          }
+        });
+
+        file.on('finish', () => {
+          file.close();
+          broadcastProgress(100);
+          resolve();
+        });
+
+        file.on('error', (err) => {
+          file.close();
+          fs.unlink(ytDlpPath, () => {});
+          ytDlpDownloadError = err.message;
+          broadcastProgress(-1);
+          reject(err);
+        });
+      });
+
+      request.on('error', (err) => {
+        ytDlpDownloadError = err.message;
+        broadcastProgress(-1);
+        reject(err);
+      });
+    }
+
+    startDownload(downloadUrl);
+  });
+}
+
+ipcMain.handle('check-ytdlp-status', async () => {
+  const ytDlpPath = path.join(app.getPath('userData'), 'yt-dlp.exe');
+  let exists = fs.existsSync(ytDlpPath);
+  if (!exists) {
+    const localScratchPath = path.join(__dirname, 'scratch', 'yt-dlp.exe');
+    if (fs.existsSync(localScratchPath)) {
+      try {
+        fs.copyFileSync(localScratchPath, ytDlpPath);
+        exists = true;
+        console.log("Successfully copied yt-dlp.exe from scratch folder to AppData.");
+      } catch (err) {
+        console.error("Failed to copy yt-dlp.exe from scratch folder:", err);
+      }
+    }
+  }
+  return {
+    exists,
+    progress: ytDlpDownloadProgress,
+    error: ytDlpDownloadError
+  };
+});
+
+ipcMain.handle('download-ytdlp', async () => {
+  try {
+    await downloadYtDlpBinary(true);
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
 
 function findKeysRecursive(obj, keys, results = []) {
   if (!obj || typeof obj !== 'object') return results;

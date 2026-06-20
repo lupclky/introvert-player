@@ -16,7 +16,21 @@
 
 <body>
 
-
+    <!-- Màn hình khởi động (Splash Screen) -->
+    <div id="app-loading-screen" class="app-loading-screen">
+        <div class="loading-overlay">
+            <div class="loading-content">
+                <!-- Material 3 Expressive Spinner -->
+                <div class="m3-expressive-spinner" role="progressbar" aria-label="Đang tải Introvert Player">
+                    <svg viewBox="0 0 48 48">
+                        <circle class="spinner-track" cx="24" cy="24" r="18" fill="none" stroke-dasharray="0" stroke-width="3.5"></circle>
+                        <circle class="spinner-arc" cx="24" cy="24" r="18" fill="none" stroke-width="3.5" stroke-dasharray="113" stroke-dashoffset="113"></circle>
+                    </svg>
+                </div>
+                <div class="loading-subtitle">Đang khởi tạo cho một buổi stream tốt lành cho chị của em...</div>
+            </div>
+        </div>
+    </div>
 
     <!-- Custom Frameless Titlebar -->
     <div class="app-titlebar">
@@ -28,17 +42,21 @@
                     title="Bàn điều khiển">
                     <i class="fa-solid fa-play"></i>
                 </button>
-                <button id="menu-btn-donations" class="titlebar-menu-btn" onclick="switchTab('donations')"
-                    title="Lời nhắn donate">
-                    <i class="fa-solid fa-envelope-open-text"></i>
+                <button id="menu-btn-donations" class="titlebar-menu-btn" onclick="switchTab('donations')">
+                    <svg class="zypage-logo-svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle;">
+                        <mask id="zypage-logo-mask">
+                            <rect width="24" height="24" fill="white" />
+                            <rect x="7" y="7" width="10" height="10" fill="black" />
+                        </mask>
+                        <g mask="url(#zypage-logo-mask)">
+                            <rect x="2" y="2" width="15" height="15" rx="4" />
+                            <rect x="7" y="7" width="15" height="15" rx="4" />
+                        </g>
+                    </svg>
                 </button>
                 <button id="menu-btn-settings" class="titlebar-menu-btn" onclick="switchTab('settings')"
                     title="Cấu hình">
                     <i class="fa-solid fa-gear"></i>
-                </button>
-                <button id="menu-btn-aftercredit" class="titlebar-menu-btn" onclick="switchTab('aftercredit')"
-                    title="After Credit" style="display: none;">
-                    <i class="fa-solid fa-gift"></i>
                 </button>
             </div>
         </div>
@@ -48,6 +66,9 @@
                 <i class="fa-solid fa-magnifying-glass search-icon"></i>
                 <input id="donor-url" class="titlebar-search-input" type="text"
                     placeholder="Thêm nhạc nhanh (Dán link hoặc tìm kiếm)..." required autocomplete="off">
+                <i class="fa-solid fa-circle-xmark search-clear-btn" id="search-clear-btn"
+                    style="display: none; cursor: pointer; color: #9CA3AF; font-size: 1.1rem; margin-left: 0.5rem; transition: color 0.15s;"
+                    title="Xóa tìm kiếm"></i>
             </div>
             
             <!-- Popover settings and search suggestions -->
@@ -111,6 +132,7 @@
                 <div class="left-column">
                     <!-- Card 2: Trình phát hiện tại (Now Playing Widget) -->
                     <div class="player-widget">
+                        <div id="direct-stream-badge" class="direct-stream-badge" style="display: none;">DirectStream</div>
                         <div class="player-header">
                             <span class="dua-card-title" style="border-bottom: none; padding-bottom: 0;">
                                 <i class="fa-solid fa-compact-disc"></i> Đang Phát
@@ -133,6 +155,8 @@
                                 </div>
                                 <div id="current-song-message" class="song-message" style="display: none;">
                                     Không có tin nhắn.
+                                </div>
+                                <div id="current-song-extension-info" class="song-extension-info" style="display: none;">
                                 </div>
                             </div>
                         </div>
@@ -176,7 +200,7 @@
                                     </button>
                                     <!-- Nút Gia hạn (Force Show Extension) -->
                                     <button id="btn-force-extension" class="dua-btn dua-btn-secondary" onclick="toggleForceExtension()" title="Hiện mã gia hạn trên Overlay" style="display: none;">
-                                        Gia hạn TG
+                                        Hiện gia hạn
                                     </button>
                                     <!-- Nút Vote Skip (Mở/Tắt Vote Skip cho bài hiện tại) -->
                                     <button id="btn-vote-skip" class="dua-btn dua-btn-secondary" onclick="toggleVoteSkip()" title="Mở bầu chọn bỏ qua bài hát này" style="display: none;">
@@ -216,61 +240,6 @@
                     </div>
 
 
-                    <!-- Card 3: Danh sách hàng đợi phát nhạc (Queue) -->
-                    <div class="dua-card" id="card-queue">
-                        <div class="queue-header-actions" style="flex-wrap: wrap; gap: 0.5rem;">
-                            <span class="dua-card-title"
-                                style="border-bottom: none; padding-bottom: 0; white-space: nowrap;">
-                                <i class="fa-solid fa-list-ol"></i> Hàng đợi Nhạc (<span id="queue-count">0</span>)
-                            </span>
-                            <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: nowrap;">
-                                <button id="btn-manual-sync" class="dua-btn"
-                                    style="padding: 0.25rem 0.6rem; font-size: 0.85rem; border-radius: 10px; border-width: 2px; box-shadow: 2px 2px 0px var(--pineapple-text); white-space: nowrap; background: var(--pineapple-yellow); font-weight: 800; display: inline-flex; align-items: center; gap: 0.3rem;"
-                                    onclick="triggerManualZyPageSync()" title="Đồng bộ thủ công từ ZyPage">
-                                    Đồng bộ ZyPage
-                                </button>
-                                <button id="btn-test-mode" class="dua-btn"
-                                    style="padding: 0.25rem 0.6rem; font-size: 0.8rem; border-radius: 10px; border-width: 2px; box-shadow: 2px 2px 0px var(--pineapple-text); white-space: nowrap;"
-                                    onclick="toggleTestMode()" title="Giữ hàng đợi: TẮT">
-                                    <i class="fa-solid fa-lock-open"></i>
-                                </button>
-                                <div class="form-group"
-                                    style="flex-direction: row; align-items: center; gap: 0.3rem; flex-wrap: nowrap;">
-                                    <label for="queue-sort-select"
-                                        style="font-size: 0.85rem; white-space: nowrap; margin-bottom: 0;"><i
-                                            class="fa-solid fa-sort"></i> Ưu tiên:</label>
-                                    <select id="queue-sort-select" class="dua-select"
-                                        style="padding: 0.2rem 0.5rem; border-radius: 8px; font-size: 0.85rem; box-shadow: none;"
-                                        onchange="onSortConfigChange(this.value)">
-                                        <option value="time">Thời gian</option>
-                                        <option value="amount">Số tiền</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div id="queue-list-container" class="queue-list">
-                            <!-- Danh sách các bài hát trong hàng đợi sẽ được tạo bằng Javascript -->
-                            <div class="empty-queue-notice">Hàng đợi đang trống. Hãy dán link YouTube bài hát đầu tiên!
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="right-column">
-                    <!-- Card: 2 Donate gần nhất -->
-                    <div class="dua-card" id="card-recent-donations" style="padding: 1.2rem; display: flex; flex-direction: column; gap: 0.6rem;">
-                        <h3 class="dua-card-title" style="border-bottom: none; padding-bottom: 0; margin-bottom: 0.1rem; font-size: 1.2rem;">
-                            Donate gần nhất
-                        </h3>
-                        <div id="recent-donations-container" style="display: flex; flex-direction: column; gap: 0.6rem;">
-                            <div style="font-size: 0.85rem; color: var(--pineapple-text); opacity: 0.6; text-align: center; padding: 0.5rem 0;">
-                                Chưa nhận được donate nào
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Card 4: Form thêm nhạc bằng Link nhanh -->
                     <!-- Card 4.5: Gợi ý và Danh sách phát YouTube -->
                     <div class="dua-card" id="card-youtube-dashboard"
                         style="padding: 1rem; display: flex; flex-direction: column; gap: 0.6rem;">
@@ -318,6 +287,73 @@
                             </div>
                         </div>
                     </div>
+                </div>
+
+                <div class="right-column">
+                    <!-- Card: 2 Donate gần nhất -->
+                    <div class="dua-card" id="card-recent-donations" style="padding: 1.2rem; display: flex; flex-direction: column; gap: 0.6rem;">
+                        <h3 class="dua-card-title" style="border-bottom: none; padding-bottom: 0; margin-bottom: 0.1rem; font-size: 1.2rem;">
+                            Donate gần nhất
+                        </h3>
+                        <div id="recent-donations-container" style="display: flex; flex-direction: column; gap: 0.6rem;">
+                            <div style="font-size: 0.85rem; color: var(--pineapple-text); opacity: 0.6; text-align: center; padding: 0.5rem 0;">
+                                Chưa nhận được donate nào
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 3: Danh sách hàng đợi phát nhạc (Queue) -->
+                    <div class="dua-card" id="card-queue">
+                        <div class="queue-header-actions">
+                            <span class="dua-card-title"
+                                style="border-bottom: none; padding-bottom: 0; white-space: nowrap;">
+                                <i class="fa-solid fa-list-ol"></i> Hàng đợi Nhạc (<span id="queue-count">0</span>)
+                            </span>
+                        </div>
+                        
+                        <!-- Thanh điều khiển hàng đợi gọn gàng, đồng bộ -->
+                        <div class="queue-control-toolbar">
+                            <div class="toolbar-group">
+                                <button id="btn-manual-sync" class="dua-btn"
+                                    onclick="triggerManualZyPageSync()" title="Đồng bộ thủ công từ ZyPage">
+                                    <i class="fa-solid fa-arrows-rotate"></i>
+                                    <span>Đồng bộ ZyPage</span>
+                                </button>
+                                <button id="btn-test-mode" class="dua-btn"
+                                    onclick="toggleTestMode()" title="Giữ hàng đợi: TẮT">
+                                    <i class="fa-solid fa-lock-open"></i>
+                                </button>
+                            </div>
+                            
+                            <div class="toolbar-group">
+                                <!-- Công tắc Lucky -->
+                                <div class="toolbar-item lucky-wrapper" title="Quay ngẫu nhiên bài tiếp theo khi hết nhạc và đếm ngược 30s">
+                                    <span class="toolbar-label">Lucky</span>
+                                    <label class="theme-switch" style="margin: 0;">
+                                        <input type="checkbox" id="lucky-mode-toggle-switch" onchange="toggleLuckyMode(this.checked)">
+                                        <span class="slider-round"></span>
+                                    </label>
+                                </div>
+                                <!-- Dropdown Sắp xếp -->
+                                <div class="toolbar-item sort-wrapper">
+                                    <label for="queue-sort-select" class="toolbar-label">
+                                        <i class="fa-solid fa-sort"></i>
+                                        <span>Ưu tiên:</span>
+                                    </label>
+                                    <select id="queue-sort-select" class="dua-select" onchange="onSortConfigChange(this.value)">
+                                        <option value="time">Thời gian</option>
+                                        <option value="amount">Số tiền</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="queue-list-container" class="queue-list">
+                            <!-- Danh sách các bài hát trong hàng đợi sẽ được tạo bằng Javascript -->
+                            <div class="empty-queue-notice">Hàng đợi đang trống. Hãy dán link YouTube bài hát đầu tiên!
+                            </div>
+                        </div>
+                    </div>
 
                 </div>
             </div>
@@ -332,7 +368,16 @@
                         <div class="donation-tab-header">
                             <div class="donation-title-group">
                                 <h1>
-                                    <i class="fa-solid fa-envelope-open-text"></i> Lời nhắn donate
+                                    <svg class="zypage-logo-svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle; margin-right: 0.4rem;">
+                                        <mask id="zypage-logo-mask-header">
+                                            <rect width="24" height="24" fill="white" />
+                                            <rect x="7" y="7" width="10" height="10" fill="black" />
+                                        </mask>
+                                        <g mask="url(#zypage-logo-mask-header)">
+                                            <rect x="2" y="2" width="15" height="15" rx="4" />
+                                            <rect x="7" y="7" width="15" height="15" rx="4" />
+                                        </g>
+                                    </svg> Lời nhắn donate
                                 </h1>
                                 <div id="donation-stats-line">
                                     Tổng doanh thu: 0 VNĐ | Số lượt donate: 0
@@ -340,10 +385,10 @@
                             </div>
                             <div class="donation-action-buttons">
                                 <button class="dua-btn btn-mark-read" onclick="markAllDonationsAsRead()">
-                                    <i class="fa-solid fa-check-double"></i> Đánh dấu đã đọc
+                                    Đánh dấu đã đọc
                                 </button>
                                 <button class="dua-btn btn-clear-all" onclick="clearAllDonationHistory()">
-                                    <i class="fa-solid fa-trash-can"></i> Xóa hết
+                                    Xóa hết
                                 </button>
                             </div>
                         </div>
@@ -351,7 +396,6 @@
                         <!-- Search Input Section -->
                         <div class="donation-search-container">
                             <div class="donation-search-wrapper">
-                                <i class="fa-solid fa-magnifying-glass"></i>
                                 <input id="donation-search-input" class="dua-input" type="text" placeholder="Tìm kiếm tên người gửi, số tiền, lời nhắn, thời gian..." oninput="onDonationSearchInput(this.value)">
                             </div>
                         </div>
@@ -486,6 +530,39 @@
                                             <i class="fa-solid fa-right-from-bracket"></i> Đăng xuất
                                         </button>
                                     </div>
+                                </div>
+                            </div>
+
+                            <!-- Card 5.6: Cấu hình Phát nhạc Dự phòng YouTube -->
+                            <div class="dua-card" id="card-yt-bypass" style="padding: 1.5rem; width: 100%; margin: 0; display: flex; flex-direction: column; gap: 0.8rem;">
+                                <h3 class="dua-card-title"
+                                    style="margin-bottom: 0.4rem; padding-bottom: 0.4rem; border-bottom: 2px solid var(--pineapple-border-color);">
+                                    <i class="fa-solid fa-circle-play" style="color: var(--pineapple-orange); font-size: 1.1rem; vertical-align: middle;"></i> Hỗ trợ phát nhạc bản quyền
+                                </h3>
+                                
+                                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 1rem; flex-wrap: wrap;">
+                                    <div style="flex-grow: 1; min-width: 250px;">
+                                        <div style="font-weight: 750; font-size: 0.9rem; color: var(--pineapple-text);">Cho phép phát nhạc có bản quyền</div>
+                                        <div style="font-size: 0.78rem; font-weight: 600; color: #6B7280; margin-top: 0.15rem; line-height: 1.35;">Tự động sử dụng luồng âm thanh dự phòng đối với các bài hát có bản quyền bị YouTube hạn chế phát nhúng trên các ứng dụng ngoài (lỗi 150/101).</div>
+                                    </div>
+                                    <div class="theme-switch-wrapper" style="-webkit-app-region: no-drag;">
+                                        <label class="theme-switch">
+                                            <input type="checkbox" id="yt-bypass-toggle">
+                                            <span class="slider-round"></span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div style="border-top: 2px dashed var(--pineapple-border-color); padding-top: 0.8rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; width: 100%;">
+                                    <div>
+                                        <div style="font-size: 0.82rem; font-weight: 700; color: var(--pineapple-text);">Trạng thái công cụ hỗ trợ:</div>
+                                        <div id="ytdlp-status-text" style="font-size: 0.78rem; font-weight: 800; color: #6B7280; margin-top: 0.15rem;">Đang kiểm tra...</div>
+                                    </div>
+                                    <button id="btn-ytdlp-download" class="dua-btn"
+                                        style="padding: 0.35rem 0.8rem; font-size: 0.82rem; background: var(--pineapple-yellow); border-width: 2px; box-shadow: 2px 2px 0px var(--pineapple-text); white-space: nowrap;"
+                                        onclick="downloadYtDlp()">
+                                        Cập nhật yt-dlp.exe
+                                    </button>
                                 </div>
                             </div>
                         </div>

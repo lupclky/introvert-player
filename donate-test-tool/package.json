@@ -1,0 +1,11 @@
+{
+  "name": "donate-test-tool",
+  "version": "1.0.0",
+  "description": "Công cụ giả lập sự kiện donate ZyPage",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "author": "Introvert",
+  "license": "ISC"
+}

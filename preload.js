@@ -26,5 +26,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
     
     // External Log File
     saveLogEntry: (text) => ipcRenderer.send('save-log-entry', text),
-    openLogFile: () => ipcRenderer.invoke('open-log-file')
+    openLogFile: () => ipcRenderer.invoke('open-log-file'),
+    
+    // yt-dlp direct stream bypass
+    checkYtDlpStatus: () => ipcRenderer.invoke('check-ytdlp-status'),
+    downloadYtDlp: () => ipcRenderer.invoke('download-ytdlp'),
+    onYtDlpDownloadProgress: (callback) => ipcRenderer.on('ytdlp-download-progress', (event, data) => callback(data)),
+    
+    // Test Donate
+    onTestDonate: (callback) => ipcRenderer.on('test-donate', (event, data) => callback(data))
 });
