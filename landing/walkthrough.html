@@ -33,7 +33,7 @@
                 <button class="dua-btn dua-btn-danger" id="btn-reset-html" title="Khôi phục nội dung gốc hệ thống">
                     <i class="fa-solid fa-rotate-left"></i> Khôi phục gốc
                 </button>
-                <button class="dua-btn dua-btn-primary" id="btn-deploy-vercel" title="Deploy trực tiếp lên Vercel"><i class="fa-solid fa-cloud-arrow-up"></i> Deploy lên Vercel</button>
+                <button class="dua-btn dua-btn-primary" id="btn-deploy-vercel" title="Deploy trực tiếp lên Vercel" disabled="true"><i class="fa-solid fa-spinner fa-spin"></i> Đang deploy...</button>
                 <a href="index.html" class="dua-btn" title="Quay lại Trang chủ">
                     <i class="fa-solid fa-house"></i> Trang chủ
                 </a>
@@ -157,7 +157,7 @@
     </div>
 
     <!-- Toast Notification -->
-    <div class="toast-container" id="toast-container"></div>
+    <div class="toast-container" id="toast-container"><div class="toast toast-success show"><i class="fa-solid fa-circle-check"></i> <span>Đã lưu thành công vào GitHub. Vercel đang tự động xây dựng lại dự án (quá trình này mất khoảng 1-2 phút)!</span></div><div class="toast toast-info"><i class="fa-solid fa-circle-info"></i> <span>Đang đẩy thay đổi lên Vercel... Vui lòng chờ.</span></div></div>
 
     <!-- Floating Edit Action Button -->
     <a href="?edit=true" class="edit-mode-toggle-btn" title="Chuyển sang chế độ chỉnh sửa">
