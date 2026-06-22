@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="vi"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pineapple Studio 26.7.0</title>
+    <meta name="description" content="Trình soạn thảo văn bản trực tiếp (WYSIWYG) giới thiệu tính năng mới của Dứa Corner Player.">
+    
+    <!-- Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;600;700&amp;family=Nunito:wght@300;400;600;700;800;900&amp;family=Quicksand:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Styling -->
+    <link rel="stylesheet" href="walkthrough.css">
+</head>
+<body>
+
+    <!-- Sticky Header Toolbar (App Style) -->
+    <header class="editor-header">
+        <div class="header-container">
+            <div class="brand">
+                <span class="brand-emoji">🍍</span>
+                <div class="brand-text">
+                    <h1>Dứa Corner</h1>
+                    <p>Trình Soạn Thảo Giới Thiệu</p>
+                </div>
+                <span class="status-indicator" id="save-status">Đã lưu thay đổi</span>
+            </div>
+            
+            <div class="header-actions">
+                <button class="dua-btn dua-btn-success" id="btn-save-html" title="Lưu bài viết xuống đĩa cứng" disabled="true">
+                    <i class="fa-solid fa-floppy-disk"></i> Lưu thay đổi
+                </button>
+                <button class="dua-btn dua-btn-danger" id="btn-reset-html" title="Khôi phục nội dung gốc hệ thống">
+                    <i class="fa-solid fa-rotate-left"></i> Khôi phục gốc
+                </button>
+                <button class="dua-btn dua-btn-primary" id="btn-deploy-vercel" title="Deploy trực tiếp lên Vercel"><i class="fa-solid fa-cloud-arrow-up"></i> Deploy lên Vercel</button>
+                <a href="index.html" class="dua-btn" title="Quay lại Trang chủ">
+                    <i class="fa-solid fa-house"></i> Trang chủ
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Editor Workspace (Single Canvas with Rich Toolbar) -->
+    <main class="editor-workspace">
+        
+        <!-- WYSIWYG Rich Text Formatting Toolbar -->
+        <div class="format-toolbar">
+            <div class="format-group">
+                <button class="format-btn" data-command="bold" title="Chữ đậm (Ctrl+B)">
+                    <i class="fa-solid fa-bold"></i>
+                </button>
+                <button class="format-btn" data-command="italic" title="Chữ nghiêng (Ctrl+I)">
+                    <i class="fa-solid fa-italic"></i>
+                </button>
+                <button class="format-btn" data-command="underline" title="Gạch chân (Ctrl+U)">
+                    <i class="fa-solid fa-underline"></i>
+                </button>
+            </div>
+            
+            <div class="format-group">
+                <button class="format-btn" data-command="formatBlock" data-value="h1" title="Tiêu đề lớn (H1)">
+                    H1
+                </button>
+                <button class="format-btn" data-command="formatBlock" data-value="h2" title="Tiêu đề phụ (H2)">
+                    H2
+                </button>
+                <button class="format-btn" data-command="formatBlock" data-value="p" title="Đoạn văn thường (P)">
+                    P
+                </button>
+                <button class="format-btn" data-command="formatBlock" data-value="blockquote" title="Đoạn trích dẫn / Lời giới thiệu">
+                    <i class="fa-solid fa-quote-left"></i>
+                </button>
+            </div>
+
+            <div class="format-group">
+                <button class="format-btn" data-command="insertUnorderedList" title="Danh sách chấm tròn">
+                    <i class="fa-solid fa-list-ul"></i>
+                </button>
+                <button class="format-btn" data-command="insertOrderedList" title="Danh sách số">
+                    <i class="fa-solid fa-list-ol"></i>
+                </button>
+            </div>
+
+            <div class="format-group">
+                <button class="format-btn" id="btn-insert-kbd" title="Thêm nút phím tắt KBD">
+                    <i class="fa-solid fa-keyboard"></i>
+                </button>
+                <button class="format-btn" id="btn-insert-image" title="Chèn hình ảnh minh họa">
+                    <i class="fa-solid fa-image"></i>
+                </button>
+                <button class="format-btn" id="btn-insert-youtube" title="Chèn Video / Link YouTube">
+                    <i class="fa-brands fa-youtube" style="color: #FF0000;"></i>
+                </button>
+                <button class="format-btn" data-command="removeFormat" title="Xóa định dạng chữ">
+                    <i class="fa-solid fa-eraser"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Document Paper Canvas -->
+        <div class="document-container">
+            <div class="document-paper">
+                <div id="editor-canvas" class="article-content" contenteditable="true" placeholder="Bắt đầu viết bài viết của bạn tại đây..."><h1>Xin chào xin chào</h1><div>Hơn 1 tuần nữa đã trôi qua, em lại quay trở lại với vô vàn vô vàn nhiều update mới cho Introvert Player đây. Chúng ta cùng bắt đầu nha.</div><div><br></div><h2>1. Thay đổi về tên, số hiệu phiên bản</h2><p>Hiện tại vì một vài lí do sức khoẻ, em cũng không còn làm một mình app này nữa, lần này may là có sự giúp sức của người bạn của em. Vì vậy app vẫn đang tiếp tục phát triển. Và từ phiên bản này, app sẽ có tên gọi mới là Pineapple Studio để không còn introvert ở trong app nữa.</p><p>Ngoài ra, giờ số hiệu phiên bản sẽ là v26.7.0, tức là phiên bản tháng 7 năm 2026. App sẽ được kiểm thử, hoàn thiện tính năng và đẩy lên update ở cuối tháng 7 này. Và từ phiên bản này trở đi, mỗi tháng sẽ có 1 bản update mới, chứ không còn 1-2 tuần 1 phiên bản như trước. Các bản hotfix vẫn có thể ra mắt để fix các lỗi nghiêm trọng,</p><h2>2. Thiết kế giao diện mới</h2><div>Em thấy giao diện mới ổn hơn bản cũ, nhìn sạch và gọn hơn nhiều. Bố cục dễ nhìn, đỡ rối mắt hơn. Chỉ là em vẫn thấy bản cũ có chất riêng hơn, còn bản mới thì thiên về sự chỉn chu và phổ thông hơn.</div><div><div class="figure-box"><img src="image/home.png"><div class="caption">Giao diện trang chủ mới</div></div><p>Màu được làm với hệ màu mới, giảm độ bắt mắt, nổi khối ở giao diện cũ. Làm cho việc khi stream đỡ phải nhức mắt khi live vào ban đêm.</p><br></div>
+<p><br></p><ul>
+</ul>
+
+<h2>2. Thanh thêm nhanh Titlebar thông minh</h2>
+<p>Để tối ưu hóa không gian, ô nhập link và tìm kiếm nhạc đã được đưa lên trung tâm của Titlebar ứng dụng. Khi nhấp vào, một popover thông minh sẽ xuất hiện để streamer chỉnh sửa tên người gửi, số tiền donate hoặc đánh dấu là chủ kênh thêm nhạc.</p><div class="figure-box"><img src="https://i.ibb.co/KzXR9D1Q/Screenshot-2026-06-22-152138.png"><div class="caption">Thanh search mới</div></div><p></p>
+
+<p>Giờ đây, khi tìm kiếm, kết quả tìm kiếm trở nên to hơn. GIúp việc nhìn dễ dàng trong môi trường streamer mà không cần phải dí sát vào màn hình để thấy kết quả như trước. Ngoài ra với công nghệ mới, tốc độ search đã được tăng x2 lần.</p><p>Và khi tìm kiếm YouTube, khi ra kết quả đầu tiên hợp lí, chỉ cần nhấn&nbsp;<kbd>Enter</kbd> để thêm ngay bài đầu tiên vào hàng đợi.</p><p>Video Demo:<br></p><div class="figure-box" contenteditable="false"><iframe src="https://www.youtube.com/embed/YpFekCDW8MI" style="width:100%; aspect-ratio:16/9; border:none;" allowfullscreen=""></iframe><div class="caption" contenteditable="true">Thêm nhanh</div></div><p><br></p><br><p></p><h2>3. (Đang phát triển) Thêm nhạc trực tiếp từ trình duyệt</h2><div>Khi sử dụng Extension ở trình duyệt, giờ đây Pineapple Studio cho phép thêm video từ trang YouTube của trình duyệt, nhằm nâng cao sự tối ưu về đề xuất của YouTube và khiến mọi thứ tiện lợi hơn đôi chút</div><div><br></div><div>Video demo:</div><div><div class="figure-box" contenteditable="false"><iframe src="https://www.youtube.com/embed/cWRrgVkpLvw" style="width:100%; aspect-ratio:16/9; border:none;" allowfullscreen=""></iframe><div class="caption" contenteditable="true">Thêm nhanh từ trình duyệt</div></div><p><br></p><br></div><h2>4. Ghim bài hát</h2>
+<p>Nếu muốn ưu tiên 1 bài hát thấp tiền hơn để được phát ở lượt tiếp theo, có thể nhấn <b>Ghim bài hát </b>để có thể ưu tiên bài hát dành cho viewer bất kì tiếp theo. Như ví dụ dưới đây:</p><p></p><div class="figure-box" contenteditable="false"><iframe src="https://www.youtube.com/embed/fTHxP9azuaA" style="width:100%; aspect-ratio:16/9; border:none;" allowfullscreen=""></iframe><div class="caption" contenteditable="true">Ghim bài hát</div></div><p><br></p><br><p></p><p><br></p>
+
+<h2>5. Vote Skip</h2>
+<p>Chức năng cho phép người xem Donate để bỏ qua bài hát đang phát, giúp tăng tương tác cũng như là ... cho streamer.</p><p>Với tính năng này giờ đây các chức năng như <b>Bỏ qua, Xoá, Tua đi, tua lại bài hát </b>chỉ được sử dụng tối đa 8 lần/12 giờ.</p><p>Video Demo:&nbsp;</p><p></p><div class="figure-box" contenteditable="false"><iframe src="https://www.youtube.com/embed/k-HuLDu_YQ8" style="width:100%; aspect-ratio:16/9; border:none;" allowfullscreen=""></iframe><div class="caption" contenteditable="true">Vote Skip</div></div><p><br></p><h2>6. Gia hạn thời gian</h2><div>Với chức năng Gia hạn thời gian, nếu giả sử muốn nghe thêm thời lượng của bài hát hay truyện, người xem có thể donate số tiền kèm mã gia hạn trên app. Với mức giá có thể tự setup trong Cài đặt, mặc định là 50k/6 phút, Sau khi donate, thời gian sẽ được gia hạn và người xem tiếp tục nghe thêm bài hát.</div><div><br></div><div><div class="figure-box" contenteditable="false"><iframe src="https://www.youtube.com/embed/tDY51yPvhMQ" style="width:100%; aspect-ratio:16/9; border:none;" allowfullscreen=""></iframe><div class="caption" contenteditable="true">Gia hạn thời gian</div></div><h2 style="font-family: Quicksand, sans-serif; color: rgb(234, 88, 12); border-bottom: 2px dashed rgba(45, 39, 39, 0.15); text-align: start;">8. Phím tắt điều khiển nhanh chóng</h2></div><p></p><p style="font-size: 16.8px;">Điều khiển trình phát tiện lợi bằng bàn phím tương tự như xem phim trên YouTube:</p><p style="font-size: 16.8px;">Sử dụng phím <kbd style="background-color: rgb(245, 240, 228); border-color: rgb(45, 39, 39); border-style: solid; border-width: 2px; border-image: none 100% / 1 / 0 stretch; box-shadow: rgb(45, 39, 39) 2px 2px 0px 0px; color: rgb(45, 39, 39);">Space</kbd> hoặc <kbd style="background-color: rgb(245, 240, 228); border-color: rgb(45, 39, 39); border-style: solid; border-width: 2px; border-image: none 100% / 1 / 0 stretch; box-shadow: rgb(45, 39, 39) 2px 2px 0px 0px; color: rgb(45, 39, 39);">K</kbd> để Tạm dừng / Phát nhạc.<br>Sử dụng phím <kbd style="background-color: rgb(245, 240, 228); border-color: rgb(45, 39, 39); border-style: solid; border-width: 2px; border-image: none 100% / 1 / 0 stretch; box-shadow: rgb(45, 39, 39) 2px 2px 0px 0px; color: rgb(45, 39, 39);">→</kbd> hoặc <kbd style="background-color: rgb(245, 240, 228); border-color: rgb(45, 39, 39); border-style: solid; border-width: 2px; border-image: none 100% / 1 / 0 stretch; box-shadow: rgb(45, 39, 39) 2px 2px 0px 0px; color: rgb(45, 39, 39);">L</kbd> để Tua nhanh 10 giây.<br>Sử dụng phím <kbd style="background-color: rgb(245, 240, 228); border-color: rgb(45, 39, 39); border-style: solid; border-width: 2px; border-image: none 100% / 1 / 0 stretch; box-shadow: rgb(45, 39, 39) 2px 2px 0px 0px; color: rgb(45, 39, 39);">←</kbd> hoặc <kbd style="background-color: rgb(245, 240, 228); border-color: rgb(45, 39, 39); border-style: solid; border-width: 2px; border-image: none 100% / 1 / 0 stretch; box-shadow: rgb(45, 39, 39) 2px 2px 0px 0px; color: rgb(45, 39, 39);">J</kbd> để Tua lại 10 giây.<br>Sử dụng phím <kbd style="background-color: rgb(245, 240, 228); border-color: rgb(45, 39, 39); border-style: solid; border-width: 2px; border-image: none 100% / 1 / 0 stretch; box-shadow: rgb(45, 39, 39) 2px 2px 0px 0px; color: rgb(45, 39, 39);">M</kbd> để Tắt / Bật tiếng nhanh.</p><div><h2>9. Một số chức năng khác</h2></div><p></p><ol><li>DirectStream cho phép phát nhạc bị chặn bản quyền từ YouTube (VD: Trời giấu trời mang đi của AMEE x VIRUSS không thể phát kể cả bản v3 cũng như bản zypage gốc)</li><li>Thông báo toàn hệ thống, hiển thị donate như 1 thông báo của Windows, luôn hiển thị ở màn hình phụ để dễ nắm bắt thông tin.</li><li>Trang quản lý donate riêng</li><li>Thông báo hiện từ trên title xuống như điện thoại</li><li>Chức năng Lucky cho phép chọn bài hát may mắn không theo thứ tự sắp xếp để phát.</li><li>Giao diện Cài đặt giờ đây cho phép preview theme OBS, ngoài ra sắp xếp phân mục sao cho chuẩn.</li></ol><h2>10. After Credit</h2><div>After Credit được loại bỏ sau bản v3.0.0 để tiết kiệm tài nguyên vì đơn giản chả ai thèm để ý chúng.</div><div><br></div><div>Đó là những gì hiện tại em đang phát triển ở phiên bản 26.7.0 hiện tại, có thể thay đổi nữa trong tương lai. Cuối tháng 7 thì sẽ được đẩy lên update. Dù sao một lần nữa cảm ơn chị trong suốt thời gian qua chịu lỗi, test app cho em để cho app trở nên hoàn thiện hơn.</div><div><br></div><div>Em xin cảm ơn rất nhiều, chúc chị luôn may mắn nhé.</div><div>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; Introvert</div><div><br></div><p></p></div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Custom Image Insertion Modal -->
+    <div class="editor-modal" id="image-modal">
+        <div class="modal-content">
+            <h3 class="modal-title"><i class="fa-solid fa-image"></i> Chèn hình ảnh tính năng</h3>
+            <div class="form-group">
+                <label for="input-img-src">Đường dẫn hình ảnh (URL hoặc đường dẫn tương đối):</label>
+                <input type="text" id="input-img-src" class="dua-input" placeholder="Ví dụ: image/home.png">
+            </div>
+            <div class="form-group" style="margin-top: 1rem;">
+                <label for="input-img-caption">Chú thích hình ảnh:</label>
+                <input type="text" id="input-img-caption" class="dua-input" placeholder="Ví dụ: Hình 1: Giao diện chính mới">
+            </div>
+            <div class="modal-actions" style="margin-top: 1.5rem;">
+                <button class="dua-btn btn-close" id="btn-modal-cancel">Hủy bỏ</button>
+                <button class="dua-btn dua-btn-primary" id="btn-modal-save">Chèn ảnh</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom YouTube Insertion Modal -->
+    <div class="editor-modal" id="youtube-modal">
+        <div class="modal-content">
+            <h3 class="modal-title"><i class="fa-brands fa-youtube" style="color: #FF0000;"></i> Chèn liên kết / Video YouTube</h3>
+            <div class="form-group">
+                <label for="input-yt-url">Đường dẫn video/liên kết YouTube:</label>
+                <input type="text" id="input-yt-url" class="dua-input" placeholder="Ví dụ: https://www.youtube.com/watch?v=dQw4w9WgXcQ">
+            </div>
+            <div class="form-group" style="margin-top: 1rem;">
+                <label for="input-yt-caption">Tiêu đề / Chú thích hiển thị:</label>
+                <input type="text" id="input-yt-caption" class="dua-input" placeholder="Ví dụ: Hướng dẫn sử dụng Dứa Player">
+            </div>
+            <div class="modal-actions" style="margin-top: 1.5rem;">
+                <button class="dua-btn btn-close" id="btn-yt-cancel">Hủy bỏ</button>
+                <button class="dua-btn dua-btn-primary" id="btn-yt-save">Chèn</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- Floating Edit Action Button -->
+    <a href="?edit=true" class="edit-mode-toggle-btn" title="Chuyển sang chế độ chỉnh sửa">
+        <i class="fa-solid fa-pen-to-square"></i>
+    </a>
+
+    <!-- Script -->
+    <script src="walkthrough.js"></script>
+
+
+</body></html>
