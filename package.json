@@ -1,7 +1,7 @@
 {
   "name": "introvert-player",
-  "version": "4.0.0",
-  "description": "Introvert Player",
+  "version": "26.8.0",
+  "description": "Pineapple Studio",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
@@ -44,7 +44,7 @@
       "allowToChangeInstallationDirectory": false,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Introvert Player"
+      "shortcutName": "Pineapple Studio"
     }
   },
   "devDependencies": {

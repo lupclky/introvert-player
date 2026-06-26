@@ -6,6 +6,32 @@ const path = require('path');
 const crypto = require('crypto');
 const { spawn } = require('child_process');
 const WebSocket = require('ws');
+const sqlite = require('node:sqlite');
+
+let db = null;
+function initDatabase() {
+  try {
+    const dbPath = path.join(app.getPath('userData'), 'donations.db');
+    console.log('Initializing SQLite database at:', dbPath);
+    db = new sqlite.DatabaseSync(dbPath);
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS donations (
+        id TEXT PRIMARY KEY,
+        name TEXT,
+        amount REAL,
+        message TEXT,
+        timestamp INTEGER,
+        isNew INTEGER,
+        songLink TEXT,
+        isMusicOrder INTEGER
+      );
+      CREATE INDEX IF NOT EXISTS idx_donations_timestamp ON donations(timestamp DESC);
+    `);
+    console.log('SQLite database initialized successfully.');
+  } catch (e) {
+    console.error('Failed to initialize SQLite database:', e);
+  }
+}
 
 let mainWindow = null;
 let server = null;
@@ -14,13 +40,14 @@ let tray = null;
 app.isQuitting = false;
 let wss = null;
 const activeWsClients = new Set();
+const ytStreamResolveCache = new Map();
+const ytStreamResolveInFlight = new Map();
+const YT_STREAM_CACHE_TTL_MS = 10 * 60 * 1000;
+let currentSearchReq = null;
 
-// Tắt GPU và sandbox để tránh crash khi chạy từ thư mục AppData
+// Tắt sandbox để tránh crash khi chạy từ thư mục AppData (giữ GPU bật để tránh bug input focus)
 app.commandLine.appendSwitch('no-sandbox');
 app.commandLine.appendSwitch('disable-gpu-sandbox');
-app.commandLine.appendSwitch('disable-gpu');
-app.commandLine.appendSwitch('in-process-gpu');
-app.disableHardwareAcceleration();
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
   app.quit();
@@ -46,12 +73,14 @@ if (!gotTheLock) {
     '.ico': 'image/x-icon'
   };
 
-  // Hàm bổ trợ kiểm tra Origin tin cậy (localhost, 127.0.0.1, file:// và null của OBS local file)
+  // Hàm bổ trợ kiểm tra Origin tin cậy (localhost, 127.0.0.1, file:// và null của OBS local file, vercel.app)
   function isOriginAllowed(origin) {
     if (!origin || origin === 'null') return true;
     return /^http:\/\/localhost(:\d+)?$/.test(origin) || 
            /^http:\/\/127\.0\.0\.1(:\d+)?$/.test(origin) || 
-           /^file:\/\//.test(origin);
+           /^chrome-extension:\/\//.test(origin) ||
+           /^file:\/\//.test(origin) ||
+           /\.vercel\.app$/.test(origin);
   }
 
   // Hàm khởi tạo Local HTTP Server
@@ -110,6 +139,51 @@ if (!gotTheLock) {
         return;
       }
 
+      // Xử lý API lưu walkthrough và đẩy lên Vercel (POST /api/save-walkthrough)
+      if (req.url === '/api/save-walkthrough' && req.method === 'POST') {
+        let body = '';
+        req.setEncoding('utf8');
+        req.on('data', chunk => {
+          body += chunk;
+        });
+        req.on('end', () => {
+          try {
+            const data = JSON.parse(body);
+            const htmlContent = data.html;
+            
+            // Ghi đè tệp tin walkthrough.html trong thư mục landing
+            const filePath = path.join(__dirname, 'landing', 'walkthrough.html');
+            fs.writeFileSync(filePath, htmlContent, 'utf8');
+            console.log('[API] Đã lưu thành công nội dung walkthrough.html vào đĩa cứng.');
+            
+            // Nếu cờ deploy bằng true, chạy lệnh vercel --prod
+            if (data.deploy) {
+              const { exec } = require('child_process');
+              const landingDir = path.join(__dirname, 'landing');
+              
+              console.log('[API] Bắt đầu đẩy lên Vercel...');
+              exec('npx vercel --prod --yes', { cwd: landingDir }, (error, stdout, stderr) => {
+                if (error) {
+                  console.error('[API] Lỗi khi chạy lệnh deploy Vercel:', error);
+                } else {
+                  console.log('[API] Deploy Vercel thành công:\n', stdout);
+                }
+              });
+            }
+
+            res.writeHead(200, getCorsHeaders({
+              'Content-Type': 'application/json'
+            }));
+            res.end(JSON.stringify({ success: true, message: 'Đã lưu và triển khai thành công!' }));
+          } catch (err) {
+            console.error('[API] Lỗi API save-walkthrough:', err);
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: err.message }));
+          }
+        });
+        return;
+      }
+
       // Xử lý API test donate (POST /api/test-donate)
       if (req.url === '/api/test-donate' && req.method === 'POST') {
         let body = '';
@@ -129,6 +203,42 @@ if (!gotTheLock) {
             res.end(JSON.stringify({ success: true }));
           } catch (err) {
             console.error('Lỗi API test-donate:', err);
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: err.message }));
+          }
+        });
+        return;
+      }
+
+      // Xử lý API Ping (GET /api/ping)
+      if (req.url === '/api/ping' && req.method === 'GET') {
+        res.writeHead(200, getCorsHeaders({
+          'Content-Type': 'application/json'
+        }));
+        res.end(JSON.stringify({ success: true, app: "pineapple-studio", version: "26.8.0" }));
+        return;
+      }
+
+      // Xử lý API Thêm nhạc từ Extension (POST /api/add-song)
+      if (req.url === '/api/add-song' && req.method === 'POST') {
+        let body = '';
+        req.setEncoding('utf8');
+        req.on('data', chunk => {
+          body += chunk;
+        });
+        req.on('end', () => {
+          try {
+            const data = JSON.parse(body);
+            if (mainWindow && data.url) {
+              mainWindow.webContents.send('add-song-external', data);
+            }
+            
+            res.writeHead(200, getCorsHeaders({
+              'Content-Type': 'application/json'
+            }));
+            res.end(JSON.stringify({ success: true }));
+          } catch (err) {
+            console.error('Lỗi API add-song:', err);
             res.writeHead(500, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: err.message }));
           }
@@ -474,6 +584,7 @@ if (!gotTheLock) {
       if (req.url.startsWith('/api/yt-stream') && req.method === 'GET') {
         const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
         const videoId = parsedUrl.searchParams.get('videoId');
+        const type = parsedUrl.searchParams.get('type') || 'audio';
         if (!videoId) {
           res.writeHead(400, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'Missing videoId parameter' }));
@@ -487,31 +598,87 @@ if (!gotTheLock) {
           return;
         }
 
-        const { spawn } = require('child_process');
         const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
         
-        // Chạy yt-dlp.exe -g -f ba [url]
-        const proc = spawn(ytDlpPath, ['-g', '-f', 'ba', videoUrl]);
-        let stdout = '';
-        let stderr = '';
+        // Dinh dang tai: audio-only cho overlay, video cho preview Dashboard.
+        const format = type === 'video' ? 'bestvideo[vcodec^=avc][height<=720]/bestvideo[ext=mp4][vcodec^=avc]/bestvideo[ext=mp4]/best[ext=mp4]/best' : 'bestaudio[ext=m4a]/bestaudio/ba';
+        const cacheKey = `${type}:${videoId}`;
+        const cached = ytStreamResolveCache.get(cacheKey);
 
-        proc.stdout.on('data', data => stdout += data.toString());
-        proc.stderr.on('data', data => stderr += data.toString());
+        if (cached && Date.now() - cached.timestamp < YT_STREAM_CACHE_TTL_MS) {
+          res.writeHead(200, getCorsHeaders({ 'Content-Type': 'application/json' }));
+          res.end(JSON.stringify({ success: true, url: cached.url, cached: true }));
+          return;
+        }
 
-        proc.on('close', code => {
-          if (code === 0) {
-            res.writeHead(200, getCorsHeaders({ 'Content-Type': 'application/json' }));
-            res.end(JSON.stringify({ success: true, url: stdout.trim() }));
-          } else {
-            console.error(`yt-dlp stream resolution failed for ${videoId}:`, stderr);
-            res.writeHead(500, getCorsHeaders({ 'Content-Type': 'application/json' }));
-            res.end(JSON.stringify({ error: `yt-dlp failed: ${stderr.trim()}` }));
-          }
-        });
-        
-        req.on('close', () => {
-          try { proc.kill(); } catch (e) {}
-        });
+        if (!ytStreamResolveInFlight.has(cacheKey)) {
+          ytStreamResolveInFlight.set(cacheKey, new Promise((resolve, reject) => {
+            let proc;
+            try {
+              proc = spawn(ytDlpPath, ['--js-runtimes', 'node', '--no-playlist', '--no-cache-dir', '-g', '-f', format, videoUrl]);
+            } catch (spawnError) {
+              reject(new Error(`Failed to spawn yt-dlp: ${spawnError.message}`));
+              return;
+            }
+
+            let stdout = '';
+            let stderr = '';
+
+            const timeout = setTimeout(() => {
+              console.error(`yt-dlp stream resolution timed out for ${videoId}`);
+              try { proc.kill(); } catch (e) {}
+              reject(new Error('yt-dlp resolution timed out'));
+            }, 15000);
+
+            proc.stdout.on('data', data => stdout += data.toString());
+            proc.stderr.on('data', data => stderr += data.toString());
+
+            proc.on('error', err => {
+              clearTimeout(timeout);
+              console.error(`yt-dlp process error for ${videoId}:`, err);
+              reject(new Error(`yt-dlp process error: ${err.message}`));
+            });
+
+            proc.on('close', code => {
+              clearTimeout(timeout);
+              if (code !== 0) {
+                console.error(`yt-dlp stream resolution failed for ${videoId}:`, stderr);
+                reject(new Error(`yt-dlp failed with code ${code}: ${stderr.trim()}`));
+                return;
+              }
+
+              const streamUrl = stdout
+                .split(/\r?\n/)
+                .map(line => line.trim())
+                .find(line => /^https?:\/\//i.test(line));
+              if (!streamUrl) {
+                console.error(`yt-dlp returned no usable stream URL for ${videoId}:`, stdout);
+                reject(new Error('yt-dlp returned no usable stream URL'));
+                return;
+              }
+
+              ytStreamResolveCache.set(cacheKey, { url: streamUrl, timestamp: Date.now() });
+              resolve(streamUrl);
+            });
+          }).finally(() => {
+            ytStreamResolveInFlight.delete(cacheKey);
+          }));
+        }
+
+        ytStreamResolveInFlight.get(cacheKey)
+          .then(streamUrl => {
+            if (!res.writableEnded) {
+              res.writeHead(200, getCorsHeaders({ 'Content-Type': 'application/json' }));
+              res.end(JSON.stringify({ success: true, url: streamUrl }));
+            }
+          })
+          .catch(err => {
+            if (!res.writableEnded) {
+              const statusCode = err.message.includes('timed out') ? 504 : 500;
+              res.writeHead(statusCode, getCorsHeaders({ 'Content-Type': 'application/json' }));
+              res.end(JSON.stringify({ error: err.message }));
+            }
+          });
         return;
       }
 
@@ -619,16 +786,25 @@ if (!gotTheLock) {
   }
 
   function createWindow(port) {
+    const isWin = process.platform === 'win32';
     mainWindow = new BrowserWindow({
       width: 1280,
       height: 800,
-      title: "Introvert Player",
+      minWidth: 640,
+      minHeight: 640,
+      title: "Pineapple Studio",
       frame: false,
-      titleBarStyle: 'hidden',
+      titleBarStyle: isWin ? 'hidden' : 'hidden',
+      titleBarOverlay: isWin ? {
+        color: '#0C0A0F',      // Match dark mode background initially
+        symbolColor: '#E2E8F0', // Match dark mode text
+        height: 41
+      } : false,
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
-        preload: path.join(__dirname, 'preload.js')
+        preload: path.join(__dirname, 'preload.js'),
+        autoplayPolicy: 'no-user-gesture-required'
       }
     });
 
@@ -637,6 +813,29 @@ if (!gotTheLock) {
 
     // Tạo menu ứng dụng cơ bản
     Menu.setApplicationMenu(null); // Ẩn menu mặc định để giao diện trông tối giản và chuyên nghiệp hơn
+
+    // Cho phép window.open() tạo cửa sổ Overlay với autoplay không cần gesture của người dùng
+    // Đây là cần thiết để DirectStream có thể tự phát ngay khi cửa sổ Overlay vừa mở
+    mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+      // Chỉ cho phép mở các URL nội bộ của app (overlay.html và các trang localhost)
+      const isLocalFile = url.startsWith('file://') || url.includes('127.0.0.1') || url.includes('localhost');
+      if (!isLocalFile) {
+        shell.openExternal(url);
+        return { action: 'deny' };
+      }
+      return {
+        action: 'allow',
+        overrideBrowserWindowOptions: {
+          autoHideMenuBar: true,
+          webPreferences: {
+            nodeIntegration: false,
+            contextIsolation: true,
+            autoplayPolicy: 'no-user-gesture-required' // Cho phép DirectStream tự phát không cần user click
+          }
+        }
+      };
+    });
+
 
 
 
@@ -710,7 +909,7 @@ if (!gotTheLock) {
       ]);
     };
 
-    tray.setToolTip('Introvert Player');
+    tray.setToolTip('Pineapple Studio');
 
     tray.on('double-click', () => {
       if (mainWindow) {
@@ -726,6 +925,40 @@ if (!gotTheLock) {
   }
 
   app.whenReady().then(() => {
+    initDatabase();
+
+    // Thiết lập khởi động cùng Windows khi mở app lần đầu
+    try {
+      const firstRunPath = path.join(app.getPath('userData'), '.first_run');
+      if (!fs.existsSync(firstRunPath)) {
+        app.setLoginItemSettings({
+          openAtLogin: true,
+          path: app.getPath('exe')
+        });
+        fs.writeFileSync(firstRunPath, 'initialized');
+        console.log('First run: Enabled Start with Windows (openAtLogin) by default.');
+      }
+    } catch (e) {
+      console.error('Lỗi khi thiết lập khởi động cùng Windows lần đầu:', e);
+    }
+
+    // Dọn dẹp các file html tạm của thông báo từ lần chạy trước
+    try {
+      const userDataDir = app.getPath('userData');
+      if (fs.existsSync(userDataDir)) {
+        const files = fs.readdirSync(userDataDir);
+        files.forEach(file => {
+          if (file.startsWith('notif_') && file.endsWith('.html')) {
+            try {
+              fs.unlinkSync(path.join(userDataDir, file));
+            } catch (e) {}
+          }
+        });
+      }
+    } catch (e) {
+      console.error('Không thể dọn dẹp file thông báo tạm:', e);
+    }
+
     // Bắt đầu khởi chạy server trước, sau đó tạo cửa sổ hiển thị
     createLocalServer(3000, (port) => {
       createWindow(port);
@@ -771,6 +1004,18 @@ ipcMain.on('send-to-overlay', (event, message) => {
   });
 });
 
+let lastIsDarkMode = false;
+
+// Lắng nghe yêu cầu hiển thị thông báo taskbar từ Dashboard (Renderer)
+ipcMain.on('show-taskbar-notification', (event, data) => {
+  if (data && data.title) {
+    if (data.isDarkMode !== undefined) {
+      lastIsDarkMode = data.isDarkMode;
+    }
+    showTaskbarNotification(data.title, data.message || '', lastIsDarkMode, data.duration);
+  }
+});
+
 // Lắng nghe sự kiện điều khiển cửa sổ từ Dashboard (Renderer)
 ipcMain.on('window-control', (event, action) => {
   if (!mainWindow) return;
@@ -784,6 +1029,28 @@ ipcMain.on('window-control', (event, action) => {
     }
   } else if (action === 'close') {
     mainWindow.close();
+  } else if (action === 'focus') {
+    mainWindow.focus();
+  }
+});
+
+// Lắng nghe sự kiện chuyển đổi theme để cập nhật Titlebar Overlay tương ứng
+ipcMain.on('theme-change', (event, theme) => {
+  if (!mainWindow) return;
+  if (process.platform === 'win32') {
+    if (theme === 'dark') {
+      mainWindow.setTitleBarOverlay({
+        color: '#0C0A0F',
+        symbolColor: '#E2E8F0',
+        height: 41
+      });
+    } else {
+      mainWindow.setTitleBarOverlay({
+        color: '#F5F2EB',
+        symbolColor: '#2D2727',
+        height: 41
+      });
+    }
   }
 });
 
@@ -807,33 +1074,104 @@ ipcMain.handle('search-youtube', async (event, query) => {
     }
   }
 
-  // Tận dụng play-dl để search nhanh và ổn định hơn, tránh bị YouTube chặn hoặc lỗi DNS/TLS
+  if (currentSearchReq) {
+    try {
+      currentSearchReq.destroy();
+    } catch (e) {}
+    currentSearchReq = null;
+  }
+
+  // 1. Try InnerTube search API first (blazing fast, ~200-400ms & highly stable)
   try {
-    const play = require('play-dl');
-    const searchResults = await play.search(query, { limit: 15 });
-    const videos = [];
-    for (const v of searchResults) {
-      const videoId = v.id;
-      const title = v.title || '';
-      const thumbnail = v.thumbnails?.[0]?.url || '';
-      const duration = v.durationRaw || '0:00';
-      const author = v.channel?.name || '';
-      const views = v.views ? v.views.toLocaleString('vi-VN') + ' lượt xem' : '';
-      
-      if (videoId && title) {
-        videos.push({
-          videoId,
-          title,
-          thumbnail,
-          duration,
-          author,
-          views,
-          url: `https://www.youtube.com/watch?v=${videoId}`
+    const data = await new Promise((resolve, reject) => {
+      const https = require('https');
+      const postData = JSON.stringify({
+        query: query,
+        context: {
+          client: {
+            clientName: 'WEB',
+            clientVersion: '2.20210621.02.00'
+          }
+        }
+      });
+
+      const reqOpts = {
+        hostname: 'www.youtube.com',
+        port: 443,
+        path: '/youtubei/v1/search',
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(postData),
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        }
+      };
+
+      const ytReq = https.request(reqOpts, (ytRes) => {
+        let body = '';
+        ytRes.setEncoding('utf8');
+        ytRes.on('data', chunk => body += chunk);
+        ytRes.on('end', () => {
+          if (currentSearchReq === ytReq) currentSearchReq = null;
+          resolve(body);
         });
+      });
+
+      currentSearchReq = ytReq;
+
+      ytReq.on('error', (err) => {
+        if (currentSearchReq === ytReq) currentSearchReq = null;
+        if (ytReq.destroyed) {
+          reject(new Error("SEARCH_ABORTED"));
+        } else {
+          reject(err);
+        }
+      });
+
+      ytReq.write(postData);
+      ytReq.end();
+    });
+
+    const jsonObj = JSON.parse(data);
+    const contents = jsonObj.contents?.twoColumnSearchResultsRenderer?.primaryContents?.sectionListRenderer?.contents;
+    if (!contents) {
+      throw new Error("Unexpected JSON structure in InnerTube response");
+    }
+    
+    let items = [];
+    for (const content of contents) {
+      if (content.itemSectionRenderer) {
+        items = content.itemSectionRenderer.contents;
+        break;
       }
     }
     
-    const result = { success: true, videos };
+    const videos = [];
+    for (const item of items) {
+      if (item.videoRenderer) {
+        const v = item.videoRenderer;
+        const videoId = v.videoId;
+        const title = v.title?.runs?.[0]?.text || '';
+        const thumbnail = v.thumbnail?.thumbnails?.[0]?.url || '';
+        const duration = v.lengthText?.simpleText || '0:00';
+        const author = v.ownerText?.runs?.[0]?.text || '';
+        const views = v.viewCountText?.simpleText || '';
+        
+        if (videoId && title) {
+          videos.push({
+            videoId,
+            title,
+            thumbnail,
+            duration,
+            author,
+            views,
+            url: `https://www.youtube.com/watch?v=${videoId}`
+          });
+        }
+      }
+    }
+
+    const result = { success: true, videos: videos.slice(0, 15) };
     
     // Store in cache
     if (youtubeSearchCache.size >= MAX_CACHE_SIZE) {
@@ -846,67 +1184,39 @@ ipcMain.handle('search-youtube', async (event, query) => {
     });
     
     return result;
-  } catch (playDlError) {
-    console.warn("[play-dl search failed, falling back to InnerTube/HTML scrape]:", playDlError.message);
 
-    if (currentSearchReq) {
-      try {
-        currentSearchReq.destroy();
-      } catch (e) {}
-      currentSearchReq = null;
+  } catch (innerTubeError) {
+    if (innerTubeError.message === 'SEARCH_ABORTED') {
+      return { success: false, aborted: true };
     }
-    
-    // Try InnerTube search API first (blazing fast, ~200-400ms)
+    console.warn("[InnerTube Search failed, falling back to HTML Scrape]:", innerTubeError.message);
+
+    // 2. Try HTML Scrape fallback
     try {
-      const data = await new Promise((resolve, reject) => {
-        const https = require('https');
-        const postData = JSON.stringify({
-          query: query,
-          context: {
-            client: {
-              clientName: 'WEB',
-              clientVersion: '2.20210621.02.00'
-            }
-          }
-        });
-
-        const reqOpts = {
-          hostname: 'www.youtube.com',
-          port: 443,
-          path: '/youtubei/v1/search',
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Content-Length': Buffer.byteLength(postData),
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-          }
-        };
-
-        const ytReq = https.request(reqOpts, (ytRes) => {
-          let body = '';
-          ytRes.setEncoding('utf8');
-          ytRes.on('data', chunk => body += chunk);
-          ytRes.on('end', () => resolve(body));
-        });
-
-        currentSearchReq = ytReq;
-
-        ytReq.on('error', (err) => {
-          if (ytReq.destroyed) {
-            reject(new Error("SEARCH_ABORTED"));
-          } else {
-            reject(err);
-          }
-        });
-
-        ytReq.write(postData);
-        ytReq.end();
-      });
-
-      const jsonObj = JSON.parse(data);
+      const url = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}&sp=EgIQAQ%253D%253D`;
+      const cookies = await getYoutubeCookieHeader();
+      
+      let cookieStr = cookies || '';
+      if (!cookieStr.includes('SOCS=')) {
+        if (cookieStr) cookieStr += '; ';
+        cookieStr += 'SOCS=CAESEwgDEgk0ODE3Nzk3OTQaAmVuIAEaBgiA_eWqBg';
+      }
+      
+      const headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept-Language': 'vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7',
+        'Cookie': cookieStr
+      };
+      
+      const { html } = await fetchHtmlWithRedirects(url, headers);
+      const jsonObj = extractYtInitialData(html);
+      if (!jsonObj) {
+        throw new Error("Could not find or parse ytInitialData in response");
+      }
+      
       const contents = jsonObj.contents?.twoColumnSearchResultsRenderer?.primaryContents?.sectionListRenderer?.contents;
       if (!contents) {
-        throw new Error("Unexpected JSON structure in InnerTube response");
+        throw new Error("Unexpected JSON structure in scraped HTML");
       }
       
       let items = [];
@@ -941,10 +1251,9 @@ ipcMain.handle('search-youtube', async (event, query) => {
           }
         }
       }
-
+      
       const result = { success: true, videos: videos.slice(0, 15) };
       
-      // Store in cache
       if (youtubeSearchCache.size >= MAX_CACHE_SIZE) {
         const firstKey = youtubeSearchCache.keys().next().value;
         if (firstKey) youtubeSearchCache.delete(firstKey);
@@ -956,75 +1265,41 @@ ipcMain.handle('search-youtube', async (event, query) => {
       
       return result;
 
-    } catch (e) {
-      if (e.message === 'SEARCH_ABORTED') {
+    } catch (scrapeError) {
+      if (scrapeError.message === 'SEARCH_ABORTED') {
         return { success: false, aborted: true };
       }
-      console.warn("[InnerTube Search failed, falling back to Scrape HTML]:", e.message);
-      
-      // Fallback: Use HTML scrape
+      console.warn("[HTML Scrape failed, falling back to play-dl search]:", scrapeError.message);
+
+      // 3. Last resort fallback: play-dl search
       try {
-        const url = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}&sp=EgIQAQ%253D%253D`;
-        const cookies = await getYoutubeCookieHeader();
-        
-        let cookieStr = cookies || '';
-        if (!cookieStr.includes('SOCS=')) {
-          if (cookieStr) cookieStr += '; ';
-          cookieStr += 'SOCS=CAESEwgDEgk0ODE3Nzk3OTQaAmVuIAEaBgiA_eWqBg';
-        }
-        
-        const headers = {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Accept-Language': 'vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7',
-          'Cookie': cookieStr
-        };
-        
-        const { html } = await fetchHtmlWithRedirects(url, headers);
-        const jsonObj = extractYtInitialData(html);
-        if (!jsonObj) {
-          return { error: "Could not find or parse ytInitialData in response" };
-        }
-        
-        const contents = jsonObj.contents?.twoColumnSearchResultsRenderer?.primaryContents?.sectionListRenderer?.contents;
-        if (!contents) {
-          return { error: "Unexpected JSON structure" };
-        }
-        
-        let items = [];
-        for (const content of contents) {
-          if (content.itemSectionRenderer) {
-            items = content.itemSectionRenderer.contents;
-            break;
-          }
-        }
-        
+        const play = require('play-dl');
+        const searchResults = await play.search(query, { limit: 15 });
         const videos = [];
-        for (const item of items) {
-          if (item.videoRenderer) {
-            const v = item.videoRenderer;
-            const videoId = v.videoId;
-            const title = v.title?.runs?.[0]?.text || '';
-            const thumbnail = v.thumbnail?.thumbnails?.[0]?.url || '';
-            const duration = v.lengthText?.simpleText || '0:00';
-            const author = v.ownerText?.runs?.[0]?.text || '';
-            const views = v.viewCountText?.simpleText || '';
-            
-            if (videoId && title) {
-              videos.push({
-                videoId,
-                title,
-                thumbnail,
-                duration,
-                author,
-                views,
-                url: `https://www.youtube.com/watch?v=${videoId}`
-              });
-            }
+        for (const v of searchResults) {
+          const videoId = v.id;
+          const title = v.title || '';
+          const thumbnail = v.thumbnails?.[0]?.url || '';
+          const duration = v.durationRaw || '0:00';
+          const author = v.channel?.name || '';
+          const views = v.views ? v.views.toLocaleString('vi-VN') + ' lượt xem' : '';
+          
+          if (videoId && title) {
+            videos.push({
+              videoId,
+              title,
+              thumbnail,
+              duration,
+              author,
+              views,
+              url: `https://www.youtube.com/watch?v=${videoId}`
+            });
           }
         }
         
-        const result = { success: true, videos: videos.slice(0, 15) };
+        const result = { success: true, videos };
         
+        // Store in cache
         if (youtubeSearchCache.size >= MAX_CACHE_SIZE) {
           const firstKey = youtubeSearchCache.keys().next().value;
           if (firstKey) youtubeSearchCache.delete(firstKey);
@@ -1035,11 +1310,9 @@ ipcMain.handle('search-youtube', async (event, query) => {
         });
         
         return result;
-      } catch (err) {
-        if (err.message === 'SEARCH_ABORTED') {
-          return { success: false, aborted: true };
-        }
-        return { error: err.message };
+      } catch (playDlError) {
+        console.error("[All search methods failed]:", playDlError.message);
+        return { error: playDlError.message };
       }
     }
   }
@@ -1153,6 +1426,7 @@ function fetchHtmlWithRedirects(urlToFetch, reqHeaders, depth = 0) {
         res.setEncoding('utf8');
         res.on('data', chunk => { data += chunk; });
         res.on('end', () => {
+          if (currentSearchReq === req) currentSearchReq = null;
           resolve({ html: data, statusCode: res.statusCode });
         });
       });
@@ -1160,6 +1434,7 @@ function fetchHtmlWithRedirects(urlToFetch, reqHeaders, depth = 0) {
       currentSearchReq = req;
       
       req.on('error', (err) => {
+        if (currentSearchReq === req) currentSearchReq = null;
         if (req.destroyed) {
           reject(new Error("SEARCH_ABORTED"));
         } else {
@@ -1904,6 +2179,108 @@ ipcMain.handle('youtube-get-recommendations', async () => {
 
 ipcMain.handle('get-app-version', () => app.getVersion());
 
+// SQLite operations
+ipcMain.handle('db-get-donations', () => {
+  if (!db) return [];
+  try {
+    const stmt = db.prepare('SELECT * FROM donations ORDER BY timestamp DESC');
+    const rows = stmt.all();
+    return rows.map(row => ({
+      id: row.id,
+      name: row.name,
+      amount: Number(row.amount),
+      message: row.message || '',
+      timestamp: Number(row.timestamp),
+      isNew: row.isNew === 1,
+      songLink: row.songLink || '',
+      isMusicOrder: row.isMusicOrder === 1
+    }));
+  } catch (err) {
+    console.error('db-get-donations error:', err);
+    return [];
+  }
+});
+
+ipcMain.handle('db-add-donation', (event, donation) => {
+  if (!db) return { success: false };
+  try {
+    const id = donation.id || `manual_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+    const name = donation.name || '';
+    const amount = Number(donation.amount) || 0;
+    const message = donation.message || '';
+    const timestamp = Number(donation.timestamp) || Date.now();
+    const isNew = donation.isNew !== undefined ? donation.isNew : true;
+    const songLink = donation.songLink || '';
+    const isMusicOrder = donation.isMusicOrder ? 1 : 0;
+
+    // Check if donation already exists
+    let existing = null;
+    if (donation.id) {
+      const stmt = db.prepare('SELECT * FROM donations WHERE id = ?');
+      existing = stmt.get(donation.id);
+    }
+    if (!existing) {
+      const stmt = db.prepare('SELECT * FROM donations WHERE name = ? AND amount = ? AND abs(timestamp - ?) < 5000 LIMIT 1');
+      existing = stmt.get(name, amount, timestamp);
+    }
+
+    if (existing) {
+      if (songLink && !existing.songLink) {
+        const stmt = db.prepare('UPDATE donations SET songLink = ?, isMusicOrder = 1 WHERE id = ?');
+        stmt.run(songLink, existing.id);
+        return { success: true, updated: true, id: existing.id };
+      }
+      return { success: true, updated: false, id: existing.id };
+    }
+
+    const stmt = db.prepare(`
+      INSERT INTO donations (id, name, amount, message, timestamp, isNew, songLink, isMusicOrder)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    stmt.run(id, name, amount, message, timestamp, isNew ? 1 : 0, songLink, isMusicOrder);
+    return { success: true, inserted: true, id };
+  } catch (err) {
+    console.error('db-add-donation error:', err);
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('db-mark-read', (event, id) => {
+  if (!db) return false;
+  try {
+    const stmt = db.prepare('UPDATE donations SET isNew = 0 WHERE id = ?');
+    const res = stmt.run(id);
+    return res.changes > 0;
+  } catch (err) {
+    console.error('db-mark-read error:', err);
+    return false;
+  }
+});
+
+ipcMain.handle('db-mark-all-read', () => {
+  if (!db) return false;
+  try {
+    const stmt = db.prepare('UPDATE donations SET isNew = 0 WHERE isNew = 1');
+    const res = stmt.run();
+    return res.changes > 0;
+  } catch (err) {
+    console.error('db-mark-all-read error:', err);
+    return false;
+  }
+});
+
+ipcMain.handle('db-clear-history', () => {
+  if (!db) return false;
+  try {
+    const stmt = db.prepare('DELETE FROM donations');
+    const res = stmt.run();
+    return true;
+  } catch (err) {
+    console.error('db-clear-history error:', err);
+    return false;
+  }
+});
+
 // Cấu hình cập nhật tự động từ GitHub Release
 const GITHUB_REPO = 'lupclky/dua-corner-player';
 
@@ -2104,4 +2481,347 @@ ipcMain.handle('open-log-file', async () => {
   }
 });
 
+const activeNotifications = [];
 
+function repositionNotifications() {
+  const { screen } = require('electron');
+  try {
+    const displays = screen.getAllDisplays();
+    const primaryDisplay = screen.getPrimaryDisplay();
+    const externalDisplay = displays.find(d => d.id !== primaryDisplay.id);
+    const targetDisplay = externalDisplay || primaryDisplay;
+    const { x, y, width, height } = targetDisplay.workArea;
+    
+    const notifWidth = 360;
+    
+    let currentOffset = 0;
+    activeNotifications.forEach((notif) => {
+      const h = notif.height || 110;
+      const posX = x + width - notifWidth - 20;
+      const posY = y + height - h - 20 - currentOffset;
+      
+      if (notif.window && !notif.window.isDestroyed()) {
+        notif.window.setBounds({ x: posX, y: posY, width: notifWidth, height: h });
+      }
+      currentOffset += h + 10;
+    });
+  } catch (e) {
+    console.error('Lỗi khi reposition notifications:', e);
+  }
+}
+
+function closeNotificationById(id) {
+  const index = activeNotifications.findIndex(n => n.id === id);
+  if (index !== -1) {
+    const notif = activeNotifications[index];
+    if (notif.timeout) clearTimeout(notif.timeout);
+    activeNotifications.splice(index, 1);
+    if (notif.window && !notif.window.isDestroyed()) {
+      try {
+        notif.window.destroy();
+      } catch (e) {}
+    }
+    repositionNotifications();
+  }
+}
+
+ipcMain.on('close-notification-window', (event, id) => {
+  closeNotificationById(id);
+});
+
+ipcMain.on('set-ignore-mouse-events', (event, id, ignore, options) => {
+  const notif = activeNotifications.find(n => n.id === id);
+  if (notif && notif.window && !notif.window.isDestroyed()) {
+    if (ignore) {
+      notif.window.setIgnoreMouseEvents(true, { forward: true });
+    } else {
+      notif.window.setIgnoreMouseEvents(false);
+    }
+  }
+});
+
+function showTaskbarNotification(title, message, isDarkMode = false, duration) {
+  const { screen, BrowserWindow } = require('electron');
+  
+  try {
+    const displays = screen.getAllDisplays();
+    const primaryDisplay = screen.getPrimaryDisplay();
+    const externalDisplay = displays.find(d => d.id !== primaryDisplay.id);
+    const targetDisplay = externalDisplay || primaryDisplay;
+    
+    const { x, y, width, height } = targetDisplay.workArea;
+    
+    // Tách tiêu đề nhạc và tin nhắn từ message (phân cách bằng \n)
+    const lines = (message || '').split('\n');
+    const songTitle = lines[0] || '';
+    const cleanMsg = lines.slice(1).join('\n') || '';
+    const cleanMsgLines = cleanMsg ? cleanMsg.split('\n') : [];
+
+    const notifWidth = 360;
+    let notifHeight = 110;
+    
+    if (cleanMsgLines.length > 1) {
+      const calculatedHeight = 95 + (cleanMsgLines.length - 1) * 18;
+      notifHeight = Math.min(220, Math.max(110, calculatedHeight));
+    }
+    
+    // Tính toán vị trí Y dựa trên số lượng thông báo hiện có
+    let offset = 0;
+    activeNotifications.forEach(notif => {
+      offset += (notif.height || 110) + 10;
+    });
+    const posX = x + width - notifWidth - 20;
+    const posY = y + height - notifHeight - 20 - offset;
+    
+    const win = new BrowserWindow({
+      width: notifWidth,
+      height: notifHeight,
+      x: posX,
+      y: posY,
+      frame: false,
+      transparent: true,
+      alwaysOnTop: true,
+      skipTaskbar: true,
+      focusable: true, // Cho phép focus để click dấu x
+      show: false,
+      webPreferences: {
+        nodeIntegration: true,
+        contextIsolation: false
+      }
+    });
+
+    // Cho phép click xuyên qua phần trong suốt và tương tác phần đặc
+    win.setIgnoreMouseEvents(true, { forward: true });
+
+    const escapeHtml = (text) => {
+      return (text || '')
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    };
+
+    // Lấy thông tin màu sắc theo theme của Dashboard
+    const bgGradient = isDarkMode 
+      ? 'linear-gradient(135deg, #1D1A22 0%, #121016 100%)' 
+      : 'linear-gradient(135deg, #FAF6EE 0%, #F5F0E4 100%)';
+    const borderColor = isDarkMode ? 'rgba(226, 232, 240, 0.08)' : 'rgba(45, 39, 39, 0.15)';
+    const titleColor = isDarkMode ? '#FB923C' : '#EA580C';
+    const textSongColor = isDarkMode ? '#E2E8F0' : '#2D2727';
+    const textMsgColor = isDarkMode ? '#D1D5DB' : '#4B5563';
+    const msgBg = isDarkMode ? '#17151E' : '#FAF6EE';
+    const msgBorder = isDarkMode ? 'rgba(226, 232, 240, 0.06)' : 'rgba(45, 39, 39, 0.12)';
+
+    const notifId = 'notif_' + Date.now() + '_' + Math.floor(Math.random() * 1000000);
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&family=Quicksand:wght@700;800&display=swap');
+          body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: transparent;
+            font-family: 'Nunito', sans-serif;
+          }
+          .container {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            background: ${isDarkMode ? 'rgba(18, 16, 22, 0.92)' : 'rgba(250, 246, 238, 0.95)'};
+            background-image: ${bgGradient};
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 2px solid ${borderColor};
+            border-radius: 16px;
+            padding: 12px 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, ${isDarkMode ? '0.5' : '0.15'});
+            color: ${textSongColor};
+            height: 100%;
+            box-sizing: border-box;
+            position: relative;
+            animation: slide-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+          }
+          @keyframes slide-in {
+            from {
+              transform: translateY(30px);
+              opacity: 0;
+            }
+            to {
+              transform: translateY(0);
+              opacity: 1;
+            }
+          }
+          .content {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+          }
+          .title {
+            font-family: 'Quicksand', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 800;
+            color: ${titleColor};
+            margin-bottom: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            padding-right: 20px;
+          }
+          .close-btn {
+            position: absolute;
+            top: 8px;
+            right: 12px;
+            font-size: 1.1rem;
+            font-weight: 800;
+            cursor: pointer;
+            color: ${isDarkMode ? 'rgba(255, 255, 255, 0.4)' : 'rgba(0, 0, 0, 0.3)'};
+            transition: color 0.15s ease;
+            line-height: 1;
+            z-index: 10;
+            -webkit-app-region: no-drag;
+          }
+          .close-btn:hover {
+            color: ${isDarkMode ? '#FB923C' : '#EA580C'};
+          }
+          .song-title {
+            font-family: 'Quicksand', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: ${textSongColor};
+            line-height: 1.35;
+          }
+          .song-title.single-line {
+            display: -webkit-box;
+            -webkit-line-clamp: 1;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+          .song-title.double-line {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+          .message {
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: ${textMsgColor};
+            background: ${msgBg};
+            border: 1px solid ${msgBorder};
+            border-radius: 8px;
+            padding: 4px 8px;
+            margin-top: 5px;
+            display: -webkit-box;
+            -webkit-line-clamp: ${songTitle ? 1 : 2};
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            word-break: break-word;
+          }
+          .message.multi-line {
+            display: block;
+            white-space: pre-wrap;
+            overflow-y: auto;
+            max-height: 110px;
+          }
+          .message.multi-line::-webkit-scrollbar {
+            width: 4px;
+          }
+          .message.multi-line::-webkit-scrollbar-track {
+            background: transparent;
+          }
+          .message.multi-line::-webkit-scrollbar-thumb {
+            background: ${isDarkMode ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.15)'};
+            border-radius: 4px;
+          }
+          .message.multi-line::-webkit-scrollbar-thumb:hover {
+            background: ${isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)'};
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="close-btn" onclick="closeNotification()">&times;</div>
+          <div class="content">
+            <div class="title">${escapeHtml(title)}</div>
+            ${songTitle ? `<div class="song-title ${cleanMsg ? 'single-line' : 'double-line'}">${escapeHtml(songTitle)}</div>` : ''}
+            ${cleanMsg ? `<div class="message ${cleanMsgLines.length > 1 ? 'multi-line' : ''}">${escapeHtml(cleanMsg)}</div>` : ''}
+          </div>
+        </div>
+        <script>
+          const { ipcRenderer } = require('electron');
+          function closeNotification() {
+            ipcRenderer.send('close-notification-window', '${notifId}');
+          }
+          
+          const container = document.querySelector('.container');
+          container.addEventListener('mouseenter', () => {
+            ipcRenderer.send('set-ignore-mouse-events', '${notifId}', false);
+          });
+          container.addEventListener('mouseleave', () => {
+            ipcRenderer.send('set-ignore-mouse-events', '${notifId}', true, { forward: true });
+          });
+        </script>
+      </body>
+      </html>
+    `;
+
+    const tempHtmlPath = path.join(app.getPath('userData'), `${notifId}.html`);
+    fs.writeFileSync(tempHtmlPath, htmlContent, 'utf8');
+
+    win.loadFile(tempHtmlPath);
+
+    let timeout = null;
+    const isHang = (duration === -1 || duration === 0);
+    if (!isHang) {
+      const timeoutVal = duration || 10000; // default to 10 seconds
+      timeout = setTimeout(() => {
+        closeNotificationById(notifId);
+      }, timeoutVal);
+    }
+
+    activeNotifications.push({
+      id: notifId,
+      window: win,
+      timeout: timeout,
+      height: notifHeight
+    });
+
+    win.once('ready-to-show', () => {
+      if (win && !win.isDestroyed()) {
+        win.showInactive();
+      }
+    });
+
+    win.on('closed', () => {
+      try {
+        if (fs.existsSync(tempHtmlPath)) {
+          fs.unlinkSync(tempHtmlPath);
+        }
+      } catch (e) {
+        console.error('Lỗi khi xóa file tạm notification:', e);
+      }
+
+      const idx = activeNotifications.findIndex(n => n.id === notifId);
+      if (idx !== -1) {
+        const notif = activeNotifications[idx];
+        if (notif.timeout) clearTimeout(notif.timeout);
+        activeNotifications.splice(idx, 1);
+        repositionNotifications();
+      }
+    });
+
+  } catch (err) {
+    console.error('Lỗi khi tạo thông báo Taskbar:', err);
+  }
+}

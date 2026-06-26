@@ -1,6 +1,6 @@
-# 🍍 Danh sách Toàn bộ Chức năng Introvert Player (v1.0.0 - v4.0.0)
+# 🍍 Danh sách Toàn bộ Chức năng Introvert Player (v1.0.0 - v26.8.0)
 
-Tài liệu này tổng hợp toàn bộ các tính năng, giao diện, và cơ chế hoạt động của **Introvert Player** từ khi bắt đầu phát triển cho đến phiên bản **v4.0.0** mới nhất.
+Tài liệu này tổng hợp toàn bộ các tính năng, giao diện, và cơ chế hoạt động của **Introvert Player** từ khi bắt đầu phát triển cho đến phiên bản **v26.8.0** mới nhất.
 
 ---
 
@@ -36,7 +36,7 @@ OBS Overlay hỗ trợ nhiều chủ đề thiết kế đa dạng phù hợp v�
 
 ---
 
-## 📺 3. Giao diện Streamer Dashboard Cải tiến (v4.0.0)
+## 📺 3. Giao diện Streamer Dashboard Cải tiến (v26.8.0)
 
 *   **Thanh thêm nhanh (Quick Add) trên Titlebar:** Ô nhập URL và tìm kiếm nhạc được đưa lên trung tâm của Titlebar giúp tiết kiệm diện tích. Popover kết quả hiển thị tự động và tự ẩn đi khi click ra ngoài hoặc bấm `ESC`.
 *   **Trình phát kiểu Spotify ở đáy màn hình:** Trình phát nhạc hiện tại (Now Playing Widget) được chuyển thành thanh phát ngang cố định dưới cùng với bố cục 3 phần trực quan (Thông tin bài hát & tin nhắn - Điều khiển phát & Tiến trình - Âm lượng & Sóng nhạc).

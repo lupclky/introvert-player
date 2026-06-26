@@ -1,6 +1,6 @@
 # Nhật ký thay đổi (Changelog) - Introvert Player
 
-## [4.0.0] - 2026-06-15
+## [26.8.0] - 2026-06-24
 ### 🎨 Tái cấu trúc Bố cục Giao diện & Tinh giản Dashboard
 - **Thanh thêm nhanh trên Titlebar**: Tích hợp ô nhập URL và tìm kiếm nhạc nhanh (`#quick-add-form`) lên trung tâm của Titlebar. Thiết kế thanh tìm kiếm dạng tối giản kèm Popover thông minh tự động hiển thị các tùy chọn (Tên người gửi, Số tiền, Chủ kênh) và kết quả gợi ý tìm kiếm khi người dùng focus, click ra ngoài hoặc bấm Escape sẽ tự động ẩn đi.
 - **Trình phát nhạc kiểu Spotify ở đáy màn hình**: Chuyển đổi toàn bộ trình phát nhạc hiện tại (Now Playing Widget) thành một thanh phát nhạc nằm ngang cố định dưới cùng của ứng dụng. Bố cục 3 phần trực quan: Thông tin bài hát & tin nhắn ở bên trái; Điều khiển phát nhạc & thanh tiến trình ở giữa; Sóng nhạc & điều khiển âm lượng ở bên phải.
