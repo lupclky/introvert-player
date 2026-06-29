@@ -2417,6 +2417,7 @@
             flex-direction: column;
             gap: 0.4rem;
             overflow: hidden;
+            interpolate-size: allow-keywords;
             transition: opacity 0.5s ease, transform 0.5s ease-out, height 0.4s cubic-bezier(0.25, 1, 0.5, 1), min-height 0.4s cubic-bezier(0.25, 1, 0.5, 1), max-height 0.4s cubic-bezier(0.25, 1, 0.5, 1);
             opacity: 0;
             transform: scale(0.95) translateZ(0);
@@ -2545,6 +2546,11 @@
         }
 
         .obs-song-title-container {
+            width: 100% !important;
+            max-width: 100% !important;
+            min-width: 0 !important;
+            box-sizing: border-box !important;
+
             width: 100%;
             overflow: hidden;
             position: relative;
@@ -2570,7 +2576,7 @@
         .next-title.marquee,
         .obs-alert-song.marquee,
         .next-fullscreen-title.marquee {
-            animation: obs-marquee 10s linear infinite;
+            animation: obs-marquee var(--obs-marquee-duration, 10s) linear infinite !important;
             display: inline-block;
             vertical-align: bottom;
             white-space: nowrap;
@@ -3064,6 +3070,11 @@
         }
 
         .obs-alert-box .next-fullscreen-title-container {
+            width: 100% !important;
+            max-width: 100% !important;
+            min-width: 0 !important;
+            box-sizing: border-box !important;
+
             padding: 2px 0 !important;
             margin: -2px 0 !important;
         }
@@ -5841,7 +5852,7 @@
         }
     </style>
 </head>
-<body>
+<body class="obs-overlay-body">
 
     <!-- Toast: Chủ kênh đã thêm nhạc -->
     <div id="obs-owner-add-toast">
@@ -5860,7 +5871,7 @@
             <div id="obs-alert-box" class="obs-alert-box">
                 <!-- Layout Classic (dùng khi ở theme classic hoặc classic-dark) -->
                 <div id="obs-alert-content-classic" class="alert-classic-layout obs-alert-content" style="font-family: var(--font-title);">
-                    <div id="obs-alert-song-container" style="width: 100%; overflow: hidden; position: relative;">
+                    <div id="obs-alert-song-container" style="width: 100% !important; max-width: 100% !important; min-width: 0 !important; overflow: hidden; position: relative; box-sizing: border-box !important;">
                         <div id="alert-song" class="obs-alert-song" style="display: inline-block; white-space: nowrap; font-size: 1.5rem; font-weight: 900; margin-bottom: 0.2rem;">Tên bài hát</div>
                     </div>
                     <div style="font-size: 1.15rem; font-weight: 800; display: flex; align-items: center; gap: 0.4rem;">
@@ -6098,6 +6109,15 @@
                 </div>
             </div>
         </div>
+
+        <!-- Confetti Canvas & Birthday Overlay Layer -->
+        <canvas id="birthday-confetti-canvas" style="display: none;"></canvas>
+        <div id="birthday-alert-layer" style="display: none !important;">
+            <div class="birthday-banner-content" style="text-align: center; color: #fff; font-family: 'Outfit', sans-serif;">
+                <div id="birthday-alert-title" style="font-family: 'Dancing Script', cursive; font-size: 4.5rem; font-weight: 700; color: #FB923C; text-shadow: 0 0 20px rgba(251, 146, 60, 0.6); margin-bottom: 0.5rem; transform: translateY(-20px); transition: transform 0.5s ease;">Happy Birthday!</div>
+                <div id="birthday-alert-donor-text" style="font-size: 1.5rem; font-weight: 600; text-shadow: 0 2px 8px rgba(0,0,0,0.5);">Khách vừa gửi tặng bài nhạc sinh nhật</div>
+            </div>
+        </div>
     </div>
 
     <!-- Khung video YouTube (chỉ phát ngầm trên overlay) -->
@@ -6105,10 +6125,7 @@
         <div id="obs-youtube-placeholder"></div>
     </div>
     
-    <!-- Khung Spotify (chỉ phát ngầm) -->
-    <div id="obs-spotify-area" style="position: absolute; top: -9999px; left: -9999px; width: 300px; height: 300px; z-index: -1; overflow: hidden; pointer-events: none;">
-        <div id="obs-spotify-placeholder"></div>
-    </div>
+    
 
     <!-- Khung SoundCloud (chỉ phát ngầm) -->
     <div id="obs-soundcloud-area" style="position: absolute; top: -9999px; left: -9999px; width: 300px; height: 300px; z-index: -1; overflow: hidden; pointer-events: none;">
@@ -6119,6 +6136,90 @@
     <audio id="obs-direct-audio-player" style="display: none;" allow="autoplay"></audio>
 
     <script>
+        // --- HIỆU ỨNG PHÁO GIẤY SINH NHẬT TỐI GIẢN (KHÔNG DÙNG KEYFRAMES) ---
+        let confettiAnimationId = null;
+        function startBirthdayConfetti() {
+            const canvas = document.getElementById('birthday-confetti-canvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            
+            const width = canvas.width = window.innerWidth;
+            const height = canvas.height = window.innerHeight;
+            
+            if (confettiAnimationId) cancelAnimationFrame(confettiAnimationId);
+            
+            const colors = ['#FF6B8B', '#FF8E9E', '#FB923C', '#4DCC93', '#5AB9EA', '#FBBF24', '#A78BFA'];
+            const particles = [];
+            
+            // 50 hạt bên trái bắn lên
+            for (let i = 0; i < 50; i++) {
+                particles.push({
+                    x: 0,
+                    y: height,
+                    vx: 6 + Math.random() * 8,
+                    vy: -12 - Math.random() * 12,
+                    g: 0.18 + Math.random() * 0.12,
+                    size: 6 + Math.random() * 6,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    rot: Math.random() * 360,
+                    rotSpeed: -4 + Math.random() * 8,
+                    swaySpeed: 0.04 + Math.random() * 0.04,
+                    swayOffset: Math.random() * 10
+                });
+            }
+            // 50 hạt bên phải bắn lên
+            for (let i = 0; i < 50; i++) {
+                particles.push({
+                    x: width,
+                    y: height,
+                    vx: -6 - Math.random() * 8,
+                    vy: -12 - Math.random() * 12,
+                    g: 0.18 + Math.random() * 0.12,
+                    size: 6 + Math.random() * 6,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    rot: Math.random() * 360,
+                    rotSpeed: -4 + Math.random() * 8,
+                    swaySpeed: 0.04 + Math.random() * 0.04,
+                    swayOffset: Math.random() * 10
+                });
+            }
+            
+            let frame = 0;
+            function update() {
+                ctx.clearRect(0, 0, width, height);
+                let alive = false;
+                
+                for (let i = 0; i < particles.length; i++) {
+                    const p = particles[i];
+                    if (p.y > height + 20) continue;
+                    
+                    alive = true;
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.vy += p.g;
+                    p.vx *= 0.98;
+                    p.rot += p.rotSpeed;
+                    p.x += Math.sin(frame * p.swaySpeed + p.swayOffset) * 0.5;
+                    
+                    ctx.save();
+                    ctx.translate(p.x, p.y);
+                    ctx.rotate(p.rot * Math.PI / 180);
+                    ctx.fillStyle = p.color;
+                    ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+                    ctx.restore();
+                }
+                
+                frame++;
+                if (alive) {
+                    confettiAnimationId = requestAnimationFrame(update);
+                } else {
+                    ctx.clearRect(0, 0, width, height);
+                }
+            }
+            
+            confettiAnimationId = requestAnimationFrame(update);
+        }
+
         // Tự động chuyển hướng từ 127.0.0.1 sang localhost để tránh lệch origin localStorage
         if (window.location.hostname === '127.0.0.1') {
             window.location.replace(window.location.href.replace('127.0.0.1', 'localhost'));
@@ -7078,10 +7179,7 @@
             isPlaying: false
         };
         let currentRemainingTime = 999999;
-        let spotifyEmbedController = null;
-        let currentSpotifyId = null;
-        let isSpotifySdkLoaded = false;
-        let pendingSpotifyTrackId = null;
+        
         let soundCloudWidget = null;
         let currentSoundCloudUrl = null;
         let isSoundCloudSdkLoaded = false;
@@ -7096,12 +7194,13 @@
         let directAudioSessionId = 0;
         let directAudioResolveController = null;
 
-        function publishOverlayPlaybackState(currentTime, duration, isPlaying, force = false) {
+        function publishOverlayPlaybackState(currentTime, duration, isPlaying, force = false, isBuffering = false) {
             const payload = {
                 currentTime: Number.isFinite(currentTime) ? currentTime : 0,
                 duration: Number.isFinite(duration) ? duration : 0,
                 isLive: false,
                 isPlaying: !!isPlaying,
+                isBuffering: !!isBuffering,
                 isDirectStream: isDirectAudioPlaying,
                 sentAt: Date.now(),
                 timestamp: Date.now()
@@ -7115,6 +7214,7 @@
                     duration: payload.duration,
                     isLive: false,
                     isPlaying: payload.isPlaying,
+                    isBuffering: payload.isBuffering,
                     isDirectStream: payload.isDirectStream,
                     sentAt: payload.sentAt
                 });
@@ -7139,8 +7239,14 @@
         function applyMarquee(containerEl, textEl, text, baseSpeed = 30) {
             if (!containerEl || !textEl) return;
             
+            if (textEl._marqueeAnimation) {
+                textEl._marqueeAnimation.cancel();
+                textEl._marqueeAnimation = null;
+            }
             textEl.classList.remove('marquee');
+            textEl.style.animation = '';
             textEl.style.animationDuration = '0s';
+            textEl.style.transform = 'translate3d(0, 0, 0)';
             textEl.style.display = 'inline-block';
             textEl.style.overflow = 'hidden';
             textEl.textContent = text;
@@ -7148,12 +7254,30 @@
             setTimeout(() => {
                 const containerWidth = containerEl.offsetWidth;
                 const textWidth = textEl.scrollWidth;
-                if (textWidth > containerWidth) {
-                    textEl.innerHTML = `<span style="padding-right: 2rem;">${text}</span><span style="padding-right: 2rem;">${text}</span>`;
-                    textEl.classList.add('marquee');
-                    textEl.style.animationDuration = `${Math.max(5, textWidth / baseSpeed)}s`;
+                if (textWidth > containerWidth || (containerWidth <= 0 && text.length > 20)) {
+                    textEl.textContent = '';
+                    const firstCopy = document.createElement('span');
+                    const secondCopy = document.createElement('span');
+                    firstCopy.textContent = text;
+                    secondCopy.textContent = text;
+                    firstCopy.style.paddingRight = '2rem';
+                    secondCopy.style.paddingRight = '2rem';
+                    textEl.append(firstCopy, secondCopy);
+
+                    const cycleWidth = firstCopy.getBoundingClientRect().width || textWidth;
+                    const durationMs = Math.max(8000, (cycleWidth / baseSpeed) * 1000);
+                    textEl.style.setProperty('--obs-marquee-duration', `${durationMs / 1000}s`);
                     textEl.style.display = 'inline-block';
                     textEl.style.overflow = 'visible';
+                    textEl.style.animation = 'none';
+                    textEl._marqueeAnimation = textEl.animate([
+                        { transform: 'translate3d(0, 0, 0)' },
+                        { transform: `translate3d(${-cycleWidth}px, 0, 0)` }
+                    ], {
+                        duration: durationMs,
+                        easing: 'linear',
+                        iterations: Infinity
+                    });
                 } else {
                     textEl.style.display = 'inline-block';
                     textEl.style.overflow = 'hidden';
@@ -7968,110 +8092,6 @@
             }
         }
 
-        function loadSpotifySdk() {
-            if (isSpotifySdkLoaded) return;
-            isSpotifySdkLoaded = true;
-            
-            window.onSpotifyIframeApiReady = (IFrameAPI) => {
-                window.SpotifyIframeAPI = IFrameAPI;
-                if (pendingSpotifyTrackId) {
-                    playSpotifyTrack(pendingSpotifyTrackId);
-                    pendingSpotifyTrackId = null;
-                }
-            };
-            
-            const script = document.createElement('script');
-            script.src = 'https://open.spotify.com/embed/iframe-api/v1';
-            script.async = true;
-            document.body.appendChild(script);
-        }
-
-        function playSpotifyTrack(trackId) {
-            if (!window.SpotifyIframeAPI) {
-                pendingSpotifyTrackId = trackId;
-                loadSpotifySdk();
-                return;
-            }
-            
-            if (spotifyEmbedController) {
-                if (currentSpotifyId !== trackId) {
-                    currentSpotifyId = trackId;
-                    spotifyEmbedController.loadUri(`spotify:track:${trackId}`);
-                    setTimeout(() => {
-                        try {
-                            spotifyEmbedController.play();
-                            if (localIsResuming && resumeTargetTime > 0) {
-                                spotifyEmbedController.seek(resumeTargetTime);
-                            }
-                        } catch(e){}
-                    }, 500);
-                } else {
-                    try {
-                        spotifyEmbedController.play();
-                        if (localIsResuming && resumeTargetTime > 0) {
-                            spotifyEmbedController.seek(resumeTargetTime);
-                        }
-                    } catch(e){}
-                }
-            } else {
-                currentSpotifyId = trackId;
-                const options = {
-                    width: '100%',
-                    height: '100%',
-                    uri: `spotify:track:${trackId}`
-                };
-                window.SpotifyIframeAPI.createController(document.getElementById('obs-spotify-placeholder'), options, (EmbedController) => {
-                    spotifyEmbedController = EmbedController;
-                    
-                    spotifyEmbedController.addListener('playback_update', (e) => {
-                        if (!e.data) return;
-                        lastSongLoadStartTimestamp = 0; // Reset loader watchdog
-                        
-                        let isSongActive = false;
-                        try {
-                            const songRaw = localStorage.getItem('dua_current_song');
-                            if (songRaw) {
-                                const song = JSON.parse(songRaw);
-                                isSongActive = song.type === 'spotify';
-                            }
-                        } catch(err){}
-                        if (!isSongActive) return;
-                        
-                        const currentTime = e.data.position / 1000;
-                        const duration = e.data.duration / 1000;
-                        const isPlaying = !e.data.isPaused;
-                        
-                        currentPlayback.currentTime = currentTime;
-                        currentPlayback.duration = duration;
-                        currentPlayback.isPlaying = isPlaying;
-                        
-                        updateTrackProgress(currentTime, duration, isPlaying);
-                        
-                        if (isPlaying && duration > 0 && e.data.position >= e.data.duration - 500) {
-                            console.log("Spotify: Kết thúc bài hát.");
-                            triggerEndedEvent();
-                            return;
-                        }
-
-                        // Tự động chuyển bài khi kết thúc 30s preview của Spotify (nếu không có Premium)
-                        if (e.data.isPaused && e.data.position >= 29000 && lastCommandType !== 'pause' && lastCommandType !== 'stop') {
-                            console.log("Spotify: Đã phát hết 30s preview (chưa đăng nhập Premium). Chuyển bài...");
-                            triggerEndedEvent();
-                        }
-                    });
-                    
-                    setTimeout(() => {
-                        try {
-                            spotifyEmbedController.play();
-                            if (localIsResuming && resumeTargetTime > 0) {
-                                spotifyEmbedController.seek(resumeTargetTime);
-                            }
-                        } catch(e){}
-                    }, 1000);
-                });
-            }
-        }
-
         function loadSoundCloudSdk(callback) {
             if (isSoundCloudSdkLoaded) {
                 if (callback) callback();
@@ -8430,6 +8450,7 @@
             const streamApiUrl = `/api/yt-stream?videoId=${videoId}`;
             let autoplayRetryTimer = null;
             let autoplayRetryCount = 0;
+            let autoplayAttemptInFlight = false;
             const sessionId = ++directAudioSessionId;
             const existingDirectVideoId = currentDirectVideoId;
             if (directAudioResolveController) {
@@ -8440,12 +8461,15 @@
             isDirectAudioPlaying = true;
             currentDirectVideoId = videoId;
             directAudioShouldPlay = !!shouldPlay;
+            if (directAudioShouldPlay) {
+                lastCommandType = 'play';
+            }
             currentPlayback.currentTime = startTime || 0;
             currentPlayback.duration = 0;
             currentPlayback.isPlaying = false;
             isLiveStream = false;
             lastSongLoadStartTimestamp = Date.now(); // reset watchdog load timestamp
-            publishOverlayPlaybackState(startTime || 0, 0, false, true);
+            publishOverlayPlaybackState(startTime || 0, 0, directAudioShouldPlay, true, true);
 
             const clearAutoplayRetry = () => {
                 if (autoplayRetryTimer) {
@@ -8465,6 +8489,7 @@
                 clearAutoplayRetry();
                 if (!isActiveDirectSession()) return;
                 if (!directAudioShouldPlay) return;
+                if (autoplayAttemptInFlight) return;
 
                 const startAt = Math.max(0, Number(startTime) || 0);
                 try {
@@ -8478,8 +8503,10 @@
                 directAudioPlayer.autoplay = true;
                 directAudioPlayer.muted = true;
 
+                autoplayAttemptInFlight = true;
                 const playResult = directAudioPlayer.play();
                 if (!playResult || typeof playResult.then !== 'function') {
+                    autoplayAttemptInFlight = false;
                     console.log("Direct stream audio playback requested (non-promise play()).");
                     currentPlayback.isPlaying = true;
                     currentPlayback.currentTime = directAudioPlayer.currentTime || startAt;
@@ -8494,6 +8521,7 @@
 
                 playResult
                     .then(() => {
+                        autoplayAttemptInFlight = false;
                         console.log("Direct stream audio playback started.");
                         currentPlayback.isPlaying = true;
                         currentPlayback.currentTime = directAudioPlayer.currentTime || startAt;
@@ -8505,6 +8533,7 @@
                         publishOverlayPlaybackState(currentPlayback.currentTime, currentPlayback.duration, true, true);
                     })
                     .catch(err => {
+                        autoplayAttemptInFlight = false;
                         console.error("Error playing direct audio stream:", err);
                         currentPlayback.isPlaying = false;
                         publishOverlayPlaybackState(directAudioPlayer.currentTime || startAt, directAudioPlayer.duration || 0, false, true);
@@ -8593,6 +8622,12 @@
                         let activeVol = localIsResuming ? 0 : targetVolume;
                         directAudioPlayer.volume = activeVol / 100;
                         directAudioPlayer.muted = true;
+
+                        // Calling play immediately also starts network loading on
+                        // Chromium media elements. Readiness events remain as retries.
+                        if (directAudioShouldPlay) {
+                            tryStartDirectPlayback();
+                        }
 
                         if (directAudioPlayer.readyState >= 1) {
                             syncDirectPlaybackOnReady();
@@ -8883,7 +8918,7 @@
             try {
                 if (overlayPlayer && typeof overlayPlayer.pauseVideo === 'function') overlayPlayer.pauseVideo();
                 if (soundCloudWidget) soundCloudWidget.pause();
-                if (spotifyEmbedController) spotifyEmbedController.pause();
+                
                 if (directAudioPlayer) directAudioPlayer.pause();
             } catch(e) {}
 
@@ -9185,7 +9220,7 @@
                 try {
                     if (overlayPlayer && typeof overlayPlayer.pauseVideo === 'function') overlayPlayer.pauseVideo();
                     if (soundCloudWidget) soundCloudWidget.pause();
-                    if (spotifyEmbedController) spotifyEmbedController.pause();
+                    
                     if (directAudioPlayer) directAudioPlayer.pause();
                 } catch(e){}
                 // Hiện overlay chờ với nội dung phù hợp
@@ -9211,22 +9246,7 @@
                 }
             } catch(e){}
 
-            if (songType === 'spotify') {
-                if (!spotifyEmbedController) return;
-                if (command.type === 'play') {
-                    if (!currentPlayback.isPlaying) {
-                        try { spotifyEmbedController.play(); } catch(e){}
-                    }
-                } else if (command.type === 'pause') {
-                    if (currentPlayback.isPlaying) {
-                        try { spotifyEmbedController.pause(); } catch(e){}
-                    }
-                } else if (command.type === 'seek') {
-                    try { spotifyEmbedController.seek(command.value); } catch(e){}
-                } else if (command.type === 'stop') {
-                    try { spotifyEmbedController.pause(); } catch(e){}
-                }
-            } else if (songType === 'soundcloud') {
+            if (songType === 'soundcloud') {
                 if (!soundCloudWidget) return;
                 if (command.type === 'play') {
                     if (!currentPlayback.isPlaying) {
@@ -9598,7 +9618,7 @@
                 try {
                     if (overlayPlayer && typeof overlayPlayer.pauseVideo === 'function') overlayPlayer.pauseVideo();
                     if (soundCloudWidget) soundCloudWidget.pause();
-                    if (spotifyEmbedController) spotifyEmbedController.pause();
+                    
                     if (directAudioPlayer) directAudioPlayer.pause();
                 } catch(e){}
                 stopDirectAudioStream();
@@ -10075,9 +10095,7 @@
                         overlayPlayer = null;
                         document.getElementById('obs-youtube-area').innerHTML = '<div id="obs-youtube-placeholder"></div>';
                     }
-                    if (spotifyEmbedController) {
-                        try { spotifyEmbedController.pause(); } catch(e){}
-                    }
+                    
                     if (soundCloudWidget) {
                         try { soundCloudWidget.pause(); } catch(e){}
                     }
@@ -10209,9 +10227,7 @@
                     if (overlayPlayer && typeof overlayPlayer.pauseVideo === 'function') {
                         try { overlayPlayer.pauseVideo(); } catch(e){}
                     }
-                    if (spotifyEmbedController) {
-                        try { spotifyEmbedController.pause(); } catch(e){}
-                    }
+                    
                     if (soundCloudWidget) {
                         try { soundCloudWidget.pause(); } catch(e){}
                     }
@@ -10528,9 +10544,7 @@
                     if (overlayPlayer && typeof overlayPlayer.pauseVideo === 'function') {
                         try { overlayPlayer.pauseVideo(); } catch(e){}
                     }
-                    if (spotifyEmbedController) {
-                        try { spotifyEmbedController.pause(); } catch(e){}
-                    }
+                    
                     stopDirectAudioStream();
                     
                     // Phát SoundCloud
@@ -10541,9 +10555,7 @@
                     }
                 } else {
                     // Mặc định: YouTube
-                    if (spotifyEmbedController) {
-                        try { spotifyEmbedController.pause(); } catch(e){}
-                    }
+                    
                     if (soundCloudWidget) {
                         try { soundCloudWidget.pause(); } catch(e){}
                     }
@@ -11084,6 +11096,24 @@
             // Sync alert action text for the new modern badge as well
             updateAlertActionTextDisplay();
 
+            // Hiệu ứng sinh nhật và pháo giấy
+            const birthdayLayer = document.getElementById('birthday-alert-layer');
+            const birthdayDonorText = document.getElementById('birthday-alert-donor-text');
+            const birthdayTitle = document.getElementById('birthday-alert-title');
+            if (false && birthdayLayer && birthdayDonorText && birthdayTitle) {
+                birthdayDonorText.textContent = `${donorText} đã gửi tặng nhạc sinh nhật!`;
+                birthdayLayer.style.opacity = '1';
+                birthdayTitle.style.transform = 'translateY(0)';
+                
+                startBirthdayConfetti();
+                
+                if (window.birthdayTimeout) clearTimeout(window.birthdayTimeout);
+                window.birthdayTimeout = setTimeout(() => {
+                    birthdayLayer.style.opacity = '0';
+                    birthdayTitle.style.transform = 'translateY(-20px)';
+                }, 5200);
+            }
+
             const widget = document.getElementById('obs-player-widget');
             if (widget) {
                 widget.classList.add('alert-active');
@@ -11394,10 +11424,7 @@
                 return;
             }
             console.log("Overlay: Người dùng đã tương tác click. Kích hoạt phát lại các trình phát...");
-            // Giải phóng Spotify
-            if (spotifyEmbedController) {
-                try { spotifyEmbedController.play(); } catch(e){}
-            }
+            
             // Giải phóng SoundCloud
             if (soundCloudWidget) {
                 try { soundCloudWidget.play(); } catch(e){}

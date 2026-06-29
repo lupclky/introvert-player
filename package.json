@@ -1,6 +1,6 @@
 {
   "name": "introvert-player",
-  "version": "26.8.0",
+  "version": "26.10.23",
   "description": "Pineapple Studio",
   "main": "main.js",
   "scripts": {
@@ -8,7 +8,7 @@
     "dev": "electron .",
     "build": "electron-builder --win --publish never"
   },
-  "author": "Introvert",
+  "author": "Pineapple Team with Introvert and Lacy",
   "license": "ISC",
   "build": {
     "appId": "com.introvert.player",

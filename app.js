@@ -97,6 +97,229 @@ let playbackMonitorInterval = null;
 let lastPlayedVideoId = null;
 let searchTimeout = null;
 
+const KEYWORD_SHORTCUTS_STORAGE_KEY = 'dua_keyword_shortcuts';
+const FAVORITE_SONGS_STORAGE_KEY = 'dua_favorite_songs';
+let keywordSettingsSearchTimeout = null;
+let selectedKeywordVideo = null;
+let keywordShortcuts = loadKeywordShortcuts();
+let favoriteSongs = loadFavoriteSongs();
+
+function normalizeKeyword(value) {
+    return String(value || '').normalize('NFC').trim().replace(/\s+/g, ' ').toLocaleLowerCase('vi-VN');
+}
+
+function foldKeyword(value) {
+    return normalizeKeyword(value)
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/đ/g, 'd');
+}
+
+function updateRangeProgress(slider, value) {
+    if (!slider) return;
+    const numericValue = Number(value);
+    const min = Number(slider.min || 0);
+    const max = Number(slider.max || 100);
+    const safeValue = Number.isFinite(numericValue) ? Math.min(max, Math.max(min, numericValue)) : min;
+    const percent = max > min ? ((safeValue - min) / (max - min)) * 100 : 0;
+    slider.style.setProperty('--range-progress', `${percent}%`);
+}
+
+function loadKeywordShortcuts() {
+    try {
+        const parsed = JSON.parse(localStorage.getItem(KEYWORD_SHORTCUTS_STORAGE_KEY) || '[]');
+        return Array.isArray(parsed) ? parsed.filter(item => item && item.keyword && item.videoId) : [];
+    } catch (error) {
+        console.warn('Không thể đọc danh sách keyword:', error);
+        return [];
+    }
+}
+
+function saveKeywordShortcutsToStorage() {
+    localStorage.setItem(KEYWORD_SHORTCUTS_STORAGE_KEY, JSON.stringify(keywordShortcuts));
+}
+
+function loadFavoriteSongs() {
+    try {
+        const parsed = JSON.parse(localStorage.getItem(FAVORITE_SONGS_STORAGE_KEY) || '[]');
+        return Array.isArray(parsed) ? parsed.filter(item => item && item.videoId) : [];
+    } catch (error) {
+        console.warn('Không thể đọc danh sách yêu thích:', error);
+        return [];
+    }
+}
+
+function saveFavoriteSongs() {
+    localStorage.setItem(FAVORITE_SONGS_STORAGE_KEY, JSON.stringify(favoriteSongs));
+}
+
+function isFavoriteSong(videoId) {
+    return favoriteSongs.some(item => String(item.videoId) === String(videoId));
+}
+
+function normalizeLibraryVideo(video) {
+    return {
+        videoId: video.videoId,
+        title: video.title || `YouTube (${video.videoId})`,
+        thumbnail: video.thumbnail || `https://img.youtube.com/vi/${video.videoId}/hqdefault.jpg`,
+        author: video.author || '',
+        duration: video.duration || '',
+        views: video.views || '',
+        keyword: video.shortcutKeyword || video.keyword || '',
+        savedAt: Date.now()
+    };
+}
+
+function toggleFavoriteSong(video) {
+    if (!video || !video.videoId) return false;
+    const index = favoriteSongs.findIndex(item => String(item.videoId) === String(video.videoId));
+    let added = false;
+    if (index >= 0) {
+        favoriteSongs.splice(index, 1);
+    } else {
+        favoriteSongs.unshift(normalizeLibraryVideo(video));
+        added = true;
+    }
+    saveFavoriteSongs();
+    renderKeywordLibrary();
+    updateCurrentFavoriteButton();
+    return added;
+}
+
+function updateCurrentFavoriteButton() {
+    const button = document.getElementById('btn-favorite-current');
+    if (!button) return;
+    const song = state.currentSong;
+    const canFavorite = !!(song && (song.type || 'youtube') === 'youtube' && song.videoId);
+    button.style.display = canFavorite ? 'inline-flex' : 'none';
+    if (!canFavorite) return;
+    const favorite = isFavoriteSong(song.videoId);
+    button.classList.toggle('favorite-active', favorite);
+    button.innerHTML = `<i class="${favorite ? 'fa-solid' : 'fa-regular'} fa-heart"></i><span>${favorite ? 'Đã yêu thích' : 'Yêu thích'}</span>`;
+    button.title = favorite ? 'Bỏ bài đang phát khỏi danh sách yêu thích' : 'Thêm bài đang phát vào danh sách yêu thích';
+}
+
+function toggleCurrentSongFavorite() {
+    if (!state.currentSong || !state.currentSong.videoId) return;
+    toggleFavoriteSong(state.currentSong);
+}
+
+function updateCurrentKeywordButton() {
+    const button = document.getElementById('btn-save-current-keyword');
+    if (!button) return;
+    const song = state.currentSong;
+    button.style.display = song && (song.type || 'youtube') === 'youtube' && song.videoId ? 'inline-flex' : 'none';
+}
+
+function saveCurrentSongKeyword() {
+    if (!state.currentSong || !state.currentSong.videoId) return;
+    openSaveKeywordForVideo(state.currentSong);
+}
+
+function openSaveKeywordForVideo(video) {
+    if (!video || !video.videoId) return;
+    const oldModal = document.getElementById('save-video-keyword-modal');
+    if (oldModal) oldModal.remove();
+
+    const normalizedVideo = normalizeLibraryVideo(video);
+    const existing = keywordShortcuts.find(item => String(item.videoId) === String(video.videoId));
+    const modal = document.createElement('div');
+    modal.id = 'save-video-keyword-modal';
+    modal.className = 'save-video-keyword-modal';
+    modal.innerHTML = `
+        <form class="save-video-keyword-card">
+            <h3>Lưu keyword</h3>
+            <p title="${escapeKeywordHtml(normalizedVideo.title)}">${escapeKeywordHtml(normalizedVideo.title)}</p>
+            <input class="dua-input" type="text" maxlength="80" autocomplete="off" placeholder="Nhập keyword..." value="${escapeKeywordHtml(existing ? existing.keyword : '')}">
+            <div>
+                <button type="button" class="dua-btn keyword-modal-cancel">Hủy</button>
+                <button type="submit" class="dua-btn dua-btn-primary">Lưu</button>
+            </div>
+        </form>`;
+    document.body.appendChild(modal);
+
+    const form = modal.querySelector('form');
+    const input = modal.querySelector('input');
+    const close = () => modal.remove();
+    modal.querySelector('.keyword-modal-cancel').addEventListener('click', close);
+    modal.addEventListener('click', event => {
+        if (event.target === modal) close();
+    });
+    form.addEventListener('submit', event => {
+        event.preventDefault();
+        const keyword = input.value.trim().replace(/\s+/g, ' ');
+        if (!keyword) return input.focus();
+        const shortcut = {
+            id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+            ...normalizedVideo,
+            keyword,
+            updatedAt: Date.now()
+        };
+        const existingIndex = keywordShortcuts.findIndex(item => normalizeKeyword(item.keyword) === normalizeKeyword(keyword));
+        if (existingIndex >= 0) {
+            shortcut.id = keywordShortcuts[existingIndex].id;
+            keywordShortcuts.splice(existingIndex, 1, shortcut);
+        } else {
+            keywordShortcuts.unshift(shortcut);
+        }
+        saveKeywordShortcutsToStorage();
+        renderKeywordShortcutList();
+        close();
+    });
+    requestAnimationFrame(() => {
+        input.focus({ preventScroll: true });
+        input.select();
+    });
+}
+
+function findKeywordShortcut(query) {
+    const normalized = normalizeKeyword(query);
+    if (!normalized) return null;
+    return keywordShortcuts.find(item => normalizeKeyword(item.keyword) === normalized) || null;
+}
+
+function findKeywordSuggestions(query, limit = 5) {
+    const foldedQuery = foldKeyword(query);
+    if (foldedQuery.length < 2) return [];
+
+    return keywordShortcuts
+        .map((shortcut, index) => {
+            const foldedKeyword = foldKeyword(shortcut.keyword);
+            let rank = 99;
+            if (foldedKeyword === foldedQuery) rank = 0;
+            else if (foldedKeyword.startsWith(foldedQuery)) rank = 1;
+            else if (foldedKeyword.split(' ').some(word => word.startsWith(foldedQuery))) rank = 2;
+            else if (foldedKeyword.includes(foldedQuery)) rank = 3;
+            return { shortcut, rank, index };
+        })
+        .filter(item => item.rank < 99)
+        .sort((a, b) => a.rank - b.rank || a.shortcut.keyword.length - b.shortcut.keyword.length || a.index - b.index)
+        .slice(0, limit)
+        .map(item => item.shortcut);
+}
+
+function keywordShortcutToVideo(shortcut) {
+    if (!shortcut) return null;
+    return {
+        videoId: shortcut.videoId,
+        title: shortcut.title || `YouTube (${shortcut.videoId})`,
+        thumbnail: shortcut.thumbnail || `https://img.youtube.com/vi/${shortcut.videoId}/hqdefault.jpg`,
+        author: shortcut.author || 'Video đã gắn keyword',
+        duration: shortcut.duration || '',
+        views: shortcut.views || '',
+        url: `https://www.youtube.com/watch?v=${shortcut.videoId}`,
+        isKeywordShortcut: true,
+        shortcutKeyword: shortcut.keyword
+    };
+}
+
+function prioritizeKeywordVideo(query, videos = []) {
+    const shortcutVideos = findKeywordSuggestions(query).map(keywordShortcutToVideo);
+    if (shortcutVideos.length === 0) return videos;
+    const shortcutIds = new Set(shortcutVideos.map(video => video.videoId));
+    return [...shortcutVideos, ...videos.filter(video => video && !shortcutIds.has(video.videoId))];
+}
+
 // Khởi tạo trạng thái trống (không lưu các bài hát đã order từ phiên trước)
 const state = {
     queue: (() => {
@@ -649,8 +872,11 @@ function checkAndApplyVoteSkip(donation) {
         markMusicKeyAsEnded(donation.id);
     }
 
-    // Ghi nhận lịch sử
-    handleNewDonation(donation, false);
+    // Ghi nhận lịch sử và vẫn phát thông báo donate khi lượt này được dùng cho Vote Skip
+    donation.isVoteSkip = true;
+    donation.voteSkipCurrent = state.currentSong.voteAmount;
+    donation.voteSkipTarget = target;
+    handleNewDonation(donation, true);
 
     if (state.currentSong.voteAmount >= target) {
         if (state.currentSong.voteSkipSuccess) return true;
@@ -1451,18 +1677,13 @@ function setupDashboardPlayerLayout() {
     }
 
     const queueCard = document.getElementById('card-queue');
-    if (queueCard && playerLeftColumn && queueCard.parentElement !== playerLeftColumn) {
-        const sensitiveWarning = document.getElementById('dash-sensitive-warning');
-        if (toolsBody && toolsBody.parentElement === playerLeftColumn) {
-            if (sensitiveWarning && sensitiveWarning.parentElement === playerLeftColumn) {
-                playerLeftColumn.insertBefore(queueCard, sensitiveWarning.nextSibling);
-            } else {
-                playerLeftColumn.insertBefore(queueCard, toolsBody.nextSibling);
-            }
-        } else if (sensitiveWarning && sensitiveWarning.parentElement === playerLeftColumn) {
-            playerLeftColumn.insertBefore(queueCard, sensitiveWarning.nextSibling);
-        } else {
+    if (queueCard && playerLeftColumn) {
+        if (queueCard.parentElement !== playerLeftColumn) {
             playerLeftColumn.appendChild(queueCard);
+        }
+        // Luôn cố định Công cụ bài đang phát ngay phía trên Hàng đợi nhạc.
+        if (toolsCard && (toolsCard.parentElement !== playerLeftColumn || toolsCard.nextElementSibling !== queueCard)) {
+            playerLeftColumn.insertBefore(toolsCard, queueCard);
         }
     }
 
@@ -1481,9 +1702,16 @@ function updateMiniPlayerTitleMarquee() {
     if (!title.closest('.mini-floating-player')) return;
 
     requestAnimationFrame(() => {
-        if (title.scrollWidth > title.clientWidth + 8) {
-            title.dataset.title = title.textContent.trim();
+        const titleText = title.textContent.trim();
+        const availableWidth = title.parentElement?.clientWidth || title.clientWidth;
+        const contentWidth = title.scrollWidth;
+        if (contentWidth > availableWidth + 8) {
+            title.dataset.title = titleText;
+            const duration = Math.max(14, contentWidth / 22);
+            title.style.setProperty('--mini-marquee-duration', `${duration.toFixed(1)}s`);
             title.classList.add('marquee');
+        } else {
+            title.style.removeProperty('--mini-marquee-duration');
         }
     });
 }
@@ -1601,6 +1829,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const volSlider = document.getElementById('volume-slider');
     if (volSlider) {
         volSlider.value = state.volume;
+        updateRangeProgress(volSlider, state.volume);
         document.getElementById('volume-val-display').textContent = state.volume + '%';
         
         // Khởi tạo icon mute khi load trang
@@ -2504,10 +2733,16 @@ document.addEventListener("DOMContentLoaded", () => {
             }
             
             searchResultsContainer.style.display = 'flex';
+            const keywordMatches = findKeywordSuggestions(query);
+            if (keywordMatches.length > 0) {
+                renderSearchResults(keywordMatches.map(keywordShortcutToVideo), 'quick-add-search-results');
+            }
             
             // Trì hoãn 350ms để tăng tốc độ phản hồi tìm kiếm (debounce)
             searchTimeout = setTimeout(async () => {
-                searchResultsContainer.innerHTML = '<div style="padding: 10px; text-align: center; font-weight: 700; color: var(--pineapple-text); display: flex; align-items: center; justify-content: center; gap: 0.5rem;"><svg class="m3-spinner" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5" fill="none"></circle></svg> Đang tìm kiếm trên YouTube...</div>';
+                if (keywordMatches.length === 0) {
+                    searchResultsContainer.innerHTML = '<div style="padding: 10px; text-align: center; font-weight: 700; color: var(--pineapple-text); display: flex; align-items: center; justify-content: center; gap: 0.5rem;"><svg class="m3-spinner" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5" fill="none"></circle></svg> Đang tìm kiếm trên YouTube...</div>';
+                }
                 
                 try {
                     const result = await callYouTubeSearch(query);
@@ -2521,7 +2756,9 @@ document.addEventListener("DOMContentLoaded", () => {
                         return; // Bỏ qua nếu request này bị hủy bởi request mới hơn
                     }
                     if (result && result.success && result.videos && result.videos.length > 0) {
-                        renderSearchResults(result.videos, 'quick-add-search-results');
+                        renderSearchResults(prioritizeKeywordVideo(query, result.videos), 'quick-add-search-results');
+                    } else if (keywordMatches.length > 0) {
+                        renderSearchResults(keywordMatches.map(keywordShortcutToVideo), 'quick-add-search-results');
                     } else if (result && result.error) {
                         searchResultsContainer.innerHTML = `<div style="padding: 10px; text-align: center; color: var(--pineapple-error); font-weight: 700;">Lỗi: ${result.error}</div>`;
                     } else {
@@ -2557,6 +2794,9 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
     }
+
+    setupKeywordSettings();
+    renderKeywordLibrary();
 
 
 
@@ -2660,17 +2900,44 @@ document.addEventListener("DOMContentLoaded", () => {
     const donorUrlInput = document.getElementById('donor-url');
     const quickAddPopover = document.getElementById('quick-add-popover');
     const quickAddForm = document.getElementById('quick-add-form');
+    const quickAddSearchWrapper = quickAddForm ? quickAddForm.querySelector('.search-input-wrapper') : null;
 
     if (donorUrlInput && quickAddPopover) {
+        const openQuickAddPopover = () => {
+            const notificationDropdown = document.getElementById('notification-center-dropdown');
+            if (notificationDropdown) notificationDropdown.classList.remove('visible');
+            quickAddPopover.classList.add('visible');
+            donorUrlInput.setAttribute('aria-expanded', 'true');
+        };
+
+        const focusQuickAddInput = (event) => {
+            if (event && event.target && event.target.closest('#search-clear-btn')) return;
+            if (window.electronAPI && typeof window.electronAPI.focusWindow === 'function') {
+                window.electronAPI.focusWindow();
+            }
+            openQuickAddPopover();
+            if (!event || event.target !== donorUrlInput) {
+                if (event) event.preventDefault();
+                requestAnimationFrame(() => donorUrlInput.focus({ preventScroll: true }));
+            }
+        };
+
+        // Toàn bộ khung search đều có thể click để nhập, không chỉ riêng phần chữ.
+        if (quickAddSearchWrapper) {
+            quickAddSearchWrapper.addEventListener('mousedown', focusQuickAddInput);
+            quickAddSearchWrapper.addEventListener('click', focusQuickAddInput);
+        }
+
         // Hiển thị popover khi focus vào ô tìm kiếm/nhập link
         donorUrlInput.addEventListener('focus', () => {
-            quickAddPopover.classList.add('visible');
+            openQuickAddPopover();
         });
 
         // Ẩn popover khi click ra ngoài form
         document.addEventListener('click', (e) => {
             if (quickAddForm && !quickAddForm.contains(e.target)) {
                 quickAddPopover.classList.remove('visible');
+                donorUrlInput.setAttribute('aria-expanded', 'false');
             }
         });
 
@@ -2678,6 +2945,7 @@ document.addEventListener("DOMContentLoaded", () => {
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 quickAddPopover.classList.remove('visible');
+                donorUrlInput.setAttribute('aria-expanded', 'false');
                 donorUrlInput.blur();
             }
         });
@@ -2960,21 +3228,6 @@ function parseYoutubeId(url) {
     return (match && match[2].length === 11) ? match[2] : null;
 }
 
-// --- TRÍCH XUẤT SPOTIFY TRACK ID ---
-function parseSpotifyTrackId(url) {
-    if (!url) return null;
-    const cleanUrl = url.trim();
-    const regExp = /open\.spotify\.com\/track\/([a-zA-Z0-9]+)/;
-    const match = cleanUrl.match(regExp);
-    if (match && match[1]) return match[1];
-    
-    const uriReg = /spotify:track:([a-zA-Z0-9]+)/;
-    const uriMatch = cleanUrl.match(uriReg);
-    if (uriMatch && uriMatch[1]) return uriMatch[1];
-    
-    return null;
-}
-
 // --- THÊM BÀI HÁT NHANH BẰNG LINK ---
 async function handleQuickAddSubmit(event) {
     event.preventDefault();
@@ -2990,8 +3243,14 @@ async function handleQuickAddSubmit(event) {
         searchTimeout = null;
     }
     
-    const isUrl = url.startsWith('http://') || url.startsWith('https://') || url.startsWith('spotify:');
+    const isUrl = url.startsWith('http://') || url.startsWith('https://');
     if (!isUrl) {
+        const keywordMatch = findKeywordShortcut(url);
+        if (keywordMatch) {
+            addSearchResultToQueue(keywordShortcutToVideo(keywordMatch));
+            return;
+        }
+
         const searchResultsContainer = document.getElementById('quick-add-search-results');
         if (searchResultsContainer && searchResultsContainer.style.display !== 'none' && searchResultsContainer.dataset.query === url) {
             const firstItem = searchResultsContainer.querySelector('.search-result-item');
@@ -3007,8 +3266,9 @@ async function handleQuickAddSubmit(event) {
             try {
                 const result = await callYouTubeSearch(url);
                 if (result && result.success && result.videos && result.videos.length > 0) {
-                    renderSearchResults(result.videos, 'quick-add-search-results');
-                    addSearchResultToQueue(result.videos[0]);
+                    const prioritizedVideos = prioritizeKeywordVideo(url, result.videos);
+                    renderSearchResults(prioritizedVideos, 'quick-add-search-results');
+                    addSearchResultToQueue(prioritizedVideos[0]);
                 } else if (result && result.error) {
                     searchResultsContainer.innerHTML = `<div style="padding: 10px; text-align: center; color: var(--pineapple-error); font-weight: 700;">Lỗi: ${result.error}</div>`;
                 } else {
@@ -3023,7 +3283,7 @@ async function handleQuickAddSubmit(event) {
 
     let type = 'youtube';
     let videoId = null;
-    let spotifyId = null;
+    
     let soundcloudUrl = null;
 
     // Phân giải link SoundCloud rút gọn nếu phát hiện on.soundcloud.com
@@ -3107,7 +3367,7 @@ async function handleQuickAddSubmit(event) {
             id: Date.now() + Math.random().toString(36).substr(2, 5),
             type: type,
             videoId: videoId,
-            spotifyId: spotifyId,
+            
             soundcloudUrl: soundcloudUrl,
             title: title,
             thumbnail: thumbnail,
@@ -3128,7 +3388,9 @@ async function handleQuickAddSubmit(event) {
         sortAndRefreshQueue();
         
         logSystem(`Đã thêm nhanh bài hát: <strong>${title}</strong> (${type.toUpperCase()})`, 'queue');
-        showDashboardSystemAlert("Đã thêm nhạc nhanh", `Đã thêm nhanh bài hát: <strong>${title}</strong>`, 'HÀNG ĐỢI');
+        if (!isOwnerAdd) {
+            showDashboardSystemAlert("Đã thêm nhạc nhanh", `Đã thêm nhanh bài hát: <strong>${title}</strong>`, 'HÀNG ĐỢI');
+        }
         
         clearQuickSearch();
         if (nameInput) nameInput.value = '';
@@ -3213,6 +3475,9 @@ function broadcastNewDonationAlert(song) {
                 3000
             );
         }
+        // Nhạc thêm nhanh có thông báo xác nhận riêng từ nơi gọi.
+        // Không phát thêm popup donate giả khiến hai thông báo chồng nhau.
+        return;
     } else {
         // Đây là nhạc order từ donate (ZyPage hoặc Test)
         if (window.electronAPI && typeof window.electronAPI.showTaskbarNotification === 'function') {
@@ -3546,9 +3811,7 @@ function renderQueue() {
         item.className = `queue-item ${isCurrent ? 'playing-now' : ''} ${(!isCurrent && isNew) ? 'newly-added' : ''}`;
         
         let sourceBadgeHTML = '';
-        if (song.type === 'spotify') {
-            sourceBadgeHTML = ` <span class="source-badge spotify" style="background: #1DB954; color: #fff; padding: 0.15rem 0.35rem; border-radius: 6px; font-size: 0.7rem; font-weight: 700; margin-left: 0.4rem; display: inline-flex; align-items: center; gap: 0.2rem; vertical-align: middle;"><i class="fa-brands fa-spotify"></i> Spotify</span>`;
-        } else if (song.type === 'soundcloud') {
+        if (song.type === 'soundcloud') {
             sourceBadgeHTML = ` <span class="source-badge soundcloud" style="background: #FF5500; color: #fff; padding: 0.15rem 0.35rem; border-radius: 6px; font-size: 0.7rem; font-weight: 700; margin-left: 0.4rem; display: inline-flex; align-items: center; gap: 0.2rem; vertical-align: middle;"><i class="fa-brands fa-soundcloud"></i> SoundCloud</span>`;
         }
 
@@ -3837,7 +4100,7 @@ async function playSong(song) {
         type: song.type || 'youtube',
         videoId: song.videoId || null,
         soundcloudUrl: song.soundcloudUrl || null,
-        spotifyId: song.spotifyId || null,
+        
         title: song.title,
         thumbnail: song.thumbnail,
         donorName: song.donorName,
@@ -3998,7 +4261,7 @@ function startPlaybackMonitor() {
                 progressSlider.style.display = 'block';
                 const pct = (currentTime / duration) * 100;
                 progressSlider.value = pct;
-                progressSlider.style.background = `linear-gradient(to right, var(--pineapple-orange) 0%, var(--pineapple-orange) ${pct}%, var(--pineapple-white) ${pct}%, var(--pineapple-white) 100%)`;
+                updateRangeProgress(progressSlider, pct);
             }
             if (currentTimeDisplay) {
                 currentTimeDisplay.textContent = formatTime(currentTime);
@@ -4074,7 +4337,7 @@ function onSeekSliderChange(pct) {
     if (state.focusMode) return;
     const progressSlider = document.getElementById('progress-slider');
     if (progressSlider) {
-        progressSlider.style.background = `linear-gradient(to right, var(--pineapple-orange) 0%, var(--pineapple-orange) ${pct}%, var(--pineapple-white) ${pct}%, var(--pineapple-white) 100%)`;
+        updateRangeProgress(progressSlider, pct);
     }
     if (currentOverlayDuration <= 0) return;
     let startPoint = 0;
@@ -4098,6 +4361,7 @@ function onVolumeChange(val) {
     state.volume = parseInt(val);
     localStorage.setItem('dua_volume', val);
     document.getElementById('volume-val-display').textContent = val + '%';
+    updateRangeProgress(document.getElementById('volume-slider'), state.volume);
     
     // Cập nhật biểu tượng nút tắt âm thanh
     const muteIcon = document.getElementById('mute-btn');
@@ -4441,7 +4705,7 @@ function updatePlayerUI(song) {
         coverWrapper.classList.remove('spinning');
         if (slider) {
             slider.value = 0;
-            slider.style.background = `linear-gradient(to right, var(--pineapple-orange) 0%, var(--pineapple-white) 0%)`;
+            updateRangeProgress(slider, 0);
             slider.style.display = 'block';
         }
         if (separator) {
@@ -4465,6 +4729,8 @@ function updatePlayerUI(song) {
         updateBypassButtonUI();
         updateForceExtensionButtonUI();
         updateVoteSkipButtonUI();
+        updateCurrentFavoriteButton();
+        updateCurrentKeywordButton();
         return;
     }
  
@@ -4574,6 +4840,8 @@ function updatePlayerUI(song) {
     updateBypassButtonUI();
     updateForceExtensionButtonUI();
     updateVoteSkipButtonUI();
+    updateCurrentFavoriteButton();
+    updateCurrentKeywordButton();
 
     // Cập nhật Video Preview trực tiếp thay vì qua localStorage events
     if (typeof window.vpanelUpdateSong === 'function') {
@@ -4836,11 +5104,111 @@ function toggleForceExtension() {
     logSystem(`${state.currentSong.extensionForceShow ? '🔔 Đã hiển thị' : '🔕 Đã ẩn'} mã gia hạn trên Overlay.`);
 }
 
+// --- HIỆU ỨNG PHÁO GIẤY DASHBOARD TỐI GIẢN ---
+let dbConfettiAnimationId = null;
+function startDashboardConfetti() {
+    const canvas = document.getElementById('dashboard-confetti-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    
+    const width = canvas.width = window.innerWidth;
+    const height = canvas.height = window.innerHeight;
+    
+    if (dbConfettiAnimationId) cancelAnimationFrame(dbConfettiAnimationId);
+    
+    const colors = ['#FF6B8B', '#FF8E9E', '#FB923C', '#4DCC93', '#5AB9EA', '#FBBF24', '#A78BFA'];
+    const particles = [];
+    
+    for (let i = 0; i < 40; i++) {
+        particles.push({
+            x: 0,
+            y: height,
+            vx: 5 + Math.random() * 8,
+            vy: -10 - Math.random() * 10,
+            g: 0.2 + Math.random() * 0.1,
+            size: 5 + Math.random() * 5,
+            color: colors[Math.floor(Math.random() * colors.length)],
+            rot: Math.random() * 360,
+            rotSpeed: -4 + Math.random() * 8,
+            swaySpeed: 0.04 + Math.random() * 0.04,
+            swayOffset: Math.random() * 10
+        });
+    }
+    for (let i = 0; i < 40; i++) {
+        particles.push({
+            x: width,
+            y: height,
+            vx: -5 - Math.random() * 8,
+            vy: -10 - Math.random() * 10,
+            g: 0.2 + Math.random() * 0.1,
+            size: 5 + Math.random() * 5,
+            color: colors[Math.floor(Math.random() * colors.length)],
+            rot: Math.random() * 360,
+            rotSpeed: -4 + Math.random() * 8,
+            swaySpeed: 0.04 + Math.random() * 0.04,
+            swayOffset: Math.random() * 10
+        });
+    }
+    
+    let frame = 0;
+    function update() {
+        ctx.clearRect(0, 0, width, height);
+        let alive = false;
+        
+        for (let i = 0; i < particles.length; i++) {
+            const p = particles[i];
+            if (p.y > height + 20) continue;
+            
+            alive = true;
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vy += p.g;
+            p.vx *= 0.98;
+            p.rot += p.rotSpeed;
+            p.x += Math.sin(frame * p.swaySpeed + p.swayOffset) * 0.5;
+            
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            ctx.rotate(p.rot * Math.PI / 180);
+            ctx.fillStyle = p.color;
+            ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+            ctx.restore();
+        }
+        
+        frame++;
+        if (alive) {
+            dbConfettiAnimationId = requestAnimationFrame(update);
+        } else {
+            ctx.clearRect(0, 0, width, height);
+        }
+    }
+    
+    dbConfettiAnimationId = requestAnimationFrame(update);
+}
+
 // --- HIỂN THỊ THÔNG BÁO DONATE MỚI TRÊN DASHBOARD ---
 let dbAlertTimeout = null;
+function updateDashboardAlertStacking() {
+    const donationAlert = document.getElementById('db-alert-box');
+    const systemAlert = document.getElementById('db-system-alert-box');
+    if (!systemAlert) return;
+
+    systemAlert.style.removeProperty('top');
+    if (!donationAlert || !donationAlert.classList.contains('active') || !systemAlert.classList.contains('active')) return;
+
+    const donationRect = donationAlert.getBoundingClientRect();
+    const systemRect = systemAlert.getBoundingClientRect();
+    const overlapsHorizontally = donationRect.left < systemRect.right && donationRect.right > systemRect.left;
+    if (overlapsHorizontally) {
+        systemAlert.style.top = `${54 + donationRect.height + 10}px`;
+    }
+}
+
 function showDashboardNewDonationAlert(alertData) {
     const alertBox = document.getElementById('db-alert-box');
     if (!alertBox) return;
+    // Kích hoạt pháo giấy
+    startDashboardConfetti();
     
     // Lưu thông báo vào lịch sử
     if (typeof saveToNotificationHistory === 'function') {
@@ -4898,10 +5266,12 @@ function showDashboardNewDonationAlert(alertData) {
     }
     
     alertBox.classList.add('active');
+    requestAnimationFrame(updateDashboardAlertStacking);
     
     if (dbAlertTimeout) clearTimeout(dbAlertTimeout);
     dbAlertTimeout = setTimeout(() => {
         alertBox.classList.remove('active');
+        updateDashboardAlertStacking();
     }, 6000);
 }
 
@@ -4909,6 +5279,7 @@ function closeDashboardAlert() {
     const alertBox = document.getElementById('db-alert-box');
     if (alertBox) {
         alertBox.classList.remove('active');
+        updateDashboardAlertStacking();
     }
 }
 
@@ -5125,10 +5496,12 @@ function showDashboardSystemAlert(title, message, badge = 'HỆ THỐNG') {
     }
 
     alertBox.classList.add('active');
+    requestAnimationFrame(updateDashboardAlertStacking);
 
     if (dbSysAlertTimeout) clearTimeout(dbSysAlertTimeout);
     dbSysAlertTimeout = setTimeout(() => {
         alertBox.classList.remove('active');
+        updateDashboardAlertStacking();
     }, 4500);
 }
 
@@ -5136,6 +5509,7 @@ function closeDashboardSystemAlert() {
     const alertBox = document.getElementById('db-system-alert-box');
     if (alertBox) {
         alertBox.classList.remove('active');
+        updateDashboardAlertStacking();
     }
 }
 
@@ -5566,7 +5940,7 @@ async function quickAddSongFromHistory(type, videoId, scUrl, donorNameEncoded, d
             isQuickAdd: true,
             type: type,
             videoId: videoId || null,
-            spotifyId: null,
+            
             soundcloudUrl: scUrl || null,
             title: meta.title,
             thumbnail: meta.thumbnail,
@@ -5655,7 +6029,7 @@ async function handleNewDonation(donation, shouldAlert = true) {
     const isTestDonate = donation.id && donation.id.toString().includes('test_donate');
     
     // Chỉ hiển thị nếu không phải lúc đồng bộ khởi động, hoặc đó là test donate
-    if (shouldAlert && (!isStartupSync || isTestDonate)) {
+    if (shouldAlert && (!isStartupSync || isTestDonate || donation.isVoteSkip)) {
         if (window.electronAPI && typeof window.electronAPI.showTaskbarNotification === 'function') {
             const title = `${donation.name || 'Khách'} - ${(donation.amount || 0).toLocaleString('vi-VN')} ₫`;
             let msgText = donation.message || '';
@@ -5665,13 +6039,18 @@ async function handleNewDonation(donation, shouldAlert = true) {
             const hasLink = hasSongLink(donation.message);
             const isSong = (donation.isMusicOrder || (hasLink && donation.amount >= minAmount));
             
-            if (!isSong) {
+            if (!isSong || donation.isVoteSkip) {
                 // Kiểm tra xem có chứa mã gia hạn không
                 const activeCode = state.currentSong?.extensionCode;
                 const words = (donation.message || '').split(/\s+/);
                 const isExtensionCode = activeCode && words.some(word => word.replace(/^[^a-zA-Z0-9]+|[^a-zA-Z0-9]+$/g, '').toUpperCase() === activeCode);
                 
-                if (isExtensionCode) {
+                if (donation.isVoteSkip) {
+                    const voteProgress = donation.voteSkipTarget
+                        ? ` (${Number(donation.voteSkipCurrent || 0).toLocaleString('vi-VN')} / ${Number(donation.voteSkipTarget).toLocaleString('vi-VN')} ₫)`
+                        : '';
+                    msgText = `Vote Skip${voteProgress}${donation.message ? `\n${donation.message}` : ''}`;
+                } else if (isExtensionCode) {
                     msgText = `Gia hạn bài hát: ${donation.message}`;
                 } else if (state.currentSong?.voteSkipActive && (donation.message || '').toLowerCase().includes('#skip')) {
                     msgText = `Vote Skip bài hát: ${donation.message}`;
@@ -5691,13 +6070,13 @@ async function handleNewDonation(donation, shouldAlert = true) {
         const hasLink = hasSongLink(donation.message);
         const willBeSong = (donation.isMusicOrder || (hasLink && donation.amount >= minAmount));
         
-        if (!willBeSong) {
+        if (!willBeSong || donation.isVoteSkip) {
             showDashboardNewDonationAlert({
                 id: donation.id,
                 donorName: donation.name,
                 amount: donation.amount,
-                title: donation.message || '(Không có lời nhắn)',
-                position: 'DONATE',
+                title: donation.isVoteSkip ? `Vote Skip${donation.message ? ` • ${donation.message}` : ''}` : (donation.message || '(Không có lời nhắn)'),
+                position: donation.isVoteSkip ? 'VOTE SKIP' : 'DONATE',
                 timestamp: donation.timestamp
             });
         }
@@ -6490,7 +6869,7 @@ function startFirebaseListener(shopId, token) {
                                                 fromMessage: true,
                                                 type: type,
                                                 videoId: videoId || null,
-                                                spotifyId: null,
+                                                
                                                 soundcloudUrl: soundcloudUrl || null,
                                                 title: meta.title,
                                                 thumbnail: meta.thumbnail,
@@ -6680,7 +7059,7 @@ async function syncQueueFromZyPageApi(shopId, isManual = false) {
             const musicIdStr = String(item.music.id).trim();
             let type = 'youtube';
             let videoId = null;
-            let spotifyId = null;
+            
             let soundcloudUrl = null;
 
             if (musicIdStr.includes('spotify.com') || musicIdStr.startsWith('spotify:')) {
@@ -6718,7 +7097,7 @@ async function syncQueueFromZyPageApi(shopId, isManual = false) {
                     isZyPage: true,
                     type: type,
                     videoId: videoId,
-                    spotifyId: spotifyId,
+                    
                     soundcloudUrl: soundcloudUrl,
                     title: item.music.title || `Nhạc ${type.toUpperCase()}`,
                     thumbnail: item.music.thumbnail || (type === 'youtube' 
@@ -6854,7 +7233,7 @@ async function syncQueueFromZyPageApi(shopId, isManual = false) {
                         fromMessage: true, // Đánh dấu bài hát được trích xuất từ tin nhắn donate
                         type: type,
                         videoId: videoId || null,
-                        spotifyId: null,
+                        
                         soundcloudUrl: soundcloudUrl || null,
                         title: meta.title,
                         thumbnail: meta.thumbnail,
@@ -7197,6 +7576,7 @@ function handleOverlayMessage(topic, messageStrOrObj) {
                 currentTime: data.currentTime,
                 duration: data.duration,
                 isPlaying: data.isPlaying,
+                isBuffering: !!data.isBuffering,
                 isDirectStream: data.isDirectStream,
                 isLive: !!data.isLive,
                 sentAt: data.sentAt || Date.now(),
@@ -7217,9 +7597,12 @@ function handleOverlayMessage(topic, messageStrOrObj) {
                 state.lastReportedTime = data.currentTime;
             }
 
-            const isPlayingChanged = state.isPlaying !== data.isPlaying;
-            state.isPlaying = data.isPlaying;
-            updatePlayPauseButtonUI(data.isPlaying);
+            const reportedPlaying = data.isBuffering
+                ? state.playbackIntent !== 'pause' && state.playbackIntent !== 'stop'
+                : !!data.isPlaying;
+            const isPlayingChanged = state.isPlaying !== reportedPlaying;
+            state.isPlaying = reportedPlaying;
+            updatePlayPauseButtonUI(reportedPlaying);
 
             if (data.duration > 0 && state.currentSong) {
                 if (!state.currentSong.duration || state.currentSong.duration !== data.duration) {
@@ -7289,7 +7672,7 @@ function handleOverlayMessage(topic, messageStrOrObj) {
                 if (progressSlider) {
                     const pct = (elapsedTime / limitDuration) * 100;
                     progressSlider.value = pct;
-                    progressSlider.style.background = `linear-gradient(to right, var(--pineapple-orange) 0%, var(--pineapple-orange) ${pct}%, var(--pineapple-white) ${pct}%, var(--pineapple-white) 100%)`;
+                    updateRangeProgress(progressSlider, pct);
                 }
 
                 if (currentTimeDisplay) currentTimeDisplay.textContent = formatTime(elapsedTime);
@@ -7330,7 +7713,7 @@ function handleOverlayMessage(topic, messageStrOrObj) {
                     if (progressSlider) {
                         const pct = (displayElapsedTime / limitDuration) * 100;
                         progressSlider.value = pct;
-                        progressSlider.style.background = `linear-gradient(to right, var(--pineapple-orange) 0%, var(--pineapple-orange) ${pct}%, var(--pineapple-white) ${pct}%, var(--pineapple-white) 100%)`;
+                        updateRangeProgress(progressSlider, pct);
                     }
                     // Hiện countdown với thời gian còn lại
                     if (dashCountdown && dashCdTime) {
@@ -7341,7 +7724,7 @@ function handleOverlayMessage(topic, messageStrOrObj) {
                 } else {
                     if (progressSlider) {
                         progressSlider.value = 100;
-                        progressSlider.style.background = `var(--pineapple-orange)`;
+                        updateRangeProgress(progressSlider, 100);
                     }
                     // Ẩn countdown khi không có giới hạn
                     if (dashCountdown) dashCountdown.classList.remove('visible');
@@ -7495,6 +7878,290 @@ function triggerResetOverlay() {
     sendControlCommand('reload');
 }
 
+// --- KEYWORD TÌM KIẾM NHANH ---
+function escapeKeywordHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function setupKeywordSettings() {
+    const videoInput = document.getElementById('keyword-video-input');
+    const keywordInput = document.getElementById('keyword-name-input');
+    if (!videoInput || videoInput.dataset.ready === 'true') {
+        renderKeywordShortcutList();
+        return;
+    }
+
+    videoInput.dataset.ready = 'true';
+    videoInput.addEventListener('input', () => {
+        selectedKeywordVideo = null;
+        renderSelectedKeywordVideo();
+        if (keywordSettingsSearchTimeout) clearTimeout(keywordSettingsSearchTimeout);
+
+        const query = videoInput.value.trim();
+        const results = document.getElementById('keyword-search-results');
+        const isUrl = /^https?:\/\//i.test(query);
+        if (!results || isUrl || query.length < 2) {
+            if (results) results.style.display = 'none';
+            return;
+        }
+
+        results.style.display = 'block';
+        results.innerHTML = '<div class="keyword-search-status"><svg class="m3-spinner" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5" fill="none"></circle></svg> Đang tìm trên YouTube...</div>';
+        keywordSettingsSearchTimeout = setTimeout(async () => {
+            try {
+                const response = await callYouTubeSearch(query);
+                if (videoInput.value.trim() !== query) return;
+                renderKeywordSearchResults(response && response.success ? response.videos : []);
+            } catch (error) {
+                if (videoInput.value.trim() === query) {
+                    results.innerHTML = '<div class="keyword-search-status keyword-search-error">Không thể tìm kiếm YouTube.</div>';
+                }
+            }
+        }, 350);
+    });
+
+    videoInput.addEventListener('keydown', event => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            const resultBox = document.getElementById('keyword-search-results');
+            const isVisibleSearch = resultBox && resultBox.style.display !== 'none' && !/^https?:\/\//i.test(videoInput.value.trim());
+            const firstResult = isVisibleSearch ? resultBox.querySelector('.keyword-search-result') : null;
+            if (firstResult) firstResult.click();
+            else saveKeywordShortcut();
+        }
+    });
+    if (keywordInput) {
+        keywordInput.addEventListener('keydown', event => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                videoInput.focus();
+            }
+        });
+    }
+    renderKeywordShortcutList();
+}
+
+function renderKeywordSearchResults(videos) {
+    const container = document.getElementById('keyword-search-results');
+    if (!container) return;
+    container.innerHTML = '';
+    container.style.display = 'block';
+
+    if (!videos || videos.length === 0) {
+        container.innerHTML = '<div class="keyword-search-status">Không tìm thấy video phù hợp.</div>';
+        return;
+    }
+
+    videos.slice(0, 8).forEach(video => {
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.className = 'keyword-search-result';
+        item.innerHTML = `
+            <img src="${escapeKeywordHtml(video.thumbnail || '')}" alt="">
+            <span class="keyword-search-result-info">
+                <strong>${escapeKeywordHtml(video.title || 'Video YouTube')}</strong>
+                <small>${escapeKeywordHtml(video.author || '')}${video.duration ? ` • ${escapeKeywordHtml(video.duration)}` : ''}</small>
+            </span>`;
+        item.addEventListener('click', () => selectKeywordVideo(video));
+        container.appendChild(item);
+    });
+}
+
+function selectKeywordVideo(video) {
+    selectedKeywordVideo = {
+        videoId: video.videoId,
+        title: video.title || `YouTube (${video.videoId})`,
+        thumbnail: video.thumbnail || `https://img.youtube.com/vi/${video.videoId}/hqdefault.jpg`,
+        author: video.author || '',
+        duration: video.duration || '',
+        views: video.views || ''
+    };
+    const input = document.getElementById('keyword-video-input');
+    if (input) input.value = `https://www.youtube.com/watch?v=${video.videoId}`;
+    const results = document.getElementById('keyword-search-results');
+    if (results) results.style.display = 'none';
+    renderSelectedKeywordVideo();
+}
+
+function renderSelectedKeywordVideo() {
+    const container = document.getElementById('keyword-selected-video');
+    if (!container) return;
+    if (!selectedKeywordVideo) {
+        container.style.display = 'none';
+        container.innerHTML = '';
+        return;
+    }
+    container.style.display = 'flex';
+    container.innerHTML = `
+        <img src="${escapeKeywordHtml(selectedKeywordVideo.thumbnail)}" alt="">
+        <div><span>Đã chọn</span><strong>${escapeKeywordHtml(selectedKeywordVideo.title)}</strong><small>${escapeKeywordHtml(selectedKeywordVideo.author || '')}</small></div>`;
+}
+
+async function saveKeywordShortcut() {
+    const keywordInput = document.getElementById('keyword-name-input');
+    const videoInput = document.getElementById('keyword-video-input');
+    const saveButton = document.getElementById('keyword-save-btn');
+    const keyword = keywordInput ? keywordInput.value.trim().replace(/\s+/g, ' ') : '';
+
+    if (!keyword) {
+        alert('Vui lòng nhập keyword.');
+        if (keywordInput) keywordInput.focus();
+        return;
+    }
+
+    let video = selectedKeywordVideo;
+    if (!video) {
+        const videoId = parseYoutubeId(videoInput ? videoInput.value : '');
+        if (!videoId) {
+            alert('Hãy chọn một kết quả tìm kiếm hoặc dán link YouTube hợp lệ.');
+            if (videoInput) videoInput.focus();
+            return;
+        }
+        if (saveButton) saveButton.disabled = true;
+        try {
+            const metadata = await fetchSongMetadata('youtube', videoId, null);
+            video = {
+                videoId,
+                title: metadata.title,
+                thumbnail: metadata.thumbnail,
+                author: '',
+                duration: '',
+                views: ''
+            };
+        } finally {
+            if (saveButton) saveButton.disabled = false;
+        }
+    }
+
+    const shortcut = {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        keyword,
+        ...video,
+        updatedAt: Date.now()
+    };
+    const existingIndex = keywordShortcuts.findIndex(item => normalizeKeyword(item.keyword) === normalizeKeyword(keyword));
+    if (existingIndex >= 0) {
+        shortcut.id = keywordShortcuts[existingIndex].id;
+        keywordShortcuts.splice(existingIndex, 1, shortcut);
+    } else {
+        keywordShortcuts.unshift(shortcut);
+    }
+    saveKeywordShortcutsToStorage();
+    renderKeywordShortcutList();
+
+    if (keywordInput) keywordInput.value = '';
+    if (videoInput) videoInput.value = '';
+    selectedKeywordVideo = null;
+    renderSelectedKeywordVideo();
+    logSystem(`Đã lưu keyword <strong>${escapeKeywordHtml(keyword)}</strong> cho bài <strong>${escapeKeywordHtml(video.title)}</strong>.`, 'system');
+}
+
+function deleteKeywordShortcut(id) {
+    keywordShortcuts = keywordShortcuts.filter(item => item.id !== id);
+    saveKeywordShortcutsToStorage();
+    renderKeywordShortcutList();
+}
+
+function renderKeywordShortcutList() {
+    const container = document.getElementById('keyword-shortcut-list');
+    const count = document.getElementById('keyword-shortcut-count');
+    if (count) count.textContent = String(keywordShortcuts.length);
+    if (!container) return;
+    container.innerHTML = '';
+    renderKeywordLibrary();
+
+    if (keywordShortcuts.length === 0) {
+        container.innerHTML = '<div class="keyword-empty-state"><strong>Chưa có keyword</strong><span>Keyword đã lưu sẽ hiển thị tại đây.</span></div>';
+        return;
+    }
+
+    keywordShortcuts.forEach(shortcut => {
+        const item = document.createElement('div');
+        item.className = 'keyword-shortcut-item';
+        item.innerHTML = `
+            <span class="keyword-pill">${escapeKeywordHtml(shortcut.keyword)}</span>
+            <img src="${escapeKeywordHtml(shortcut.thumbnail || `https://img.youtube.com/vi/${shortcut.videoId}/mqdefault.jpg`)}" alt="">
+            <div class="keyword-shortcut-info">
+                <strong title="${escapeKeywordHtml(shortcut.title)}">${escapeKeywordHtml(shortcut.title)}</strong>
+                <small>${escapeKeywordHtml(shortcut.author || 'YouTube')} • ${escapeKeywordHtml(shortcut.videoId)}</small>
+            </div>
+            <button type="button" class="keyword-delete-btn" title="Xóa keyword">Xóa</button>`;
+        item.querySelector('.keyword-delete-btn').addEventListener('click', () => deleteKeywordShortcut(shortcut.id));
+        container.appendChild(item);
+    });
+
+}
+
+function createPlayerLibraryCard(video, options = {}) {
+    const normalizedVideo = normalizeLibraryVideo(video);
+    const card = document.createElement('article');
+    card.className = 'player-library-card';
+    card.tabIndex = 0;
+    card.setAttribute('role', 'button');
+    card.setAttribute('title', 'Thêm vào hàng đợi');
+
+    const keyword = options.keyword || normalizedVideo.keyword;
+    card.innerHTML = `
+        <div class="player-library-thumb">
+            <img src="${escapeKeywordHtml(normalizedVideo.thumbnail)}" alt="">
+            ${normalizedVideo.duration ? `<span>${escapeKeywordHtml(normalizedVideo.duration)}</span>` : ''}
+        </div>
+        <div class="player-library-card-body">
+            ${keyword ? `<div class="player-library-keyword">${escapeKeywordHtml(keyword)}</div>` : ''}
+            <div class="player-library-title">${escapeKeywordHtml(normalizedVideo.title)}</div>
+            ${normalizedVideo.author ? `<div class="player-library-author">${escapeKeywordHtml(normalizedVideo.author)}</div>` : ''}
+        </div>`;
+
+    card.addEventListener('click', () => addSearchResultToQueue(normalizedVideo));
+    card.addEventListener('keydown', event => {
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            addSearchResultToQueue(normalizedVideo);
+        }
+    });
+    return card;
+}
+
+function renderKeywordLibrary() {
+    const container = document.getElementById('qa-keywords-list');
+    if (!container) return;
+    container.innerHTML = '';
+
+    const libraryItems = new Map();
+    keywordShortcuts.forEach(shortcut => {
+        const key = String(shortcut.videoId);
+        const existing = libraryItems.get(key);
+        if (existing) {
+            if (!existing.keywords.includes(shortcut.keyword)) existing.keywords.push(shortcut.keyword);
+        } else {
+            libraryItems.set(key, {
+                video: keywordShortcutToVideo(shortcut),
+                keywords: [shortcut.keyword]
+            });
+        }
+    });
+    favoriteSongs.forEach(video => {
+        const key = String(video.videoId);
+        if (!libraryItems.has(key)) {
+            libraryItems.set(key, { video, keywords: video.keyword ? [video.keyword] : [] });
+        }
+    });
+
+    if (libraryItems.size === 0) {
+        container.innerHTML = '<div class="player-library-empty"><strong>Chưa có Keyword hoặc bài yêu thích</strong><span>Lưu keyword hoặc chọn “Yêu thích” để bài hát xuất hiện tại đây.</span></div>';
+        return;
+    }
+
+    libraryItems.forEach(item => {
+        container.appendChild(createPlayerLibraryCard(item.video, { keyword: item.keywords.join(', ') }));
+    });
+}
+
 // --- HIỂN THỊ KẾT QUẢ TÌM KIẾM YOUTUBE ---
 function renderSearchResults(videos, containerId = 'qa-search-list') {
     const container = document.getElementById(containerId);
@@ -7533,15 +8200,21 @@ function renderSearchResults(videos, containerId = 'qa-search-list') {
                         ${video.views ? `• <span>${formatViewsCompact(video.views)} views</span>` : ''}
                     </div>
                 </div>
+                <div class="grid-result-actions">
+                    <button type="button" class="grid-favorite-btn${isFavoriteSong(video.videoId) ? ' active' : ''}">
+                        ${isFavoriteSong(video.videoId) ? 'Đã thích' : 'Yêu thích'}
+                    </button>
+                </div>
             `;
         } else {
-            item.className = 'search-result-item';
+            item.className = `search-result-item${video.isKeywordShortcut ? ' keyword-priority-result' : ''}`;
             item.innerHTML = `
                 <div class="search-result-thumb">
                     <img src="${video.thumbnail ? video.thumbnail.replace('/default.jpg', '/mqdefault.jpg') : ''}" alt="thumb">
                 </div>
                 <div class="search-result-info">
                     <div class="search-result-title" title="${video.title}">${video.title}</div>
+                    ${video.isKeywordShortcut ? `<span class="keyword-priority-badge"><i class="fa-solid fa-key"></i> Keyword: ${escapeKeywordHtml(video.shortcutKeyword)}</span>` : ''}
                     <div class="search-result-meta">
                         <span>${video.author}</span>
                         <span style="display: flex; align-items: center; gap: 5px;">
@@ -7555,9 +8228,17 @@ function renderSearchResults(videos, containerId = 'qa-search-list') {
                         </span>
                     </div>
                 </div>
-                <button class="search-result-btn" title="Thêm vào hàng đợi">
-                    <i class="fa-solid fa-plus"></i>
-                </button>
+                <div class="search-result-actions">
+                    <button type="button" class="search-result-favorite${isFavoriteSong(video.videoId) ? ' active' : ''}" title="Yêu thích">
+                        <i class="${isFavoriteSong(video.videoId) ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
+                    </button>
+                    <button type="button" class="search-result-keyword" title="Lưu keyword">
+                        <i class="fa-solid fa-key"></i>
+                    </button>
+                    <button type="button" class="search-result-btn" title="Thêm vào hàng đợi">
+                        <i class="fa-solid fa-plus"></i>
+                    </button>
+                </div>
             `;
         }
         
@@ -7570,6 +8251,31 @@ function renderSearchResults(videos, containerId = 'qa-search-list') {
         
         if (addBtn) {
             addBtn.addEventListener('click', selectAction);
+        }
+        const favoriteBtn = item.querySelector('.grid-favorite-btn');
+        if (favoriteBtn) {
+            favoriteBtn.addEventListener('click', e => {
+                e.stopPropagation();
+                const added = toggleFavoriteSong(video);
+                favoriteBtn.classList.toggle('active', added);
+                favoriteBtn.textContent = added ? 'Đã thích' : 'Yêu thích';
+            });
+        }
+        const searchFavoriteBtn = item.querySelector('.search-result-favorite');
+        if (searchFavoriteBtn) {
+            searchFavoriteBtn.addEventListener('click', e => {
+                e.stopPropagation();
+                const added = toggleFavoriteSong(video);
+                searchFavoriteBtn.classList.toggle('active', added);
+                searchFavoriteBtn.innerHTML = `<i class="${added ? 'fa-solid' : 'fa-regular'} fa-heart"></i>`;
+            });
+        }
+        const searchKeywordBtn = item.querySelector('.search-result-keyword');
+        if (searchKeywordBtn) {
+            searchKeywordBtn.addEventListener('click', e => {
+                e.stopPropagation();
+                openSaveKeywordForVideo(video);
+            });
         }
         item.addEventListener('click', selectAction);
         
@@ -7602,7 +8308,7 @@ function addSearchResultToQueue(video) {
         id: Date.now() + Math.random().toString(36).substr(2, 5),
         type: 'youtube',
         videoId: video.videoId,
-        spotifyId: null,
+        
         soundcloudUrl: null,
         title: video.title,
         thumbnail: video.thumbnail,
@@ -7624,7 +8330,9 @@ function addSearchResultToQueue(video) {
     sortAndRefreshQueue();
     
     logSystem(`Đã thêm nhanh bài hát từ tìm kiếm: <strong>${video.title}</strong>`, 'queue');
-    showDashboardSystemAlert("Đã thêm nhạc nhanh", `Đã thêm nhanh bài hát: <strong>${video.title}</strong>`, 'HÀNG ĐỢI');
+    if (!isOwnerAdd) {
+        showDashboardSystemAlert("Đã thêm nhạc nhanh", `Đã thêm nhanh bài hát: <strong>${video.title}</strong>`, 'HÀNG ĐỢI');
+    }
     
     // Xóa trống dữ liệu nhập và ẩn dropdown/popover
     clearQuickSearch();
@@ -7646,7 +8354,7 @@ function addSearchResultToQueue(video) {
 let isYtLoggedIn = false;
 let hasLoadedRecommendations = false;
 let hasLoadedPlaylists = false;
-let activeQuickAddTab = 'recommendations';
+let activeQuickAddTab = 'keywords';
 
 async function checkYoutubeAuth() {
     if (!window.electronAPI || typeof window.electronAPI.ytCheckAuth !== 'function') {
@@ -7682,11 +8390,12 @@ async function checkYoutubeAuth() {
             if (btnLogin) btnLogin.style.display = 'none';
             if (btnLogout) btnLogout.style.display = 'block';
             
-            // Auto switch to recommendations on startup
-            switchQuickAddTab('recommendations');
+            // Keyword là thư viện mặc định; YouTube chỉ tải khi người dùng mở tab tương ứng.
+            switchQuickAddTab('keywords');
         } else {
             isYtLoggedIn = false;
-            if (ytDashboard) ytDashboard.style.display = 'none';
+            // Keyword và Yêu thích là thư viện local nên Player vẫn luôn hiển thị khối này.
+            if (ytDashboard) ytDashboard.style.display = 'flex';
             if (nameText) nameText.textContent = 'Chưa kết nối tài khoản';
             if (avatarImg) {
                 avatarImg.style.display = 'none';
@@ -7762,7 +8471,7 @@ function switchQuickAddTab(tabName) {
     activeQuickAddTab = tabName;
     
     // Switch active class on tab buttons
-    const tabs = ['recommendations', 'playlists'];
+    const tabs = ['recommendations', 'playlists', 'keywords'];
     tabs.forEach(t => {
         const btn = document.getElementById(`qa-tab-btn-${t}`);
         const content = document.getElementById(`qa-content-${t}`);
@@ -7814,6 +8523,8 @@ function switchQuickAddTab(tabName) {
         if (!hasLoadedPlaylists) {
             refreshQuickAddPlaylists();
         }
+    } else if (tabName === 'keywords') {
+        renderKeywordLibrary();
     }
 }
 
@@ -8196,7 +8907,7 @@ if (window.electronAPI && typeof window.electronAPI.onTestDonate === 'function')
                         fromMessage: isFromMessage || !donation.isMusicOrder,
                         type: type,
                         videoId: videoId || null,
-                        spotifyId: null,
+                        
                         soundcloudUrl: soundcloudUrl || null,
                         title: meta.title,
                         thumbnail: meta.thumbnail,
@@ -8269,7 +8980,7 @@ if (window.electronAPI && typeof window.electronAPI.onAddSongExternal === 'funct
                 id: 'ext_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
                 type: type,
                 videoId: videoId,
-                spotifyId: null,
+                
                 soundcloudUrl: null,
                 title: title,
                 thumbnail: thumbnail,
@@ -8290,8 +9001,6 @@ if (window.electronAPI && typeof window.electronAPI.onAddSongExternal === 'funct
             sortAndRefreshQueue();
 
             logSystem(`🔌 <strong>[Extension]</strong> Đã thêm nhạc vào hàng đợi: <strong>${title}</strong>`, 'queue');
-            showDashboardSystemAlert("Extension thêm nhạc", `Đã thêm bài hát từ trình duyệt: <strong>${title}</strong>`, 'HÀNG ĐỢI');
-
             // Thông báo taskbar phi tập trung (không cướp focus)
             if (window.electronAPI && typeof window.electronAPI.showTaskbarNotification === 'function') {
                 window.electronAPI.showTaskbarNotification(
@@ -8443,7 +9152,7 @@ if (window.electronAPI && typeof window.electronAPI.onAddSongExternal === 'funct
         const toolsCard = document.getElementById('dashboard-player-tools');
         const videoColumn = document.getElementById('video-mode-right-column');
         const videoQueue = document.getElementById('card-queue-video');
-        const playerToolsHost = document.querySelector('#tab-player .player-left-column') || document.getElementById('tab-player');
+        const playerToolsHost = document.querySelector('#tab-player .left-column');
         if (!toolsCard) return;
 
         if (shouldMove && videoColumn) {

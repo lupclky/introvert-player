@@ -1,3 +1,12 @@
+// Force console output to UTF-8 on Windows to prevent Vietnamese character encoding issues
+if (process.platform === 'win32') {
+  try {
+    require('child_process').execSync('chcp 65001', { stdio: 'ignore' });
+  } catch (e) {
+    // Ignore
+  }
+}
+
 const { app, BrowserWindow, Menu, Tray, ipcMain, session, shell } = require('electron');
 const http = require('http');
 const https = require('https');
@@ -48,6 +57,8 @@ let currentSearchReq = null;
 // Tắt sandbox để tránh crash khi chạy từ thư mục AppData (giữ GPU bật để tránh bug input focus)
 app.commandLine.appendSwitch('no-sandbox');
 app.commandLine.appendSwitch('disable-gpu-sandbox');
+// Keep Chromium's native video composition path enabled. Disabling zero-copy,
+// DirectComposition or GPU video frames is expensive on large/4K windows.
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
   app.quit();
@@ -215,7 +226,7 @@ if (!gotTheLock) {
         res.writeHead(200, getCorsHeaders({
           'Content-Type': 'application/json'
         }));
-        res.end(JSON.stringify({ success: true, app: "pineapple-studio", version: "26.8.0" }));
+        res.end(JSON.stringify({ success: true, app: "pineapple-studio", version: "26.10.23" }));
         return;
       }
 
@@ -601,7 +612,7 @@ if (!gotTheLock) {
         const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
         
         // Dinh dang tai: audio-only cho overlay, video cho preview Dashboard.
-        const format = type === 'video' ? 'bestvideo[vcodec^=avc][height<=720]/bestvideo[ext=mp4][vcodec^=avc]/bestvideo[ext=mp4]/best[ext=mp4]/best' : 'bestaudio[ext=m4a]/bestaudio/ba';
+        const format = type === 'video' ? 'bestvideo[vcodec^=avc][height<=480]/bestvideo[ext=mp4][vcodec^=avc][height<=480]/best[ext=mp4][height<=480]/best[height<=480]' : 'bestaudio[ext=m4a]/bestaudio/ba';
         const cacheKey = `${type}:${videoId}`;
         const cached = ytStreamResolveCache.get(cacheKey);
 
@@ -788,6 +799,7 @@ if (!gotTheLock) {
   function createWindow(port) {
     const isWin = process.platform === 'win32';
     mainWindow = new BrowserWindow({
+      icon: path.join(__dirname, 'build', 'icon.png'),
       width: 1280,
       height: 800,
       minWidth: 640,
@@ -863,7 +875,13 @@ if (!gotTheLock) {
     const { nativeImage } = require('electron');
 
     // Ưu tiên tải icon từ extraResources (nằm ngoài ASAR), fallback vào __dirname (khi dev)
-    let iconPath = path.join(process.resourcesPath, 'icon.ico');
+    let iconPath = path.join(process.resourcesPath, 'icon.png');
+    if (!fs.existsSync(iconPath)) {
+      iconPath = path.join(process.resourcesPath, 'icon.ico');
+    }
+    if (!fs.existsSync(iconPath)) {
+      iconPath = path.join(__dirname, 'build', 'icon.png');
+    }
     if (!fs.existsSync(iconPath)) {
       iconPath = path.join(__dirname, 'build', 'icon.ico');
     }
@@ -2603,15 +2621,15 @@ function showTaskbarNotification(title, message, isDarkMode = false, duration) {
     };
 
     // Lấy thông tin màu sắc theo theme của Dashboard
-    const bgGradient = isDarkMode 
-      ? 'linear-gradient(135deg, #1D1A22 0%, #121016 100%)' 
-      : 'linear-gradient(135deg, #FAF6EE 0%, #F5F0E4 100%)';
-    const borderColor = isDarkMode ? 'rgba(226, 232, 240, 0.08)' : 'rgba(45, 39, 39, 0.15)';
-    const titleColor = isDarkMode ? '#FB923C' : '#EA580C';
-    const textSongColor = isDarkMode ? '#E2E8F0' : '#2D2727';
-    const textMsgColor = isDarkMode ? '#D1D5DB' : '#4B5563';
-    const msgBg = isDarkMode ? '#17151E' : '#FAF6EE';
-    const msgBorder = isDarkMode ? 'rgba(226, 232, 240, 0.06)' : 'rgba(45, 39, 39, 0.12)';
+    const bgGradient = isDarkMode
+      ? 'linear-gradient(135deg, #1D1A22 0%, #121016 100%)'
+      : 'linear-gradient(135deg, #FFFFFF 0%, #FFF5F6 100%)';
+    const borderColor = isDarkMode ? 'rgba(226, 232, 240, 0.08)' : 'rgba(216, 27, 96, 0.14)';
+    const titleColor = isDarkMode ? '#FF8E9E' : '#D81B60';
+    const textSongColor = isDarkMode ? '#E2E8F0' : '#3D242B';
+    const textMsgColor = isDarkMode ? '#CBD5E1' : '#7A6870';
+    const msgBg = isDarkMode ? '#17151E' : 'rgba(255, 107, 139, 0.07)';
+    const msgBorder = isDarkMode ? 'rgba(226, 232, 240, 0.06)' : 'rgba(216, 27, 96, 0.10)';
 
     const notifId = 'notif_' + Date.now() + '_' + Math.floor(Math.random() * 1000000);
 
@@ -2632,15 +2650,15 @@ function showTaskbarNotification(title, message, isDarkMode = false, duration) {
           .container {
             display: flex;
             align-items: center;
-            gap: 14px;
-            background: ${isDarkMode ? 'rgba(18, 16, 22, 0.92)' : 'rgba(250, 246, 238, 0.95)'};
+            gap: 12px;
+            background: ${isDarkMode ? 'rgba(18, 16, 22, 0.96)' : 'rgba(255, 255, 255, 0.97)'};
             background-image: ${bgGradient};
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
             border: 2px solid ${borderColor};
-            border-radius: 16px;
+            border-radius: 20px;
             padding: 12px 16px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, ${isDarkMode ? '0.5' : '0.15'});
+            box-shadow: ${isDarkMode ? '0 12px 32px rgba(0, 0, 0, 0.5)' : '0 12px 32px rgba(216, 27, 96, 0.12)'};
             color: ${textSongColor};
             height: 100%;
             box-sizing: border-box;
@@ -2682,14 +2700,14 @@ function showTaskbarNotification(title, message, isDarkMode = false, duration) {
             font-size: 1.1rem;
             font-weight: 800;
             cursor: pointer;
-            color: ${isDarkMode ? 'rgba(255, 255, 255, 0.4)' : 'rgba(0, 0, 0, 0.3)'};
+            color: ${isDarkMode ? 'rgba(255, 255, 255, 0.4)' : 'rgba(61, 36, 43, 0.35)'};
             transition: color 0.15s ease;
             line-height: 1;
             z-index: 10;
             -webkit-app-region: no-drag;
           }
           .close-btn:hover {
-            color: ${isDarkMode ? '#FB923C' : '#EA580C'};
+            color: ${isDarkMode ? '#FF8E9E' : '#D81B60'};
           }
           .song-title {
             font-family: 'Quicksand', sans-serif;
