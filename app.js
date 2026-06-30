@@ -2969,6 +2969,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const key = e.key.toLowerCase();
 
+        // Khóa các phím tắt phát/tạm dừng và tua khi đang phát bài hát đợi lâu
+        if (state.currentSong && state.currentSong.isAutoPinned) {
+            if (key === ' ' || key === 'k' || e.key === 'ArrowLeft' || key === 'j' || e.key === 'ArrowRight' || key === 'l' || (e.key >= '0' && e.key <= '9')) {
+                e.preventDefault();
+                return;
+            }
+        }
+
         // 1. Phát / Tạm dừng: Space hoặc K
         if (key === ' ' || key === 'k') {
             e.preventDefault(); // Tránh cuộn trang đối với phím Space
@@ -3641,6 +3649,15 @@ function sortAndRefreshQueue(forceSort = false) {
     if (forceSort) {
         if (state.sortConfig === 'amount') {
             otherSongs.sort((a, b) => {
+                // Ghim cuối (isPinnedBottom) luôn ở đáy hàng đợi
+                if (a.isPinnedBottom && !b.isPinnedBottom) return 1;
+                if (!a.isPinnedBottom && b.isPinnedBottom) return -1;
+                
+                // Nếu cả hai đều ghim cuối: sắp xếp theo thứ tự bấm trước sau (pinnedBottomTime)
+                if (a.isPinnedBottom && b.isPinnedBottom) {
+                    return (a.pinnedBottomTime || 0) - (b.pinnedBottomTime || 0);
+                }
+
                 // Ưu tiên bài hát đã ghim (isPinned)
                 if (a.isPinned && !b.isPinned) return -1;
                 if (!a.isPinned && b.isPinned) return 1;
@@ -3652,6 +3669,15 @@ function sortAndRefreshQueue(forceSort = false) {
             });
         } else if (state.sortConfig === 'time') {
             otherSongs.sort((a, b) => {
+                // Ghim cuối (isPinnedBottom) luôn ở đáy hàng đợi
+                if (a.isPinnedBottom && !b.isPinnedBottom) return 1;
+                if (!a.isPinnedBottom && b.isPinnedBottom) return -1;
+                
+                // Nếu cả hai đều ghim cuối: sắp xếp theo thứ tự bấm trước sau (pinnedBottomTime)
+                if (a.isPinnedBottom && b.isPinnedBottom) {
+                    return (a.pinnedBottomTime || 0) - (b.pinnedBottomTime || 0);
+                }
+
                 // Ưu tiên bài hát đã ghim (isPinned)
                 if (a.isPinned && !b.isPinned) return -1;
                 if (!a.isPinned && b.isPinned) return 1;
@@ -3831,6 +3857,7 @@ function renderQueue() {
                 <!-- Hàng 1: Tiêu đề bài hát hiển thị đầy đủ -->
                 <div class="queue-item-title">
                     ${song.isPinned ? `<i class="fa-solid fa-thumbtack pinned-title-icon" style="color: var(--pineapple-orange-dark); margin-right: 0.35rem; transform: rotate(45deg); display: inline-block; vertical-align: middle;"></i>` : ''}
+                    ${song.isPinnedBottom ? `<i class="fa-solid fa-thumbtack pinned-title-icon" style="color: var(--pineapple-orange-dark); margin-right: 0.35rem; transform: rotate(180deg); display: inline-block; vertical-align: middle;"></i>` : ''}
                     ${song.title}${sourceBadgeHTML}${autoPinBadgeHTML}
                 </div>
                 <!-- Hàng 2: Thông tin người ủng hộ + thời gian + nút chức năng -->
@@ -3870,13 +3897,16 @@ function renderQueue() {
                                     <button class="queue-item-btn btn-pin ${song.isPinned ? 'pinned' : ''}" title="${song.isPinned ? 'Bỏ ghim bài hát' : 'Ghim bài hát lên đầu'}" onclick="togglePinQueueItem('${song.id}')">
                                         <i class="fa-solid fa-thumbtack"></i>
                                     </button>
+                                    <button class="queue-item-btn btn-pin-bottom ${song.isPinnedBottom ? 'pinned-bottom' : ''}" title="${song.isPinnedBottom ? 'Bỏ ghim cuối' : 'Ghim bài hát xuống cuối'}" onclick="togglePinBottomQueueItem('${song.id}')">
+                                        <i class="fa-solid fa-thumbtack" style="transform: rotate(180deg); display: inline-block;"></i>
+                                    </button>
                                 `}
-                                ${(!song.isPinned && realIndex > (state.currentSong ? 1 : 0) && !state.queue[realIndex - 1].isPinned) ? `
+                                ${(!song.isPinned && !song.isPinnedBottom && realIndex > (state.currentSong ? 1 : 0) && !state.queue[realIndex - 1].isPinned && !state.queue[realIndex - 1].isPinnedBottom) ? `
                                     <button class="queue-item-btn" title="Dịch chuyển lên" onclick="moveQueueItemUp('${song.id}')">
                                         <i class="fa-solid fa-arrow-up"></i>
                                     </button>
                                 ` : ''}
-                                ${(!song.isPinned && realIndex < state.queue.length - 1 && !state.queue[realIndex + 1].isPinned) ? `
+                                ${(!song.isPinned && !song.isPinnedBottom && realIndex < state.queue.length - 1 && !state.queue[realIndex + 1].isPinned && !state.queue[realIndex + 1].isPinnedBottom) ? `
                                     <button class="queue-item-btn" title="Dịch chuyển xuống" onclick="moveQueueItemDown('${song.id}')">
                                         <i class="fa-solid fa-arrow-down"></i>
                                     </button>
@@ -4335,6 +4365,11 @@ function resumeAutoplay() {
 let currentOverlayDuration = 0;
 function onSeekSliderChange(pct) {
     if (state.focusMode) return;
+    if (state.currentSong && state.currentSong.isAutoPinned) {
+        logSystem("Không thể tua bài hát đợi lâu!", "system");
+        updatePlayerUI(state.currentSong);
+        return;
+    }
     const progressSlider = document.getElementById('progress-slider');
     if (progressSlider) {
         updateRangeProgress(progressSlider, pct);
@@ -4431,6 +4466,11 @@ function togglePlayPause() {
 function skipSong(isManual = true) {
     if (state.focusMode) return;
     if (!state.currentSong) return;
+    if (isManual && state.currentSong.isAutoPinned) {
+        logSystem("Không thể bỏ qua bài hát đợi lâu!", "system");
+        showDashboardSystemAlert("Thao tác bị khóa", "Không thể bỏ qua bài hát do đợi lâu");
+        return;
+    }
     
     const skipAction = () => {
         logSystem(`Bỏ qua bài hát: <strong>${state.currentSong.title}</strong>`);
@@ -4563,6 +4603,24 @@ function insertSongSmartly(newSong) {
         for (let i = startIndex; i < state.queue.length; i++) {
             const item = state.queue[i];
             
+            // Nếu bài duyệt qua là ghim cuối mà bài mới không phải ghim cuối, chèn bài mới trước nó
+            if (item.isPinnedBottom && !newSong.isPinnedBottom) {
+                insertIndex = i;
+                break;
+            }
+            // Nếu cả hai đều ghim cuối: sắp xếp theo pinnedBottomTime
+            if (item.isPinnedBottom && newSong.isPinnedBottom) {
+                if ((item.pinnedBottomTime || 0) > (newSong.pinnedBottomTime || 0)) {
+                    insertIndex = i;
+                    break;
+                }
+                continue;
+            }
+            // Nếu bài mới là ghim cuối mà bài duyệt qua chưa ghim cuối, bỏ qua bài duyệt qua này để xuống dưới
+            if (!item.isPinnedBottom && newSong.isPinnedBottom) {
+                continue;
+            }
+
             // Bài mới (mặc định chưa ghim) không được chèn trước bài đã ghim
             if (item.isPinned && !newSong.isPinned) {
                 continue;
@@ -4586,15 +4644,41 @@ function insertSongSmartly(newSong) {
         }
     } else {
         // Defaults to 'time' or any other configurations
-        if (newSong.isPinned) {
-            // Chèn sau bài hát đã ghim cuối cùng
-            let lastPinnedIndex = startIndex - 1;
-            for (let i = startIndex; i < state.queue.length; i++) {
-                if (state.queue[i].isPinned) {
-                    lastPinnedIndex = i;
-                }
+        let insertIndex = -1;
+        for (let i = startIndex; i < state.queue.length; i++) {
+            const item = state.queue[i];
+            
+            // Ghim cuối
+            if (item.isPinnedBottom && !newSong.isPinnedBottom) {
+                insertIndex = i;
+                break;
             }
-            state.queue.splice(lastPinnedIndex + 1, 0, newSong);
+            if (item.isPinnedBottom && newSong.isPinnedBottom) {
+                if ((item.pinnedBottomTime || 0) > (newSong.pinnedBottomTime || 0)) {
+                    insertIndex = i;
+                    break;
+                }
+                continue;
+            }
+            if (!item.isPinnedBottom && newSong.isPinnedBottom) {
+                continue;
+            }
+
+            if (item.isPinned && !newSong.isPinned) {
+                continue;
+            }
+            if (!item.isPinned && newSong.isPinned) {
+                insertIndex = i;
+                break;
+            }
+            // Cả hai cùng ghim hoặc cùng không ghim: so sánh timestamp
+            if (item.timestamp > newSong.timestamp) {
+                insertIndex = i;
+                break;
+            }
+        }
+        if (insertIndex !== -1) {
+            state.queue.splice(insertIndex, 0, newSong);
         } else {
             state.queue.push(newSong);
         }
@@ -4675,6 +4759,10 @@ function togglePinQueueItem(songId) {
         return;
     }
     song.isPinned = !song.isPinned;
+    if (song.isPinned) {
+        song.isPinnedBottom = false;
+        delete song.pinnedBottomTime;
+    }
     
     logSystem(`Đã ${song.isPinned ? 'ghim' : 'bỏ ghim'} bài hát: <strong>${song.title}</strong>`);
     
@@ -4682,6 +4770,32 @@ function togglePinQueueItem(songId) {
     sortAndRefreshQueue(true);
 }
 window.togglePinQueueItem = togglePinQueueItem;
+
+// --- GHIM / BỎ GHIM CUỐI BÀI HÁT TRONG HÀNG ĐỢI ---
+function togglePinBottomQueueItem(songId) {
+    const index = state.queue.findIndex(s => String(s.id) === String(songId));
+    if (index === -1) return;
+    
+    const song = state.queue[index];
+    if (song.isAutoPinned) {
+        logSystem(`Bài hát <strong>${song.title}</strong> được ghim tự động do đợi lâu, không thể ghim cuối!`, 'system');
+        return;
+    }
+    
+    song.isPinnedBottom = !song.isPinnedBottom;
+    if (song.isPinnedBottom) {
+        song.isPinned = false;
+        song.pinnedBottomTime = Date.now();
+    } else {
+        delete song.pinnedBottomTime;
+    }
+    
+    logSystem(`Đã ${song.isPinnedBottom ? 'ghim cuối' : 'bỏ ghim cuối'} bài hát: <strong>${song.title}</strong>`);
+    
+    // Sắp xếp lại hàng đợi
+    sortAndRefreshQueue(true);
+}
+window.togglePinBottomQueueItem = togglePinBottomQueueItem;
 
 // --- CẬP NHẬT GIAO DIỆN KHI CÓ BÀI MỚI / DỪNG ---
 function updatePlayerUI(song) {
@@ -4847,7 +4961,93 @@ function updatePlayerUI(song) {
     if (typeof window.vpanelUpdateSong === 'function') {
         window.vpanelUpdateSong(song);
     }
+
+    // Cập nhật trạng thái vô hiệu hoá của các nút điều khiển khi phát nhạc đợi lâu
+    updatePlayerControlsDisableState(song);
 }
+
+function updatePlayerControlsDisableState(song) {
+    const isAutoPinned = !!(song && song.isAutoPinned);
+    
+    // 1. Thanh tua (progress-slider)
+    const progressSlider = document.getElementById('progress-slider');
+    if (progressSlider) {
+        progressSlider.disabled = isAutoPinned;
+        if (isAutoPinned) {
+            progressSlider.style.pointerEvents = 'none';
+            progressSlider.style.opacity = '0.5';
+        } else {
+            progressSlider.style.pointerEvents = '';
+            progressSlider.style.opacity = '';
+        }
+    }
+    
+    // 2. Nút Play/Pause (btn-play-pause)
+    const btnPlayPause = document.getElementById('btn-play-pause');
+    if (btnPlayPause) {
+        btnPlayPause.disabled = isAutoPinned;
+        if (isAutoPinned) {
+            btnPlayPause.style.pointerEvents = 'none';
+            btnPlayPause.style.opacity = '0.5';
+        } else {
+            btnPlayPause.style.pointerEvents = '';
+            btnPlayPause.style.opacity = '';
+        }
+    }
+    
+    // 3. Nút Skip (btn-skip)
+    const btnSkip = document.getElementById('btn-skip');
+    if (btnSkip) {
+        btnSkip.disabled = isAutoPinned;
+        if (isAutoPinned) {
+            btnSkip.style.pointerEvents = 'none';
+            btnSkip.style.opacity = '0.5';
+        } else {
+            btnSkip.style.pointerEvents = '';
+            btnSkip.style.opacity = '';
+        }
+    }
+    
+    // 4. Nút Phát hết bài (btn-bypass-limit)
+    const btnBypass = document.getElementById('btn-bypass-limit');
+    if (btnBypass) {
+        btnBypass.disabled = isAutoPinned;
+        if (isAutoPinned) {
+            btnBypass.style.pointerEvents = 'none';
+            btnBypass.style.opacity = '0.5';
+        } else {
+            btnBypass.style.pointerEvents = '';
+            btnBypass.style.opacity = '';
+        }
+    }
+
+    // 5. Nút Favorite (btn-favorite-current)
+    const btnFavorite = document.getElementById('btn-favorite-current');
+    if (btnFavorite) {
+        btnFavorite.disabled = isAutoPinned;
+        if (isAutoPinned) {
+            btnFavorite.style.pointerEvents = 'none';
+            btnFavorite.style.opacity = '0.5';
+        } else {
+            btnFavorite.style.pointerEvents = '';
+            btnFavorite.style.opacity = '';
+        }
+    }
+
+    // 6. Nút Save Keyword (btn-save-current-keyword)
+    const btnSaveKeyword = document.getElementById('btn-save-current-keyword');
+    if (btnSaveKeyword) {
+        btnSaveKeyword.disabled = isAutoPinned;
+        if (isAutoPinned) {
+            btnSaveKeyword.style.pointerEvents = 'none';
+            btnSaveKeyword.style.opacity = '0.5';
+        } else {
+            btnSaveKeyword.style.pointerEvents = '';
+            btnSaveKeyword.style.opacity = '';
+        }
+    }
+}
+window.updatePlayerControlsDisableState = updatePlayerControlsDisableState;
 
 // --- CHUYỂN ĐỔI TAB NỘI DUNG DASHBOARD ---
 function switchTab(tabId) {
@@ -5695,6 +5895,11 @@ function attemptGlobalAction(actionType, callback) {
 
 function userRemoveSongFromQueue(songId) {
     if (state.focusMode) return;
+    if (state.currentSong && String(songId) === String(state.currentSong.id) && state.currentSong.isAutoPinned) {
+        logSystem("Không thể xóa bài hát hiện tại khi đang phát bài hát đợi lâu!", "system");
+        showDashboardSystemAlert("Thao tác bị khóa", "Không thể xóa bài đang phát do đợi lâu");
+        return;
+    }
     attemptGlobalAction('delete', () => {
         removeSongFromQueue(songId, true);
     });
@@ -5702,6 +5907,11 @@ function userRemoveSongFromQueue(songId) {
 
 function userForcePlaySong(songId) {
     if (state.focusMode) return;
+    if (state.currentSong && state.currentSong.isAutoPinned) {
+        logSystem("Không thể ép phát bài hát khác khi đang phát bài hát đợi lâu!", "system");
+        showDashboardSystemAlert("Thao tác bị khóa", "Không thể ép phát bài khác khi đang phát bài đợi lâu");
+        return;
+    }
     attemptGlobalAction('force_play', () => {
         forcePlaySong(songId);
     });

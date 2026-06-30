@@ -2079,6 +2079,21 @@ body.dark-mode .queue-item-btn.btn-pin.pinned {
     background: var(--pineapple-orange-dark);
 }
 
+.queue-item-btn.btn-pin-bottom.pinned-bottom {
+    background: var(--pineapple-orange);
+    color: white !important;
+    border-color: var(--pineapple-border-color);
+}
+
+.queue-item-btn.btn-pin-bottom.pinned-bottom i {
+    transform: rotate(180deg);
+    color: white !important;
+}
+
+body.dark-mode .queue-item-btn.btn-pin-bottom.pinned-bottom {
+    background: var(--pineapple-orange-dark);
+}
+
 .queue-item-btn.btn-delete {
     background: var(--pineapple-error);
     color: #FFFFFF !important;

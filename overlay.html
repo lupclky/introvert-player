@@ -7432,7 +7432,7 @@
                         if (nextSongs.length > 0) {
                             nextSongs.forEach((ns, index) => {
                                 let titleText = ns.title || 'Không rõ tên bài hát';
-                                let pinHtml = ns.isPinned ? `<i class="fa-solid fa-thumbtack" style="color: var(--pineapple-orange-dark); margin-right: 0.35rem; transform: rotate(45deg); display: inline-block; vertical-align: middle;"></i>` : '';
+                                let pinHtml = ns.isPinned ? `<i class="fa-solid fa-thumbtack" style="color: var(--pineapple-orange-dark); margin-right: 0.35rem; transform: rotate(45deg); display: inline-block; vertical-align: middle;"></i>` : (ns.isPinnedBottom ? `<i class="fa-solid fa-thumbtack" style="color: var(--pineapple-orange-dark); margin-right: 0.35rem; transform: rotate(180deg); display: inline-block; vertical-align: middle;"></i>` : '');
                                 let metaText = '';
                                 if (ns.isOwnerAdd) {
                                     metaText = localStorage.getItem('dua_empty_queue_message') || 'Order nhạc tự động Zypage 50k';
@@ -7505,12 +7505,12 @@
                                 const titleEl = document.createElement('div');
                                 titleEl.className = 'modal-song-title';
                                 titleEl.textContent = ns.title || 'Không rõ tên bài hát';
-                                if (ns.isPinned) {
+                                if (ns.isPinned || ns.isPinnedBottom) {
                                     const pinIcon = document.createElement('i');
                                     pinIcon.className = 'fa-solid fa-thumbtack';
                                     pinIcon.style.color = 'var(--pineapple-orange-dark)';
                                     pinIcon.style.marginRight = '0.35rem';
-                                    pinIcon.style.transform = 'rotate(45deg)';
+                                    pinIcon.style.transform = ns.isPinned ? 'rotate(45deg)' : 'rotate(180deg)';
                                     pinIcon.style.display = 'inline-block';
                                     pinIcon.style.verticalAlign = 'middle';
                                     titleEl.prepend(pinIcon);
