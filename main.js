@@ -1,13 +1,5 @@
-// Force console output to UTF-8 on Windows to prevent Vietnamese character encoding issues
-if (process.platform === 'win32') {
-  try {
-    require('child_process').execSync('chcp 65001', { stdio: 'ignore' });
-  } catch (e) {
-    // Ignore
-  }
-}
-
 const { app, BrowserWindow, Menu, Tray, ipcMain, session, shell } = require('electron');
+app.disableHardwareAcceleration();
 const http = require('http');
 const https = require('https');
 const fs = require('fs');
@@ -49,16 +41,10 @@ let tray = null;
 app.isQuitting = false;
 let wss = null;
 const activeWsClients = new Set();
-const ytStreamResolveCache = new Map();
-const ytStreamResolveInFlight = new Map();
-const YT_STREAM_CACHE_TTL_MS = 10 * 60 * 1000;
-let currentSearchReq = null;
 
 // Tắt sandbox để tránh crash khi chạy từ thư mục AppData (giữ GPU bật để tránh bug input focus)
 app.commandLine.appendSwitch('no-sandbox');
 app.commandLine.appendSwitch('disable-gpu-sandbox');
-// Keep Chromium's native video composition path enabled. Disabling zero-copy,
-// DirectComposition or GPU video frames is expensive on large/4K windows.
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
   app.quit();
@@ -150,6 +136,28 @@ if (!gotTheLock) {
         return;
       }
 
+      // Xử lý API ghi log debug từ overlay (POST /api/debug-log)
+      if (req.url === '/api/debug-log' && req.method === 'POST') {
+        let body = '';
+        req.setEncoding('utf8');
+        req.on('data', chunk => {
+          body += chunk;
+        });
+        req.on('end', () => {
+          try {
+            const data = JSON.parse(body);
+            console.log(data.message);
+          } catch(e) {
+            console.log(body);
+          }
+          res.writeHead(200, getCorsHeaders({
+            'Content-Type': 'application/json'
+          }));
+          res.end(JSON.stringify({ success: true }));
+        });
+        return;
+      }
+
       // Xử lý API lưu walkthrough và đẩy lên Vercel (POST /api/save-walkthrough)
       if (req.url === '/api/save-walkthrough' && req.method === 'POST') {
         let body = '';
@@ -226,7 +234,7 @@ if (!gotTheLock) {
         res.writeHead(200, getCorsHeaders({
           'Content-Type': 'application/json'
         }));
-        res.end(JSON.stringify({ success: true, app: "pineapple-studio", version: "26.10.23" }));
+        res.end(JSON.stringify({ success: true, app: "pineapple-studio", version: "26.8.0" }));
         return;
       }
 
@@ -591,11 +599,73 @@ if (!gotTheLock) {
         return;
       }
 
+      // Xử lý API lấy loudnessDb từ YouTube (GET /api/yt-loudness?videoId=...)
+      if (req.url.startsWith('/api/yt-loudness') && req.method === 'GET') {
+        const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
+        const videoId = parsedUrl.searchParams.get('videoId');
+        console.log(`[API yt-loudness] Nhận request lấy loudness cho videoId: ${videoId}`);
+        if (!videoId) {
+          res.writeHead(400, getCorsHeaders({ 'Content-Type': 'application/json' }));
+          res.end(JSON.stringify({ error: 'Missing videoId' }));
+          return;
+        }
+
+        const https = require('https');
+        const watchUrl = `https://www.youtube.com/watch?v=${videoId}`;
+        https.get(watchUrl, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept-Language': 'vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7'
+          }
+        }, (ytRes) => {
+          let html = '';
+          ytRes.setEncoding('utf8');
+          ytRes.on('data', chunk => { html += chunk; });
+          ytRes.on('end', () => {
+            try {
+              // Tìm ytInitialPlayerResponse trong HTML và trích xuất JSON bằng đếm ngoặc nhọn
+              const marker = 'ytInitialPlayerResponse';
+              const idx = html.indexOf(marker);
+              if (idx !== -1) {
+                const startBrace = html.indexOf('{', idx);
+                if (startBrace !== -1) {
+                  let depth = 0;
+                  let endBrace = -1;
+                  for (let i = startBrace; i < html.length; i++) {
+                    if (html[i] === '{') depth++;
+                    else if (html[i] === '}') { depth--; if (depth === 0) { endBrace = i; break; } }
+                  }
+                  if (endBrace !== -1) {
+                    const jsonStr = html.substring(startBrace, endBrace + 1);
+                    const playerResponse = JSON.parse(jsonStr);
+                    const loudnessDb = playerResponse?.playerConfig?.audioConfig?.loudnessDb;
+                    const perceptualLoudnessDb = playerResponse?.playerConfig?.audioConfig?.perceptualLoudnessDb;
+                    console.log(`[API yt-loudness] Thành công trích xuất cho ${videoId} -> loudnessDb: ${loudnessDb}, perceptual: ${perceptualLoudnessDb}`);
+                    res.writeHead(200, getCorsHeaders({ 'Content-Type': 'application/json' }));
+                    res.end(JSON.stringify({ videoId, loudnessDb: loudnessDb ?? null, perceptualLoudnessDb: perceptualLoudnessDb ?? null }));
+                    return;
+                  }
+                }
+              }
+            } catch (e) {
+              console.error(`[yt-loudness] Lỗi phân tích playerResponse cho ${videoId}:`, e.message);
+            }
+            console.log(`[API yt-loudness] Trả về loudnessDb mặc định: null cho ${videoId}`);
+            res.writeHead(200, getCorsHeaders({ 'Content-Type': 'application/json' }));
+            res.end(JSON.stringify({ videoId, loudnessDb: null, perceptualLoudnessDb: null }));
+          });
+        }).on('error', (err) => {
+          console.error(`[yt-loudness] Lỗi kết nối cho ${videoId}:`, err.message);
+          res.writeHead(500, getCorsHeaders({ 'Content-Type': 'application/json' }));
+          res.end(JSON.stringify({ error: err.message }));
+        });
+        return;
+      }
+
       // Xử lý API lấy URL stream trực tiếp từ YouTube (GET /api/yt-stream?videoId=...)
       if (req.url.startsWith('/api/yt-stream') && req.method === 'GET') {
         const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
         const videoId = parsedUrl.searchParams.get('videoId');
-        const type = parsedUrl.searchParams.get('type') || 'audio';
         if (!videoId) {
           res.writeHead(400, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'Missing videoId parameter' }));
@@ -609,87 +679,31 @@ if (!gotTheLock) {
           return;
         }
 
+        const { spawn } = require('child_process');
         const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
         
-        // Dinh dang tai: audio-only cho overlay, video cho preview Dashboard.
-        const format = type === 'video' ? 'bestvideo[vcodec^=avc][height<=480]/bestvideo[ext=mp4][vcodec^=avc][height<=480]/best[ext=mp4][height<=480]/best[height<=480]' : 'bestaudio[ext=m4a]/bestaudio/ba';
-        const cacheKey = `${type}:${videoId}`;
-        const cached = ytStreamResolveCache.get(cacheKey);
+        // Chạy yt-dlp.exe -g -f ba [url]
+        const proc = spawn(ytDlpPath, ['-g', '-f', 'ba', videoUrl]);
+        let stdout = '';
+        let stderr = '';
 
-        if (cached && Date.now() - cached.timestamp < YT_STREAM_CACHE_TTL_MS) {
-          res.writeHead(200, getCorsHeaders({ 'Content-Type': 'application/json' }));
-          res.end(JSON.stringify({ success: true, url: cached.url, cached: true }));
-          return;
-        }
+        proc.stdout.on('data', data => stdout += data.toString());
+        proc.stderr.on('data', data => stderr += data.toString());
 
-        if (!ytStreamResolveInFlight.has(cacheKey)) {
-          ytStreamResolveInFlight.set(cacheKey, new Promise((resolve, reject) => {
-            let proc;
-            try {
-              proc = spawn(ytDlpPath, ['--js-runtimes', 'node', '--no-playlist', '--no-cache-dir', '-g', '-f', format, videoUrl]);
-            } catch (spawnError) {
-              reject(new Error(`Failed to spawn yt-dlp: ${spawnError.message}`));
-              return;
-            }
-
-            let stdout = '';
-            let stderr = '';
-
-            const timeout = setTimeout(() => {
-              console.error(`yt-dlp stream resolution timed out for ${videoId}`);
-              try { proc.kill(); } catch (e) {}
-              reject(new Error('yt-dlp resolution timed out'));
-            }, 15000);
-
-            proc.stdout.on('data', data => stdout += data.toString());
-            proc.stderr.on('data', data => stderr += data.toString());
-
-            proc.on('error', err => {
-              clearTimeout(timeout);
-              console.error(`yt-dlp process error for ${videoId}:`, err);
-              reject(new Error(`yt-dlp process error: ${err.message}`));
-            });
-
-            proc.on('close', code => {
-              clearTimeout(timeout);
-              if (code !== 0) {
-                console.error(`yt-dlp stream resolution failed for ${videoId}:`, stderr);
-                reject(new Error(`yt-dlp failed with code ${code}: ${stderr.trim()}`));
-                return;
-              }
-
-              const streamUrl = stdout
-                .split(/\r?\n/)
-                .map(line => line.trim())
-                .find(line => /^https?:\/\//i.test(line));
-              if (!streamUrl) {
-                console.error(`yt-dlp returned no usable stream URL for ${videoId}:`, stdout);
-                reject(new Error('yt-dlp returned no usable stream URL'));
-                return;
-              }
-
-              ytStreamResolveCache.set(cacheKey, { url: streamUrl, timestamp: Date.now() });
-              resolve(streamUrl);
-            });
-          }).finally(() => {
-            ytStreamResolveInFlight.delete(cacheKey);
-          }));
-        }
-
-        ytStreamResolveInFlight.get(cacheKey)
-          .then(streamUrl => {
-            if (!res.writableEnded) {
-              res.writeHead(200, getCorsHeaders({ 'Content-Type': 'application/json' }));
-              res.end(JSON.stringify({ success: true, url: streamUrl }));
-            }
-          })
-          .catch(err => {
-            if (!res.writableEnded) {
-              const statusCode = err.message.includes('timed out') ? 504 : 500;
-              res.writeHead(statusCode, getCorsHeaders({ 'Content-Type': 'application/json' }));
-              res.end(JSON.stringify({ error: err.message }));
-            }
-          });
+        proc.on('close', code => {
+          if (code === 0) {
+            res.writeHead(200, getCorsHeaders({ 'Content-Type': 'application/json' }));
+            res.end(JSON.stringify({ success: true, url: stdout.trim() }));
+          } else {
+            console.error(`yt-dlp stream resolution failed for ${videoId}:`, stderr);
+            res.writeHead(500, getCorsHeaders({ 'Content-Type': 'application/json' }));
+            res.end(JSON.stringify({ error: `yt-dlp failed: ${stderr.trim()}` }));
+          }
+        });
+        
+        req.on('close', () => {
+          try { proc.kill(); } catch (e) {}
+        });
         return;
       }
 
@@ -799,7 +813,6 @@ if (!gotTheLock) {
   function createWindow(port) {
     const isWin = process.platform === 'win32';
     mainWindow = new BrowserWindow({
-      icon: path.join(__dirname, 'build', 'icon.png'),
       width: 1280,
       height: 800,
       minWidth: 640,
@@ -815,8 +828,7 @@ if (!gotTheLock) {
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
-        preload: path.join(__dirname, 'preload.js'),
-        autoplayPolicy: 'no-user-gesture-required'
+        preload: path.join(__dirname, 'preload.js')
       }
     });
 
@@ -825,29 +837,6 @@ if (!gotTheLock) {
 
     // Tạo menu ứng dụng cơ bản
     Menu.setApplicationMenu(null); // Ẩn menu mặc định để giao diện trông tối giản và chuyên nghiệp hơn
-
-    // Cho phép window.open() tạo cửa sổ Overlay với autoplay không cần gesture của người dùng
-    // Đây là cần thiết để DirectStream có thể tự phát ngay khi cửa sổ Overlay vừa mở
-    mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-      // Chỉ cho phép mở các URL nội bộ của app (overlay.html và các trang localhost)
-      const isLocalFile = url.startsWith('file://') || url.includes('127.0.0.1') || url.includes('localhost');
-      if (!isLocalFile) {
-        shell.openExternal(url);
-        return { action: 'deny' };
-      }
-      return {
-        action: 'allow',
-        overrideBrowserWindowOptions: {
-          autoHideMenuBar: true,
-          webPreferences: {
-            nodeIntegration: false,
-            contextIsolation: true,
-            autoplayPolicy: 'no-user-gesture-required' // Cho phép DirectStream tự phát không cần user click
-          }
-        }
-      };
-    });
-
 
 
 
@@ -875,13 +864,7 @@ if (!gotTheLock) {
     const { nativeImage } = require('electron');
 
     // Ưu tiên tải icon từ extraResources (nằm ngoài ASAR), fallback vào __dirname (khi dev)
-    let iconPath = path.join(process.resourcesPath, 'icon.png');
-    if (!fs.existsSync(iconPath)) {
-      iconPath = path.join(process.resourcesPath, 'icon.ico');
-    }
-    if (!fs.existsSync(iconPath)) {
-      iconPath = path.join(__dirname, 'build', 'icon.png');
-    }
+    let iconPath = path.join(process.resourcesPath, 'icon.ico');
     if (!fs.existsSync(iconPath)) {
       iconPath = path.join(__dirname, 'build', 'icon.ico');
     }
@@ -1049,6 +1032,51 @@ ipcMain.on('window-control', (event, action) => {
     mainWindow.close();
   } else if (action === 'focus') {
     mainWindow.focus();
+  } else if (action === 'system-menu') {
+    const { Menu } = require('electron');
+    const menu = Menu.buildFromTemplate([
+      {
+        label: 'Khôi phục',
+        enabled: mainWindow.isMaximized() || mainWindow.isMinimized(),
+        click: () => {
+          if (mainWindow.isMinimized()) mainWindow.restore();
+          else if (mainWindow.isMaximized()) mainWindow.unmaximize();
+        }
+      },
+      {
+        label: 'Di chuyển',
+        enabled: !mainWindow.isMaximized(),
+        click: () => {}
+      },
+      {
+        label: 'Kích cỡ',
+        enabled: !mainWindow.isMaximized(),
+        click: () => {}
+      },
+      {
+        label: 'Thu nhỏ',
+        enabled: mainWindow.isMinimizable(),
+        click: () => {
+          mainWindow.minimize();
+        }
+      },
+      {
+        label: 'Phóng to',
+        enabled: mainWindow.isMaximizable() && !mainWindow.isMaximized(),
+        click: () => {
+          mainWindow.maximize();
+        }
+      },
+      { type: 'separator' },
+      {
+        label: 'Đóng',
+        accelerator: 'Alt+F4',
+        click: () => {
+          mainWindow.close();
+        }
+      }
+    ]);
+    menu.popup({ window: mainWindow });
   }
 });
 
@@ -1072,6 +1100,7 @@ ipcMain.on('theme-change', (event, theme) => {
   }
 });
 
+let currentSearchReq = null;
 const youtubeSearchCache = new Map();
 const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes cache TTL
 const MAX_CACHE_SIZE = 150;
@@ -1129,16 +1158,12 @@ ipcMain.handle('search-youtube', async (event, query) => {
         let body = '';
         ytRes.setEncoding('utf8');
         ytRes.on('data', chunk => body += chunk);
-        ytRes.on('end', () => {
-          if (currentSearchReq === ytReq) currentSearchReq = null;
-          resolve(body);
-        });
+        ytRes.on('end', () => resolve(body));
       });
 
       currentSearchReq = ytReq;
 
       ytReq.on('error', (err) => {
-        if (currentSearchReq === ytReq) currentSearchReq = null;
         if (ytReq.destroyed) {
           reject(new Error("SEARCH_ABORTED"));
         } else {
@@ -1444,7 +1469,6 @@ function fetchHtmlWithRedirects(urlToFetch, reqHeaders, depth = 0) {
         res.setEncoding('utf8');
         res.on('data', chunk => { data += chunk; });
         res.on('end', () => {
-          if (currentSearchReq === req) currentSearchReq = null;
           resolve({ html: data, statusCode: res.statusCode });
         });
       });
@@ -1452,7 +1476,6 @@ function fetchHtmlWithRedirects(urlToFetch, reqHeaders, depth = 0) {
       currentSearchReq = req;
       
       req.on('error', (err) => {
-        if (currentSearchReq === req) currentSearchReq = null;
         if (req.destroyed) {
           reject(new Error("SEARCH_ABORTED"));
         } else {
@@ -2575,12 +2598,22 @@ function showTaskbarNotification(title, message, isDarkMode = false, duration) {
     const cleanMsg = lines.slice(1).join('\n') || '';
     const cleanMsgLines = cleanMsg ? cleanMsg.split('\n') : [];
 
-    const notifWidth = 360;
-    let notifHeight = 110;
+    const notifWidth = 480;
     
-    if (cleanMsgLines.length > 1) {
-      const calculatedHeight = 95 + (cleanMsgLines.length - 1) * 18;
-      notifHeight = Math.min(220, Math.max(110, calculatedHeight));
+    // Calculate title lines and additional height (title font size is large, around 38 chars max per line)
+    const titleLines = Math.ceil((title || '').length / 38);
+    const titleAdditional = (titleLines - 1) * 24;
+
+    let notifHeight = 125 + titleAdditional;
+    
+    if (cleanMsg) {
+      const charLines = Math.ceil(cleanMsg.length / 45);
+      const explicitLines = cleanMsgLines.length;
+      const estimatedLines = Math.max(charLines, explicitLines);
+      const additionalHeight = estimatedLines * 24;
+      notifHeight = Math.min(340, Math.max(125, 115 + additionalHeight + titleAdditional));
+    } else if (songTitle) {
+      notifHeight = 110 + titleAdditional;
     }
     
     // Tính toán vị trí Y dựa trên số lượng thông báo hiện có
@@ -2621,15 +2654,15 @@ function showTaskbarNotification(title, message, isDarkMode = false, duration) {
     };
 
     // Lấy thông tin màu sắc theo theme của Dashboard
-    const bgGradient = isDarkMode
-      ? 'linear-gradient(135deg, #1D1A22 0%, #121016 100%)'
-      : 'linear-gradient(135deg, #FFFFFF 0%, #FFF5F6 100%)';
-    const borderColor = isDarkMode ? 'rgba(226, 232, 240, 0.08)' : 'rgba(216, 27, 96, 0.14)';
-    const titleColor = isDarkMode ? '#FF8E9E' : '#D81B60';
-    const textSongColor = isDarkMode ? '#E2E8F0' : '#3D242B';
-    const textMsgColor = isDarkMode ? '#CBD5E1' : '#7A6870';
-    const msgBg = isDarkMode ? '#17151E' : 'rgba(255, 107, 139, 0.07)';
-    const msgBorder = isDarkMode ? 'rgba(226, 232, 240, 0.06)' : 'rgba(216, 27, 96, 0.10)';
+    const bgGradient = isDarkMode 
+      ? 'linear-gradient(135deg, #1D1A22 0%, #121016 100%)' 
+      : 'linear-gradient(135deg, #FAF6EE 0%, #F5F0E4 100%)';
+    const borderColor = isDarkMode ? 'rgba(226, 232, 240, 0.08)' : 'rgba(45, 39, 39, 0.15)';
+    const titleColor = isDarkMode ? '#FB923C' : '#EA580C';
+    const textSongColor = isDarkMode ? '#E2E8F0' : '#2D2727';
+    const textMsgColor = isDarkMode ? '#D1D5DB' : '#4B5563';
+    const msgBg = isDarkMode ? '#17151E' : '#FAF6EE';
+    const msgBorder = isDarkMode ? 'rgba(226, 232, 240, 0.06)' : 'rgba(45, 39, 39, 0.12)';
 
     const notifId = 'notif_' + Date.now() + '_' + Math.floor(Math.random() * 1000000);
 
@@ -2640,9 +2673,10 @@ function showTaskbarNotification(title, message, isDarkMode = false, duration) {
         <meta charset="utf-8">
         <style>
           @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&family=Quicksand:wght@700;800&display=swap');
-          body {
+          html, body {
             margin: 0;
             padding: 0;
+            height: 100vh;
             overflow: hidden;
             background: transparent;
             font-family: 'Nunito', sans-serif;
@@ -2650,15 +2684,15 @@ function showTaskbarNotification(title, message, isDarkMode = false, duration) {
           .container {
             display: flex;
             align-items: center;
-            gap: 12px;
-            background: ${isDarkMode ? 'rgba(18, 16, 22, 0.96)' : 'rgba(255, 255, 255, 0.97)'};
+            gap: 14px;
+            background: ${isDarkMode ? 'rgba(18, 16, 22, 0.92)' : 'rgba(250, 246, 238, 0.95)'};
             background-image: ${bgGradient};
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
             border: 2px solid ${borderColor};
-            border-radius: 20px;
+            border-radius: 16px;
             padding: 12px 16px;
-            box-shadow: ${isDarkMode ? '0 12px 32px rgba(0, 0, 0, 0.5)' : '0 12px 32px rgba(216, 27, 96, 0.12)'};
+            box-shadow: 0 10px 30px rgba(0, 0, 0, ${isDarkMode ? '0.5' : '0.15'});
             color: ${textSongColor};
             height: 100%;
             box-sizing: border-box;
@@ -2684,41 +2718,39 @@ function showTaskbarNotification(title, message, isDarkMode = false, duration) {
           }
           .title {
             font-family: 'Quicksand', sans-serif;
-            font-size: 0.9rem;
+            font-size: 1.15rem;
             font-weight: 800;
             color: ${titleColor};
-            margin-bottom: 2px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            margin-bottom: 4px;
             padding-right: 20px;
+            word-break: break-word;
           }
           .close-btn {
             position: absolute;
             top: 8px;
             right: 12px;
-            font-size: 1.1rem;
+            font-size: 1.25rem;
             font-weight: 800;
             cursor: pointer;
-            color: ${isDarkMode ? 'rgba(255, 255, 255, 0.4)' : 'rgba(61, 36, 43, 0.35)'};
+            color: ${isDarkMode ? 'rgba(255, 255, 255, 0.4)' : 'rgba(0, 0, 0, 0.3)'};
             transition: color 0.15s ease;
             line-height: 1;
             z-index: 10;
             -webkit-app-region: no-drag;
           }
           .close-btn:hover {
-            color: ${isDarkMode ? '#FF8E9E' : '#D81B60'};
+            color: ${isDarkMode ? '#FB923C' : '#EA580C'};
           }
           .song-title {
             font-family: 'Quicksand', sans-serif;
-            font-size: 0.85rem;
+            font-size: 1.0rem;
             font-weight: 700;
             color: ${textSongColor};
             line-height: 1.35;
           }
           .song-title.single-line {
             display: -webkit-box;
-            -webkit-line-clamp: 1;
+            -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -2731,38 +2763,30 @@ function showTaskbarNotification(title, message, isDarkMode = false, duration) {
             text-overflow: ellipsis;
           }
           .message {
-            font-size: 0.78rem;
+            font-size: 1.08rem;
             font-weight: 600;
             color: ${textMsgColor};
-            background: ${msgBg};
-            border: 1px solid ${msgBorder};
-            border-radius: 8px;
-            padding: 4px 8px;
-            margin-top: 5px;
-            display: -webkit-box;
-            -webkit-line-clamp: ${songTitle ? 1 : 2};
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            word-break: break-word;
-          }
-          .message.multi-line {
+            background: transparent;
+            border: none;
+            padding: 4px 0;
+            margin-top: 8px;
             display: block;
+            word-break: break-word;
             white-space: pre-wrap;
             overflow-y: auto;
-            max-height: 110px;
+            max-height: 180px;
           }
-          .message.multi-line::-webkit-scrollbar {
+          .message::-webkit-scrollbar {
             width: 4px;
           }
-          .message.multi-line::-webkit-scrollbar-track {
+          .message::-webkit-scrollbar-track {
             background: transparent;
           }
-          .message.multi-line::-webkit-scrollbar-thumb {
+          .message::-webkit-scrollbar-thumb {
             background: ${isDarkMode ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.15)'};
             border-radius: 4px;
           }
-          .message.multi-line::-webkit-scrollbar-thumb:hover {
+          .message::-webkit-scrollbar-thumb:hover {
             background: ${isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)'};
           }
         </style>
@@ -2773,7 +2797,7 @@ function showTaskbarNotification(title, message, isDarkMode = false, duration) {
           <div class="content">
             <div class="title">${escapeHtml(title)}</div>
             ${songTitle ? `<div class="song-title ${cleanMsg ? 'single-line' : 'double-line'}">${escapeHtml(songTitle)}</div>` : ''}
-            ${cleanMsg ? `<div class="message ${cleanMsgLines.length > 1 ? 'multi-line' : ''}">${escapeHtml(cleanMsg)}</div>` : ''}
+            ${cleanMsg ? `<div class="message">${escapeHtml(cleanMsg)}</div>` : ''}
           </div>
         </div>
         <script>
@@ -2802,7 +2826,14 @@ function showTaskbarNotification(title, message, isDarkMode = false, duration) {
     let timeout = null;
     const isHang = (duration === -1 || duration === 0);
     if (!isHang) {
-      const timeoutVal = duration || 10000; // default to 10 seconds
+      let timeoutVal = 10000;
+      if (duration !== undefined && duration !== null && duration > 0) {
+        timeoutVal = duration;
+      } else {
+        const contentText = (title || '') + ' ' + (message || '');
+        const charCount = contentText.length;
+        timeoutVal = Math.min(20000, Math.max(5000, 5000 + (charCount / 15) * 1000));
+      }
       timeout = setTimeout(() => {
         closeNotificationById(notifId);
       }, timeoutVal);
@@ -2843,3 +2874,5 @@ function showTaskbarNotification(title, message, isDarkMode = false, duration) {
     console.error('Lỗi khi tạo thông báo Taskbar:', err);
   }
 }
+
+

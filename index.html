@@ -12,13 +12,6 @@
         rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        /* Tắt toàn bộ animation và transition trong app dashboard để tăng tốc độ phản hồi giao diện */
-        *:not(.m3-spinner):not(.m3-spinner *) {
-            animation: none !important;
-            transition: none !important;
-        }
-    </style>
 </head>
 
 <body class="dark-mode">
@@ -47,32 +40,32 @@
             <!-- Brand container (logo + title) -->
             <div class="splash-brand-container"
                 style="display: flex; align-items: center; gap: 1.5rem; margin-top: auto; margin-bottom: auto; z-index: 3;">
-                <img src="build/icon.png"
+                <img src="build/icon.ico"
                     style="width: 72px; height: 72px; border-radius: 16px; filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.15));"
                     alt="Logo">
                 <div class="splash-text-container"
                     style="display: flex; flex-direction: column; justify-content: center; text-align: left;">
-                    <div style="display: flex; align-items: baseline; gap: 0.35rem;">
-                        <span class="splash-title-line1"
-                            style="font-family: 'Dancing Script', cursive; font-size: 2.7rem; font-weight: 700; line-height: 1.1; letter-spacing: -0.01em;">Pineapple</span>
-                        <span class="splash-title-line2"
-                            style="font-family: 'Dancing Script', cursive; font-size: 1.8rem; font-weight: 600; line-height: 1.1; letter-spacing: 0.05em;">Studio</span>
-                    </div>
-                    <span class="splash-title-line3"
-                        style="font-family: 'Outfit', sans-serif; font-size: 0.92rem; font-weight: 200; letter-spacing: 0.18em; text-transform: uppercase; color: var(--pineapple-orange-dark, #EA580C); margin-top: 0.2rem; line-height: 1;">Birthday
-                        Special</span>
+                    <span class="splash-title-line1"
+                        style="font-family: 'Dancing Script', cursive; font-size: 2.7rem; font-weight: 700; line-height: 1.1; letter-spacing: -0.01em;">Pineapple</span>
+                    <span class="splash-title-line2"
+                        style="font-family: 'Dancing Script', cursive; font-size: 1.8rem; font-weight: 600; line-height: 1.1; letter-spacing: 0.05em;">Studio</span>
                 </div>
             </div>
-            <!-- Footer container (spinner + text) -->
-            <div class="splash-footer"
-                style="display: flex; align-items: center; gap: 0.75rem; z-index: 3; margin-top: auto;">
-                <svg class="m3-spinner" viewBox="0 0 24 24"
-                    style="font-size: 1.35rem; color: var(--pineapple-orange, #FB923C); filter: drop-shadow(0 0 8px rgba(251, 146, 60, 0.35));">
-                    <circle cx="12" cy="12" r="9.5" fill="none"></circle>
-                </svg>
-                <span class="splash-loading-text"
-                    style="font-family: var(--font-title); font-size: 0.95rem; font-weight: 600; letter-spacing: 0.03em;">Đang
-                    khởi chạy..</span>
+            <!-- Footer container (spinner + text + credit) -->
+            <div class="splash-footer-container"
+                style="display: flex; flex-direction: column; align-items: center; gap: 0.75rem; z-index: 3; margin-top: auto;">
+                <div class="splash-footer" style="display: flex; align-items: center; gap: 0.75rem;">
+                    <svg class="m3-spinner" viewBox="0 0 24 24"
+                        style="font-size: 1.35rem; color: var(--pineapple-orange, #FB923C); filter: drop-shadow(0 0 8px rgba(251, 146, 60, 0.35));">
+                        <circle cx="12" cy="12" r="9.5" fill="none"></circle>
+                    </svg>
+                    <span class="splash-loading-text"
+                        style="font-family: var(--font-title); font-size: 0.95rem; font-weight: 600; letter-spacing: 0.03em;">Đang
+                        khởi chạy..</span>
+                </div>
+                <div class="splash-credit">
+                    Phát triển bởi Pineapple Team
+                </div>
             </div>
         </div>
     </div>
@@ -80,16 +73,36 @@
     <!-- Custom Frameless Titlebar -->
     <div class="app-titlebar">
         <div class="titlebar-brand-menu-wrapper"
-            style="display: flex; align-items: center; gap: 1.2rem; -webkit-app-region: no-drag;">
-            <!-- Brand Logo & Text -->
-            <div class="titlebar-brand"
-                style="display: flex; align-items: center; gap: 0.5rem; user-select: none; margin-left: 0.2rem;">
-                <img src="build/icon.png"
-                    style="width: 28px; height: 28px; padding: 2px; border-radius: 6px; border: 1.5px solid var(--pineapple-border-color); background: var(--pineapple-white); box-sizing: border-box; object-fit: contain;"
-                    alt="Logo" title="Pineapple Studio">
-                <span class="brand-birthday-text"
-                    style="font-family: 'Outfit', sans-serif; font-weight: 400; font-size: 0.78rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--pineapple-orange-dark, #D81B60); white-space: nowrap; line-height: 1;">Birthday
-                    Special</span>
+            style="display: flex; align-items: center; gap: 1.5rem; -webkit-app-region: no-drag;">
+            <img src="build/icon.ico" class="titlebar-logo" onclick="window.electronAPI.showSystemMenu()"
+                style="width: 18px; height: 18px; cursor: pointer; object-fit: contain; margin-left: 0.5rem; margin-right: -0.5rem; user-select: none;"
+                title="Menu hệ thống">
+            <!-- Titlebar Navigation Menu -->
+            <div class="titlebar-menu">
+                <button id="menu-btn-player" class="titlebar-menu-btn active" onclick="switchTab('player')"
+                    title="Bàn điều khiển">
+                    <i class="fa-solid fa-play"></i>
+                    <span class="menu-btn-text">Trình phát</span>
+                </button>
+                <button id="menu-btn-donations" class="titlebar-menu-btn" onclick="switchTab('donations')">
+                    <svg class="zypage-logo-svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"
+                        xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle;">
+                        <mask id="zypage-logo-mask">
+                            <rect width="24" height="24" fill="white" />
+                            <rect x="7" y="7" width="10" height="10" fill="black" />
+                        </mask>
+                        <g mask="url(#zypage-logo-mask)">
+                            <rect x="2" y="2" width="15" height="15" rx="4" />
+                            <rect x="7" y="7" width="15" height="15" rx="4" />
+                        </g>
+                    </svg>
+                    <span class="menu-btn-text">Donate</span>
+                </button>
+                <button id="menu-btn-settings" class="titlebar-menu-btn" onclick="switchTab('settings')"
+                    title="Cấu hình">
+                    <i class="fa-solid fa-gear"></i>
+                    <span class="menu-btn-text">Cài đặt</span>
+                </button>
             </div>
         </div>
         <form id="quick-add-form" onsubmit="handleQuickAddSubmit(event)" class="titlebar-quick-add"
@@ -97,8 +110,7 @@
             <div class="search-input-wrapper">
                 <i class="fa-solid fa-magnifying-glass search-icon"></i>
                 <input id="donor-url" class="titlebar-search-input" type="text" placeholder="Thêm nhạc nhanh..."
-                    required autocomplete="off" aria-haspopup="dialog" aria-expanded="false"
-                    aria-controls="quick-add-popover">
+                    required autocomplete="off">
                 <i class="fa-solid fa-circle-xmark search-clear-btn" id="search-clear-btn"
                     style="display: none; cursor: pointer; color: #9CA3AF; font-size: 1.1rem; margin-left: 0.5rem; transition: color 0.15s;"
                     title="Xóa tìm kiếm"></i>
@@ -169,39 +181,6 @@
     <!-- 1. GIAO DIỆN CHÍNH (STREAMER DASHBOARD) -->
     <div class="app-layout">
 
-        <div id="persistent-player-host" class="persistent-player-host">
-            <div class="titlebar-menu">
-                <button id="menu-btn-player" class="titlebar-menu-btn active" onclick="switchTab('player')"
-                    title="Bàn điều khiển">
-                    <i class="fa-solid fa-music"></i>
-                    <span class="menu-btn-text">Nhạc</span>
-                </button>
-                <button id="menu-btn-video" class="titlebar-menu-btn" onclick="switchTab('video')" title="Video Mode">
-                    <i class="fa-brands fa-youtube"></i>
-                    <span class="menu-btn-text">Video</span>
-                </button>
-                <button id="menu-btn-donations" class="titlebar-menu-btn" onclick="switchTab('donations')">
-                    <svg class="zypage-logo-svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"
-                        xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle;">
-                        <mask id="zypage-logo-mask">
-                            <rect width="24" height="24" fill="white" />
-                            <rect x="7" y="7" width="10" height="10" fill="black" />
-                        </mask>
-                        <g mask="url(#zypage-logo-mask)">
-                            <rect x="2" y="2" width="15" height="15" rx="4" />
-                            <rect x="7" y="7" width="15" height="15" rx="4" />
-                        </g>
-                    </svg>
-                    <span class="menu-btn-text">Donate</span>
-                </button>
-                <button id="menu-btn-settings" class="titlebar-menu-btn" onclick="switchTab('settings')"
-                    title="Cấu hình">
-                    <i class="fa-solid fa-gear"></i>
-                    <span class="menu-btn-text">Cài đặt</span>
-                </button>
-            </div>
-        </div>
-
         <!-- Main Content Area -->
         <main class="app-content">
             <!-- Tab 1: Bàn điều khiển (Dashboard) -->
@@ -214,29 +193,6 @@
                                 <i class="fa-solid fa-compact-disc"></i> Đang Phát
                             </span>
                             <div style="display: flex; align-items: center; gap: 0.4rem;">
-                                <!-- Video Preview Switch -->
-                                <div class="theme-switch-wrapper video-toggle-wrapper" title="Bật/Tắt Video Preview"
-                                    style="font-size: 0.72rem; font-weight: 700; color: var(--pineapple-text); display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.2rem 0.5rem; background: var(--pineapple-white, #FAF6EE); border: 1.5px solid var(--pineapple-border-color, rgba(0,0,0,0.12)); border-radius: 8px; cursor: default; height: 26px; box-sizing: border-box;">
-                                    <span>Xem Video</span>
-                                    <label class="theme-switch" style="margin: 0;">
-                                        <input type="checkbox" id="video-preview-toggle-switch"
-                                            onchange="toggleVideoPreview(this.checked)" checked>
-                                        <span class="slider-round"></span>
-                                    </label>
-                                </div>
-                                <!-- Widget Giới hạn Thao tác (Mini ở góc phải trên) -->
-                                <div id="rate-limit-widget-mini"
-                                    style="font-size: 0.72rem; font-weight: 700; color: #FF5722; display: flex; align-items: center; background: var(--pineapple-white, #FAF6EE); border: 1.5px solid var(--pineapple-border-color, rgba(0,0,0,0.12)); border-radius: 8px; padding: 0.2rem 0.45rem; box-shadow: inset 1px 1px 2px rgba(0,0,0,0.03);"
-                                    title="Giới hạn thao tác hệ thống (8 lượt trong 12 giờ)">
-                                    <span>Lượt sử dụng&nbsp;</span>
-                                    <span id="rate-limit-remaining" style="font-weight: 800;">8/8</span>
-                                    <span id="rate-limit-replenish-container"
-                                        style="display: none; font-family: monospace; margin-left: 0.25rem;"><span
-                                            id="rate-limit-timer">00:00:00</span></span>
-                                    <span id="add-actions-btn" onclick="openAddActionCodeModal()"
-                                        style="margin-left: 0.35rem; color: #10b981; cursor: pointer; user-select: none; font-weight: 800; transition: opacity 0.2s;"
-                                        title="Nhập mã thêm lượt">+ Thêm</span>
-                                </div>
                                 <div id="direct-stream-badge" class="direct-stream-badge" style="display: none;">
                                     DirectStream</div>
                                 <div id="playing-live-badge" class="live-badge" style="display: none;">
@@ -252,7 +208,12 @@
                                     alt="Cover">
                             </div>
                             <div class="song-details">
-                                <h2 id="current-song-title" class="song-title">Chưa có bài hát nào</h2>
+                                <div style="display: flex; align-items: center; gap: 0.5rem; width: 100%;">
+                                    <h2 id="current-song-title" class="song-title" style="margin-right: 0.25rem;">Chưa có bài hát nào</h2>
+                                    <button id="btn-player-favorite" class="player-favorite-btn" title="Yêu thích bài hát này" style="display: none; background: none; border: none; cursor: pointer; padding: 0.25rem; font-size: 1.15rem; color: var(--pineapple-text); transition: color 0.15s; outline: none;">
+                                        <i class="fa-regular fa-heart"></i>
+                                    </button>
+                                </div>
                                 <div id="current-song-donor" class="song-donor" style="display: none;">
                                     <span id="current-donor-name">Khách</span>
                                     <span style="color: var(--pineapple-text);">đã tặng</span>
@@ -263,6 +224,13 @@
                                 </div>
                                 <div id="current-song-extension-info" class="song-extension-info"
                                     style="display: none;">
+                                </div>
+                                <div id="player-adaptive-volume-row" class="player-adaptive-volume-row" style="display: none;">
+                                    <span class="adaptive-badge-pill">
+                                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                                        <span>Thích ứng: </span>
+                                        <strong id="player-adaptive-vol-text">80% ➜ 64% (-5.7 dB)</strong>
+                                    </span>
                                 </div>
                             </div>
                         </div>
@@ -293,11 +261,6 @@
                                             title="Bỏ qua">
                                             <i class="fa-solid fa-forward"></i>
                                         </button>
-                                        <button id="btn-favorite-current" class="dua-btn dua-btn-secondary"
-                                            onclick="toggleCurrentSongFavorite()"
-                                            title="Thêm bài đang phát vào danh sách yêu thích" style="display: none;">
-                                            <i class="fa-regular fa-heart"></i><span>Yêu thích</span>
-                                        </button>
                                     </div>
 
                                     <!-- Sóng nhạc và âm lượng -->
@@ -308,17 +271,17 @@
                                         <input id="volume-slider" class="volume-slider" type="range" min="0" max="100"
                                             value="80" oninput="onVolumeChange(this.value)">
                                         <span id="volume-val-display" style="min-width: 30px;">80%</span>
+                                        <span id="adaptive-volume-badge" class="adaptive-volume-badge" style="display: none;"
+                                            title="Âm lượng thích ứng đang hoạt động">
+                                            <i class="fa-solid fa-wand-magic-sparkles"></i>
+                                            <span id="adaptive-volume-info"></span>
+                                        </span>
                                     </div>
                                 </div>
 
                                 <!-- Hàng 2: Các tính năng mở rộng -->
                                 <div id="control-features-row" class="control-features"
                                     style="display: flex; gap: 0.75rem; width: 100%; flex-wrap: wrap; margin-top: 0.5rem; border-top: 1.5px dashed var(--pineapple-border-color); padding-top: 0.6rem; align-items: center;">
-                                    <button id="btn-save-current-keyword" class="dua-btn dua-btn-secondary"
-                                        onclick="saveCurrentSongKeyword()" title="Lưu keyword cho bài đang phát"
-                                        style="display: none;">
-                                        Lưu keyword
-                                    </button>
                                     <!-- Nút Vô Cùng (Bypass Limit) -->
                                     <button id="btn-bypass-limit" class="dua-btn dua-btn-secondary"
                                         onclick="bypassCurrentSongLimit()"
@@ -448,71 +411,6 @@
                 </div>
 
                 <div class="right-column">
-                    <!-- ============================================
-                         VIDEO PREVIEW PANEL — Right-column top
-                         ============================================ -->
-                    <div id="video-preview-section">
-                        <!-- Header -->
-                        <div class="vpanel-header">
-                            <span class="vpanel-title">
-                                <i class="fa-brands fa-youtube" style="color: #FF0000;"></i>
-                                Xem Video
-                                <span id="vpanel-sync-badge" class="vpanel-sync-badge no-video">
-                                    <i class="fa-solid fa-circle" style="font-size:0.5rem;"></i> Chưa có video
-                                </span>
-                            </span>
-                            <div class="vpanel-header-actions">
-                                <button id="vpanel-btn-cc" class="vpanel-btn" onclick="vpanelToggleCc()"
-                                    title="Tat/Bat phu de (CC)">
-                                    <i class="fa-solid fa-closed-captioning"></i> CC: Tat
-                                </button>
-                                <button id="vpanel-btn-pip" class="vpanel-btn" onclick="vpanelTogglePiP()"
-                                    title="Picture-in-Picture">
-                                    <i class="fa-solid fa-window-restore"></i> PiP
-                                </button>
-                                <!-- Quality Selector -->
-                                <select id="vpanel-quality-select" class="vpanel-quality-select"
-                                    onchange="vpanelSetQuality(this.value)" title="Chọn độ phân giải"
-                                    style="display: none;">
-                                    <option value="auto">🎬 Tự động</option>
-                                    <option value="hd1080">📺 1080p HD</option>
-                                    <option value="hd720">🖥 720p HD</option>
-                                    <option value="large">⬛ 480p</option>
-                                    <option value="medium">▪ 360p</option>
-                                    <option value="small">· 240p</option>
-                                </select>
-                                <!-- Mute toggle for preview -->
-                                <button id="vpanel-btn-mute-preview" class="vpanel-btn"
-                                    onclick="vpanelTogglePreviewMute()"
-                                    title="Tắt/Bật âm preview (âm thanh thực vẫn từ Overlay)" style="display: none;">
-                                    <i class="fa-solid fa-volume-xmark"></i> Preview muted
-                                </button>
-                                <!-- Fullscreen Dashboard -->
-                                <button id="vpanel-btn-fullscreen-dash" class="vpanel-btn"
-                                    onclick="vpanelToggleFullscreenDash()" title="Phóng to toàn Dashboard">
-                                    <i class="fa-solid fa-up-right-and-down-left-from-center"></i>
-                                </button>
-                                <!-- Fullscreen Native -->
-                                <button class="vpanel-btn" onclick="vpanelToggleNativeFullscreen()"
-                                    title="Phóng to toàn màn hình">
-                                    <i class="fa-solid fa-maximize"></i>
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Iframe area -->
-                        <div class="vpanel-iframe-wrapper" id="vpanel-iframe-wrapper">
-                            <!-- Empty state shown when no song is playing -->
-                            <div class="vpanel-empty-overlay" id="vpanel-empty-overlay">
-                                <div class="vpanel-empty-icon">🎬</div>
-                                <div class="vpanel-empty-text">Chưa có video đang phát.<br>Thêm nhạc để xem!</div>
-                            </div>
-                            <!-- The muted preview iframe — loaded dynamically by JS -->
-                            <iframe id="vpanel-iframe" src="about:blank"
-                                allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen
-                                style="border: none; background: #000;"></iframe>
-                        </div>
-                    </div>
                     <!-- Card: 2 Donate gần nhất -->
                     <div class="dua-card" id="card-recent-donations"
                         style="padding: 1.2rem; display: flex; flex-direction: column; gap: 0.6rem;">
@@ -534,23 +432,23 @@
                         style="padding: 1rem; display: flex; flex-direction: column; gap: 0.6rem;">
                         <!-- Tabs Row -->
                         <div class="qa-tabs-row" style="border-radius: 12px 12px 0 0; margin: -1rem -1rem 0 -1rem;">
-                            <button type="button" class="qa-tab-btn active" id="qa-tab-btn-keywords"
-                                onclick="switchQuickAddTab('keywords')">
-                                Keyword & Yêu thích
-                            </button>
-                            <button type="button" class="qa-tab-btn" id="qa-tab-btn-recommendations"
+                            <button type="button" class="qa-tab-btn active" id="qa-tab-btn-recommendations"
                                 onclick="switchQuickAddTab('recommendations')">
-                                Gợi ý cho bạn
+                                <i class="fa-solid fa-lightbulb"></i> Gợi ý cho bạn
                             </button>
                             <button type="button" class="qa-tab-btn" id="qa-tab-btn-playlists"
                                 onclick="switchQuickAddTab('playlists')">
                                 Playlist cá nhân
                             </button>
+                            <button type="button" class="qa-tab-btn" id="qa-tab-btn-favorites"
+                                onclick="switchQuickAddTab('favorites')">
+                                <i class="fa-solid fa-heart"></i> Yêu thích
+                            </button>
                         </div>
 
                         <!-- Tab Contents -->
                         <div class="qa-tab-content" id="qa-content-recommendations"
-                            style="display: none; max-height: 480px; overflow-y: auto;">
+                            style="max-height: 480px; overflow-y: auto;">
                             <div class="qa-recommendations-header"
                                 style="display: flex; justify-content: flex-end; width: 100%; margin-bottom: 0.5rem; padding-right: 0.2rem;">
                                 <button type="button" class="dua-btn"
@@ -576,20 +474,23 @@
                                     <i class="fa-solid fa-arrows-rotate"></i>
                                 </button>
                             </div>
-                            <div id="qa-playlists-list" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                            <div id="qa-playlists-list">
                             </div>
                         </div>
-                        <div class="qa-tab-content" id="qa-content-keywords"
-                            style="max-height: 520px; overflow-y: auto;">
-                            <div id="qa-keywords-list" class="player-library-grid"></div>
+                        <div class="qa-tab-content" id="qa-content-favorites"
+                            style="display: none; max-height: 480px; overflow-y: auto;">
+                            <div id="qa-favorites-list">
+                                <div style="grid-column: 1 / -1; padding: 30px 10px; text-align: center; color: #6B7280; font-weight: 700;">
+                                    <i class="fa-solid fa-heart" style="font-size: 1.8rem; color: #E5E7EB; margin-bottom: 0.5rem; display: block;"></i>
+                                    Chưa có bài hát yêu thích nào.<br/>Hãy bấm icon Trái tim ở kết quả tìm kiếm hoặc trình phát để lưu bài!
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
-
-
             </div>
 
-
+            <!-- Tab 1.5: Lời nhắn Donate -->
             <div id="tab-donations" class="tab-content">
                 <div class="donation-tab-wrapper">
 
@@ -599,7 +500,7 @@
                         <div class="donation-tab-header">
                             <div class="donation-title-group">
                                 <div id="donation-stats-line">
-                                    Tổng doanh thu: 0 VNĐ | Số lượt donate: 0
+                                    Số lượt donate: 0
                                 </div>
                             </div>
                             <div class="donation-action-buttons">
@@ -640,9 +541,6 @@
                         <button class="settings-tab-btn" onclick="switchSettingsSection('youtube')">
                             <i class="fa-brands fa-youtube"></i> Đồng bộ YouTube
                         </button>
-                        <button class="settings-tab-btn" onclick="switchSettingsSection('keywords')">
-                            <i class="fa-solid fa-key"></i> Keyword tìm kiếm
-                        </button>
                         <button class="settings-tab-btn" onclick="switchSettingsSection('playback')">
                             <i class="fa-solid fa-circle-play"></i> Cài đặt Phát lại
                         </button>
@@ -659,7 +557,7 @@
                             <i class="fa-solid fa-clock-rotate-left"></i> Hệ thống & Nhật ký
                         </button>
                         <button class="settings-tab-btn" onclick="switchSettingsSection('about')">
-                            Giới thiệu
+                            <i class="fa-solid fa-circle-info"></i> Giới thiệu
                         </button>
                     </div>
 
@@ -775,46 +673,6 @@
                             </div>
                         </div>
 
-                        <!-- Section: keyword shortcuts -->
-                        <div id="settings-sec-keywords" class="settings-section keyword-settings-section"
-                            style="display: none; flex-direction: column; gap: 1rem; width: 100%;">
-                            <div class="dua-card keyword-settings-card">
-                                <div class="keyword-settings-heading">
-                                    <div>
-                                        <h3 class="dua-card-title">Keyword tìm kiếm</h3>
-                                        <p>Gắn keyword với một video YouTube để thêm nhanh vào hàng đợi.</p>
-                                    </div>
-                                    <span id="keyword-shortcut-count" class="keyword-count-badge">0</span>
-                                </div>
-
-                                <div class="keyword-editor-grid">
-                                    <label class="keyword-field">
-                                        <span>Keyword</span>
-                                        <input id="keyword-name-input" class="dua-input" type="text" maxlength="80"
-                                            placeholder="Ví dụ: nhạc mở stream" autocomplete="off">
-                                    </label>
-                                    <label class="keyword-field keyword-video-field">
-                                        <span>Link YouTube hoặc tìm tên bài hát</span>
-                                        <div class="keyword-search-row">
-                                            <input id="keyword-video-input" class="dua-input" type="text"
-                                                placeholder="Dán link hoặc nhập để tìm trên YouTube..."
-                                                autocomplete="off">
-                                            <button id="keyword-save-btn" class="dua-btn dua-btn-primary" type="button"
-                                                onclick="saveKeywordShortcut()">
-                                                Lưu
-                                            </button>
-                                        </div>
-                                        <div id="keyword-search-results" class="keyword-search-results"
-                                            style="display: none;"></div>
-                                    </label>
-                                </div>
-
-                                <div id="keyword-selected-video" class="keyword-selected-video" style="display: none;">
-                                </div>
-                                <div id="keyword-shortcut-list" class="keyword-shortcut-list"></div>
-                            </div>
-                        </div>
-
                         <!-- Section: playback -->
                         <div id="settings-sec-playback" class="settings-section"
                             style="display: none; flex-direction: column; gap: 1rem; width: 100%;">
@@ -833,19 +691,34 @@
                                     style="display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 1rem; flex-wrap: wrap;">
                                     <div style="flex-grow: 1; min-width: 250px;">
                                         <div style="font-weight: 750; font-size: 0.9rem; color: var(--pineapple-text);">
-                                            Chế độ phát nhạc YouTube</div>
+                                            Cho phép phát nhạc có bản quyền</div>
                                         <div
                                             style="font-size: 0.78rem; font-weight: 600; color: #6B7280; margin-top: 0.15rem; line-height: 1.35;">
-                                            Linh hoạt chuyển đổi giữa phát trực tiếp qua Iframe YouTube hoặc dùng luồng
-                                            âm thanh dự phòng (DirectStream) giải mã bằng yt-dlp.</div>
+                                            Tự động sử dụng luồng âm thanh dự phòng đối với các bài hát có bản quyền bị
+                                            YouTube hạn chế phát nhúng trên các ứng dụng ngoài (lỗi 150/101).</div>
                                     </div>
-                                    <div style="-webkit-app-region: no-drag;">
-                                        <select id="yt-bypass-select" class="dua-select"
-                                            style="width: 200px; padding: 0.35rem 0.5rem; font-size: 0.8rem; border-radius: 8px; box-shadow: none;">
-                                            <option value="never">Không bao giờ (Iframe)</option>
-                                            <option value="auto">Tự động (Lỗi -> DirectStream)</option>
-                                            <option value="always">Luôn luôn (DirectStream)</option>
-                                        </select>
+                                    <div class="theme-switch-wrapper" style="-webkit-app-region: no-drag;">
+                                        <label class="theme-switch">
+                                            <input type="checkbox" id="yt-bypass-toggle">
+                                            <span class="slider-round"></span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div
+                                    style="border-top: 2px dashed var(--pineapple-border-color); padding-top: 0.8rem; display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 1rem; flex-wrap: wrap;">
+                                    <div style="flex-grow: 1; min-width: 250px;">
+                                        <div style="font-weight: 750; font-size: 0.9rem; color: var(--pineapple-text);">
+                                            Âm lượng thích ứng (Adaptive Volume)</div>
+                                        <div
+                                            style="font-size: 0.78rem; font-weight: 600; color: #6B7280; margin-top: 0.15rem; line-height: 1.35;">
+                                            Tự động điều chỉnh âm lượng dựa trên độ lớn (dB) của từng video YouTube để tránh bài quá to hoặc quá nhỏ so với mức âm lượng hiện tại.</div>
+                                    </div>
+                                    <div class="theme-switch-wrapper" style="-webkit-app-region: no-drag;">
+                                        <label class="theme-switch">
+                                            <input type="checkbox" id="adaptive-volume-toggle">
+                                            <span class="slider-round"></span>
+                                        </label>
                                     </div>
                                 </div>
 
@@ -1002,7 +875,7 @@
                                                 trước giao diện:</span>
                                         </div>
                                         <div class="theme-preview-container">
-                                            <iframe id="theme-preview-iframe" src="about:blank"
+                                            <iframe id="theme-preview-iframe" src="overlay.html?preview=true"
                                                 style="width: 440px; height: 300px; border: none; pointer-events: none; overflow: hidden; transform: scale(0.65); transform-origin: center; flex-shrink: 0;"></iframe>
                                         </div>
                                     </div>
@@ -1292,8 +1165,8 @@
                                             <span>Ghim bài hát lên đầu nếu đợi quá</span>
                                             <input id="auto-pin-minutes-input" class="dua-input"
                                                 style="width: 70px; padding: 0.25rem 0.5rem; border-radius: 8px; font-size: 0.8rem; box-shadow: none;"
-                                                type="number" min="1" placeholder="60">
-                                            <span>phút (mặc định 60)</span>
+                                                type="number" min="1" placeholder="75">
+                                            <span>phút (mặc định 75)</span>
                                         </div>
                                         <button id="btn-auto-pin-apply" class="dua-btn"
                                             style="align-self: flex-start; padding: 0.3rem 0.8rem; border-radius: 8px; font-size: 0.8rem; background: var(--pineapple-yellow); border-width: 2px; box-shadow: 2px 2px 0px var(--pineapple-text); margin-top: 0.2rem;">Áp
@@ -1383,24 +1256,54 @@
 
                         <!-- Section: about -->
                         <div id="settings-sec-about" class="settings-section"
-                            style="display: none; flex-direction: column; width: 100%;">
-                            <div class="settings-about-panel">
-                                <div class="settings-about-brand">
-                                    <img src="build/icon.png" alt="Pineapple Studio">
-                                    <div class="settings-about-brand-copy">
-                                        <div class="settings-about-script-line">
-                                            <span>Pineapple</span><span>Studio</span>
+                            style="display: none; flex-direction: column; gap: 1rem; width: 100%;">
+                            <div class="dua-card"
+                                style="padding: 2rem; width: 100%; margin: 0; box-sizing: border-box; display: flex; flex-direction: column; gap: 1.5rem; position: relative; overflow: hidden;">
+                                <h3 class="dua-card-title"
+                                    style="margin-bottom: 0.6rem; padding-bottom: 0.4rem; border-bottom: 2px solid var(--pineapple-border-color); font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem;">
+                                    <i class="fa-solid fa-circle-info" style="color: var(--pineapple-orange);"></i> Giới
+                                    thiệu ứng dụng
+                                </h3>
+
+                                <div style="display: flex; gap: 2rem; align-items: flex-start; flex-wrap: wrap;">
+                                    <!-- App Logo / Mascot container -->
+                                    <div
+                                        style="display: flex; flex-direction: column; align-items: center; gap: 0.5rem; background: rgba(0,0,0,0.02); padding: 1.5rem; border-radius: 16px; border: 2px solid var(--pineapple-border-color); min-width: 140px; text-align: center;">
+                                        <img src="build/icon.ico"
+                                            style="width: 80px; height: 80px; border-radius: 16px; filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.15));"
+                                            alt="Logo">
+                                        <div
+                                            style="font-family: 'Dancing Script', cursive; font-size: 1.6rem; font-weight: 700; color: var(--pineapple-orange-dark); margin-top: 0.25rem;">
+                                            Pineapple</div>
+                                    </div>
+
+                                    <!-- Info Details -->
+                                    <div
+                                        style="flex: 1; min-width: 250px; display: flex; flex-direction: column; gap: 1rem;">
+                                        <h2
+                                            style="font-family: var(--font-title); font-size: 1.5rem; font-weight: 800; color: var(--pineapple-orange-dark); margin: 0;">
+                                            Pineapple Studio</h2>
+                                        <p
+                                            style="font-size: 0.95rem; font-weight: 600; line-height: 1.6; color: var(--pineapple-text); opacity: 0.85; margin: 0;">
+                                            Trình phát nhạc donate chuyên nghiệp dành cho Streamer, đồng bộ trực tiếp
+                                            với hệ thống donate ZyPage, tích hợp OBS Overlay hiển thị đẹp mắt, và tự
+                                            động bỏ qua quảng cáo SponsorBlock.
+                                        </p>
+
+                                        <div
+                                            style="display: grid; grid-template-columns: auto 1fr; gap: 0.5rem 1rem; font-size: 0.9rem; font-weight: 700; color: var(--pineapple-text); border-top: 2px dashed var(--pineapple-border-color); padding-top: 1rem; margin-top: 0.5rem;">
+                                            <span style="opacity: 0.7;">Nhóm phát triển:</span>
+                                            <span style="color: var(--pineapple-orange);">Pineapple Team</span>
+
+                                            <span style="opacity: 0.7;">Phiên bản:</span>
+                                            <div>
+                                                <span id="app-version-display"
+                                                    style="color: var(--pineapple-orange); font-weight: 800; cursor: pointer;"
+                                                    title="Nhấp 5 lần để kích hoạt bí mật">v26.8.0</span>
+                                            </div>
                                         </div>
-                                        <div class="settings-about-special">Birthday Special</div>
                                     </div>
                                 </div>
-                                <div class="settings-about-version">
-                                    Phiên bản <strong>v26.10.23</strong>
-                                </div>
-                                <div class="settings-about-divider"></div>
-                                <p class="settings-about-message">Mọi thứ chỉ vì chị Nguyễn Thị Khánh Huyền là người chị
-                                    của em mà thôi.</p>
-                                <p class="settings-about-copyright">© Pineapple Team bởi Introvert và Lacy</p>
                             </div>
                         </div>
 
@@ -1408,82 +1311,26 @@
                 </div>
             </div>
 
-            <!-- Tab Video Mode: Khung xem video riêng để giảm tải dashboard chính -->
-            <div id="tab-video" class="tab-content">
-                <div class="video-mode-shell">
-                    <div class="video-mode-header">
-                        <div class="video-mode-title">
-                            <i class="fa-brands fa-youtube"></i>
-                            <span>Video Mode</span>
+            <!-- Tab 3: After Credit (Bí mật) -->
+            <div id="tab-aftercredit" class="tab-content">
+                <div class="settings-layout" style="display: flex; gap: 1.5rem; width: 100%;">
+                    <div class="dua-card" style="width: 100%; margin: 0;">
+                        <div class="dua-card-title">
+                            <span><i class="fa-solid fa-gift"></i> After Credit</span>
                         </div>
-                        <div id="video-mode-controls" class="video-mode-controls"></div>
-                    </div>
-                    <div class="video-mode-body">
-                        <div id="video-mode-panel" class="video-mode-panel"></div>
-                        <div id="video-mode-right-column"
-                            style="display: flex; flex-direction: column; gap: 1rem; min-width: 0;">
-                            <div class="dua-card video-mode-queue-card" id="card-queue-video"
-                                style="display: flex; flex-direction: column; gap: 0.8rem;">
-                                <div class="queue-header-actions" style="margin-top: 0.2rem;">
-                                    <span class="dua-card-title"
-                                        style="border-bottom: none; padding-bottom: 0; white-space: nowrap;">
-                                        <i class="fa-solid fa-list-ol"></i> Hàng đợi Nhạc (<span
-                                            id="queue-count-video">0</span>)
-                                    </span>
-                                </div>
-
-                                <div class="queue-control-toolbar">
-                                    <div class="toolbar-group">
-                                        <button id="btn-manual-sync-video" class="dua-btn"
-                                            onclick="triggerManualZyPageSync()" title="Đồng bộ thủ công từ ZyPage">
-                                            <i class="fa-solid fa-arrows-rotate"></i>
-                                            <span>Đồng bộ ZyPage</span>
-                                        </button>
-                                        <button id="btn-test-mode-video" class="dua-btn" onclick="toggleTestMode()"
-                                            title="Giữ hàng đợi: TẮT">
-                                            <i class="fa-solid fa-lock-open"></i>
-                                        </button>
-                                    </div>
-
-                                    <div class="toolbar-group">
-                                        <div class="toolbar-item lucky-wrapper"
-                                            title="Quay ngẫu nhiên bài tiếp theo khi hết nhạc và đếm ngược 30s">
-                                            <span class="toolbar-label">Lucky</span>
-                                            <label class="theme-switch" style="margin: 0;">
-                                                <input type="checkbox" id="lucky-mode-toggle-switch-video"
-                                                    onchange="toggleLuckyMode(this.checked)">
-                                                <span class="slider-round"></span>
-                                            </label>
-                                        </div>
-                                        <div class="toolbar-item sort-wrapper">
-                                            <label for="queue-sort-select-video" class="toolbar-label">
-                                                <i class="fa-solid fa-sort"></i>
-                                                <span>Ưu tiên:</span>
-                                            </label>
-                                            <select id="queue-sort-select-video" class="dua-select"
-                                                onchange="onSortConfigChange(this.value)">
-                                                <option value="time">Thời gian</option>
-                                                <option value="amount">Số tiền</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div id="queue-list-container-video" class="queue-list">
-                                    <div class="empty-queue-notice">Hàng đợi đang trống. Hãy dán link YouTube bài hát
-                                        đầu tiên!</div>
-                                </div>
-                            </div>
+                        <div style="padding: 3rem 1.5rem; text-align: center; color: var(--pineapple-text);">
+                            <div
+                                style="font-size: 3.5rem; margin-bottom: 1rem; filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.15));">
+                                🎁</div>
+                            <h2
+                                style="font-family: var(--font-title); font-weight: 800; font-size: 1.5rem; margin-bottom: 0.5rem; color: var(--pineapple-orange-dark);">
+                                Chào mừng bạn đến với góc After Credit bí mật!</h2>
+                            <p
+                                style="opacity: 0.85; max-width: 500px; margin: 0.5rem auto 0; font-size: 0.95rem; font-weight: 600; line-height: 1.6;">
+                                Nội dung của phần này đang được cập nhật và sẽ sớm hiển thị tại đây.</p>
                         </div>
                     </div>
                 </div>
-            </div>
-
-            <!-- Settings Footer -->
-            <div class="settings-footer"
-                style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; padding-top: 1rem; border-top: 2px dashed var(--pineapple-border-color); font-size: 0.8rem; font-weight: 700; color: #6B7280; width: 100%;">
-                <span style="font-weight: 800; color: var(--pineapple-text);">Pineapple Studio</span>
-                <span id="app-version-display" style="font-weight: 800; color: var(--pineapple-text);">v26.10.23</span>
             </div>
 
         </main>
@@ -1491,7 +1338,27 @@
 
 
 
-
+    <!-- YouTube Video Embed Area (Ẩn hoàn toàn trong Dashboard) -->
+    <div class="dua-card" style="display: none;">
+        <div class="dua-card-title" style="justify-content: space-between;">
+            <span><i class="fa-brands fa-youtube"></i> Khung hình Youtube</span>
+            <button class="dua-btn dua-btn-secondary" style="padding: 0.3rem 0.8rem; font-size: 0.8rem;"
+                onclick="togglePlayerVisibility()">
+                <i class="fa-solid fa-eye-slash"></i> Ẩn/Hiện Video
+            </button>
+        </div>
+        <div id="youtube-player-container-wrapper" class="youtube-player-area"
+            style="display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 2rem; color: #FFF; background: #1a1a1a; box-sizing: border-box; min-height: 200px;">
+            <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">📺</div>
+            <div style="font-weight: 800; font-size: 1.05rem; color: var(--pineapple-yellow);">Trình phát hoạt động trên
+                OBS Overlay</div>
+            <div
+                style="font-size: 0.85rem; color: #aaa; max-width: 320px; margin-top: 0.3rem; line-height: 1.4; font-weight: 600;">
+                Hình ảnh và âm thanh của YouTube đang được đồng bộ phát trực tiếp trên cửa sổ <strong>OBS
+                    Overlay</strong> để đưa lên livestream của bạn.
+            </div>
+        </div>
+    </div>
 
     <!-- Fullscreen Donation Alert Overlay (10s) -->
     <div id="fullscreen-donation-alert" class="fullscreen-donation-overlay" style="display: none;"
@@ -1604,7 +1471,7 @@
     <div id="donation-detail-modal" class="browser-blocked-overlay"
         style="display: none; z-index: 16100; backdrop-filter: blur(5px); background: rgba(0, 0, 0, 0.5); transition: none !important; animation: none !important;">
         <div class="blocked-card" id="donation-detail-card"
-            style="position: relative; max-width: 600px; width: 90%; text-align: left; cursor: default; padding: 2.2rem 2rem 2rem 2rem; border-radius: 16px; transition: none !important; transform: none !important; animation: none !important;">
+            style="position: relative; max-width: 600px; width: 90%; text-align: left; cursor: default; padding: 2.2rem 2rem 2rem 2rem; border-radius: 16px; transition: none !important; transform: none !important; animation: none !important; background: var(--pineapple-white) !important;">
             <!-- Close Button (Absolute positioned at top right) -->
             <button onclick="closeDonationDetailModal()"
                 style="position: absolute; top: 1.2rem; right: 1.2rem; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--pineapple-text); display: flex; align-items: center; justify-content: center; width: 30px; height: 30px;"
@@ -1612,47 +1479,24 @@
                 <i class="fa-solid fa-xmark"></i>
             </button>
 
-            <!-- Info: Donor Name & Amount & Time -->
-            <div
-                style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.5rem; margin-bottom: 1.5rem; border-bottom: 1px dashed var(--pineapple-border-color); padding-bottom: 1rem;">
-                <div style="display: flex; align-items: baseline; gap: 0.5rem;">
-                    <span
-                        style="font-size: 0.95rem; color: var(--pineapple-text); opacity: 0.6; font-weight: 600; width: 100px;">Người
-                        gửi:</span>
-                    <strong id="donation-detail-donor"
-                        style="font-size: 1.25rem; color: var(--pineapple-text); font-weight: 800;"></strong>
-                </div>
-                <div style="display: flex; align-items: baseline; gap: 0.5rem;">
-                    <span
-                        style="font-size: 0.95rem; color: var(--pineapple-text); opacity: 0.6; font-weight: 600; width: 100px;">Số
-                        tiền:</span>
-                    <span id="donation-detail-amount"
-                        style="font-size: 1.4rem; color: var(--pineapple-orange-dark); font-weight: 900;"></span>
-                </div>
-                <div style="display: flex; align-items: baseline; gap: 0.5rem;">
-                    <span
-                        style="font-size: 0.95rem; color: var(--pineapple-text); opacity: 0.6; font-weight: 600; width: 100px;">Thời
-                        gian:</span>
-                    <span id="donation-detail-time"
-                        style="font-size: 1rem; color: var(--pineapple-text); font-weight: 700; opacity: 0.85;"></span>
-                </div>
+            <!-- Info: Donor Name, Amount & Timestamp -->
+            <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.5rem; margin-bottom: 1.5rem; border-bottom: 1px dashed var(--pineapple-border-color); padding-bottom: 1rem;">
+                <strong id="donation-detail-donor" style="font-size: 1.35rem; color: var(--pineapple-text); font-weight: 800;"></strong>
+                <span style="color: var(--pineapple-text); opacity: 0.4; font-weight: 400; margin: 0 0.1rem;">•</span>
+                <span id="donation-detail-amount" style="font-size: 1.35rem; color: var(--pineapple-orange-dark); font-weight: 900;"></span>
+                <span style="color: var(--pineapple-text); opacity: 0.4; font-weight: 400; margin: 0 0.1rem;">•</span>
+                <span id="donation-detail-time" style="font-size: 0.95rem; color: var(--pineapple-text); opacity: 0.6; font-weight: 600;"></span>
             </div>
 
-            <!-- Message Block (Larger font, wrapped) -->
+            <!-- Message Block (Larger font, wrapped, without box) -->
             <div style="margin-bottom: 1.5rem;">
-                <div
-                    style="font-size: 0.95rem; color: var(--pineapple-text); opacity: 0.6; font-weight: 600; margin-bottom: 0.5rem;">
-                    Lời nhắn:</div>
                 <div id="donation-detail-message"
-                    style="font-family: 'Quicksand', var(--font-primary); font-size: 1.15rem; font-weight: 600; line-height: 1.6; color: var(--pineapple-text); background: var(--pineapple-yellow-light); border: 1.5px solid var(--pineapple-border-color); border-radius: 12px; padding: 1rem; max-height: 200px; overflow-y: auto; word-wrap: break-word; white-space: pre-wrap;">
+                    style="font-family: 'Quicksand', var(--font-primary); font-size: 1.15rem; font-weight: 600; line-height: 1.6; color: var(--pineapple-text); max-height: 250px; overflow-y: auto; word-wrap: break-word; white-space: pre-wrap;">
                 </div>
             </div>
 
-            <!-- Attachment Block (Song Info if any) -->
+            <!-- Attachment Block (Song Info if any, without box) -->
             <div id="donation-detail-attachment-container" style="margin-bottom: 1.5rem; display: none;">
-                <div
-                    style="font-size: 0.95rem; color: var(--pineapple-text); opacity: 0.6; font-weight: 600; margin-bottom: 0.5rem;">
-                    Bài hát đính kèm:</div>
                 <div id="donation-detail-attachment"></div>
             </div>
 
@@ -1666,51 +1510,9 @@
         </div>
     </div>
 
-    <!-- Modal Thêm lượt sử dụng (Add Action Code modal) -->
-    <div id="add-action-code-modal" class="browser-blocked-overlay"
-        style="display: none; z-index: 16200; backdrop-filter: blur(5px); background: rgba(0, 0, 0, 0.5);">
-        <div class="blocked-card"
-            style="max-width: 450px; width: 90%; text-align: left; cursor: default; padding: 2rem; border-radius: 16px; position: relative;">
-            <button onclick="closeAddActionCodeModal()"
-                style="position: absolute; top: 1.2rem; right: 1.2rem; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--pineapple-text); display: flex; align-items: center; justify-content: center; width: 30px; height: 30px;"
-                title="Đóng">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
-            <h2
-                style="font-family: var(--font-title); font-size: 1.35rem; font-weight: 800; margin: 0 0 1.2rem 0; color: var(--pineapple-text);">
-                Thêm lượt thao tác
-            </h2>
-            <div
-                style="font-size: 0.9rem; line-height: 1.5; color: var(--pineapple-text); opacity: 0.8; margin-bottom: 1.2rem;">
-                Nhập mã kích hoạt của bạn để nhận thêm lượt thao tác hệ thống.
-            </div>
-            <div style="margin-bottom: 1.5rem;">
-                <input type="text" id="action-code-input" placeholder="Mã kích hoạt"
-                    style="width: 100%; padding: 0.75rem 1rem; border-radius: 10px; border: 1.5px solid var(--pineapple-border-color); background: var(--pineapple-white, #FAF6EE); color: var(--pineapple-text); font-family: monospace; font-size: 0.95rem; box-sizing: border-box; outline: none; transition: border-color 0.2s;"
-                    onkeydown="if(event.key === 'Enter') submitActionCode()">
-                <div id="action-code-error"
-                    style="color: #ef4444; font-size: 0.82rem; font-weight: 600; margin-top: 0.5rem; display: none;">
-                </div>
-                <div id="action-code-success"
-                    style="color: #10b981; font-size: 0.82rem; font-weight: 600; margin-top: 0.5rem; display: none;">
-                </div>
-            </div>
-            <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
-                <button onclick="closeAddActionCodeModal()" class="dua-btn"
-                    style="padding: 0.55rem 1.2rem; border-radius: 10px; font-weight: 700; font-size: 0.9rem; background: transparent; border: 1.5px solid var(--pineapple-border-color); color: var(--pineapple-text); cursor: pointer;">
-                    Hủy bỏ
-                </button>
-                <button onclick="submitActionCode()" class="dua-btn dua-btn-primary"
-                    style="padding: 0.55rem 1.5rem; border-radius: 10px; font-weight: 800; font-size: 0.9rem; background: var(--pineapple-orange-dark); color: #fff; border: none; cursor: pointer;">
-                    Xác nhận
-                </button>
-            </div>
-        </div>
-    </div>
+
 
     <!-- 4. LOGIC JAVASCRIPT -->
-    <canvas id="dashboard-confetti-canvas"
-        style="position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 999999;"></canvas>
     <script src="https://www.gstatic.com/firebasejs/8.8.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.8.1/firebase-database.js"></script>
     <script src="app.js"></script>

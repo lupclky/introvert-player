@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     maximize: () => ipcRenderer.send('window-control', 'maximize'),
     close: () => ipcRenderer.send('window-control', 'close'),
     focusWindow: () => ipcRenderer.send('window-control', 'focus'),
+    showSystemMenu: () => ipcRenderer.send('window-control', 'system-menu'),
     themeChange: (theme) => ipcRenderer.send('theme-change', theme),
     onWindowStateChange: (callback) => ipcRenderer.on('window-state-change', (event, state) => callback(state)),
     getAppVersion: () => ipcRenderer.invoke('get-app-version'),
@@ -15,8 +16,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     onUpdateProgress: (callback) => ipcRenderer.on('update-progress', (event, progress) => callback(progress)),
     onUpdateDownloaded: (callback) => ipcRenderer.on('update-downloaded', () => callback()),
     onUpdateError: (callback) => ipcRenderer.on('update-error', (event, error) => callback(error)),
-    sendOverlayMessage: (message) => ipcRenderer.send('send-to-overlay', message),
-    onOverlayMessage: (callback) => ipcRenderer.on('from-overlay', (event, message) => callback(message)),
+    sendWsMessage: (message) => ipcRenderer.send('send-to-overlay', message),
+    onWsMessage: (callback) => ipcRenderer.on('from-overlay', (event, message) => callback(message)),
     
     // YouTube Account Sync
     ytLogin: () => ipcRenderer.invoke('youtube-login'),
