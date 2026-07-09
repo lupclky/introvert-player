@@ -5872,13 +5872,18 @@
 
         body.theme-flex .next-fullscreen-badge {
             background: var(--flex-primary) !important;
-            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+            border: 1.5px solid rgba(255, 255, 255, 0.2) !important;
             color: var(--flex-badge-text, #ffffff) !important;
+            font-size: 0.85rem !important;
+            padding: 3px 8px !important;
+            font-weight: 900 !important;
             transition: background-color 0.8s ease, color 0.8s ease, border-color 0.8s ease;
         }
 
         body.theme-flex .next-fullscreen-countdown {
             color: var(--flex-accent);
+            font-size: 1.25rem !important;
+            font-weight: 900 !important;
             transition: color 0.8s ease;
         }
 
@@ -6249,20 +6254,22 @@
         }
 
         body.theme-flex .obs-alert-box .next-fullscreen-badge {
-            background: var(--flex-progress-primary, var(--flex-primary)) !important;
-            border: none !important;
-            color: #fff !important;
-            box-shadow: 0 0 8px var(--flex-progress-glow, rgba(255, 255, 255, 0.2)) !important;
+            background: var(--flex-primary) !important;
+            border: 1.5px solid rgba(255, 255, 255, 0.2) !important;
+            color: var(--flex-badge-text, #ffffff) !important;
+            font-size: 0.85rem !important;
+            padding: 3px 8px !important;
+            font-weight: 900 !important;
             border-radius: 6px !important;
-            font-size: 0.75rem !important;
-            font-weight: 700 !important;
-            padding: 2px 6px !important;
-            letter-spacing: 0.04em !important;
+            letter-spacing: normal !important;
+            text-shadow: none !important;
+            box-shadow: none !important;
+            transition: background-color 0.8s ease, color 0.8s ease, border-color 0.8s ease;
         }
 
         body.theme-flex .obs-alert-box .next-fullscreen-countdown {
-            color: var(--flex-progress-accent, var(--flex-accent)) !important;
-            font-weight: normal !important;
+            color: var(--flex-primary) !important;
+            font-weight: 800 !important;
         }
 
         body.theme-flex .obs-alert-box .next-fullscreen-title,
@@ -6273,8 +6280,8 @@
 
         body.theme-flex .obs-alert-box .next-fullscreen-donor-name,
         body.theme-flex .obs-alert-box .obs-alert-donor {
-            color: var(--flex-progress-accent, var(--flex-accent)) !important;
-            font-weight: 600 !important;
+            color: var(--flex-primary) !important;
+            font-weight: 800 !important;
         }
 
         body.theme-flex .obs-alert-box .obs-alert-action-text {
@@ -6283,9 +6290,11 @@
 
         body.theme-flex .obs-alert-box .next-fullscreen-donor-amount,
         body.theme-flex .obs-alert-box #alert-amount {
-            color: var(--flex-progress-accent, var(--flex-accent)) !important;
+            color: var(--flex-primary) !important;
             background: transparent !important;
             border: none !important;
+            font-weight: 800 !important;
+        }
             padding: 0 !important;
             border-radius: 0 !important;
             font-weight: 600 !important;
@@ -6442,19 +6451,17 @@
                         style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.3rem;">
                         <div id="alert-status-text" class="obs-alert-status-text"></div>
                         <span id="alert-classic-duration"
-                            style="font-size: 0.9rem; font-weight: 800; color: var(--theme-sub-text-color); display: none;">Thời
-                            lượng: --:--</span>
+                            style="font-size: 0.9rem; font-weight: 800; color: var(--theme-sub-text-color); display: none;">--:--</span>
                     </div>
                 </div>
 
                 <!-- Layout Modern (dùng cho tất cả các theme khác giống giao diện đếm ngược 15s) -->
                 <div id="obs-alert-content-modern" class="alert-modern-layout next-fullscreen-container">
                     <div class="next-fullscreen-header-row next-fullscreen-badge-row">
-                        <div style="display: flex; flex-direction: column; gap: 0.15rem; align-items: flex-start;">
+                        <div style="display: flex; flex-direction: row; gap: 0.45rem; align-items: center;">
                             <span class="next-fullscreen-badge">DONATE MỚI</span>
                             <span id="alert-modern-duration"
-                                style="font-size: 0.8rem; font-weight: 800; color: var(--theme-sub-text-color); display: none; margin-top: 0.1rem; line-height: 1;">Thời
-                                lượng: --:--</span>
+                                style="font-size: 0.8rem; font-weight: 800; color: var(--theme-sub-text-color); display: none; line-height: 1;">--:--</span>
                         </div>
                         <span id="alert-modern-status" class="next-fullscreen-countdown">Tiếp theo</span>
                     </div>
@@ -6683,8 +6690,7 @@
                     style="display: flex; flex-direction: column; gap: 0.1rem; align-items: flex-start; justify-content: center;">
                     <span class="next-tag" id="obs-next-tag">TIẾP THEO</span>
                     <span id="obs-next-duration"
-                        style="font-size: 0.72rem; font-weight: 800; color: var(--theme-sub-text-color); display: none; line-height: 1;">Thời
-                        lượng: --:--</span>
+                        style="font-size: 0.72rem; font-weight: 800; color: var(--theme-sub-text-color); display: none; line-height: 1;">--:--</span>
                 </div>
                 <div id="obs-next-title-container"
                     style="flex-grow: 1; overflow: hidden; min-width: 0; position: relative; display: flex; align-items: center;">
@@ -6820,7 +6826,7 @@
             const hashColor = getColorFromString(songTitle || 'Introvert');
             const fallbackPalette = {
                 primary: { h: hashColor.h, s: hashColor.s, l: hashColor.l },
-                secondary: { h: (hashColor.h + 35) % 360, s: hashColor.s, l: hashColor.l },
+                secondary: { h: (hashColor.h + 50) % 360, s: Math.min(hashColor.s + 8, 90), l: hashColor.l },
                 avgL: 50,
                 isDark: true // Chỉ dùng dark theme.
             };
@@ -7151,6 +7157,13 @@
             document.body.style.setProperty('--flex-shadow', shadow);
             document.body.style.setProperty('--flex-bg-img-filter', bgImgFilter);
             document.body.style.setProperty('--flex-bg-img-opacity', bgImgOpacity);
+
+            // Đồng bộ màu cho alert box giống thuật toán của TIẾP THEO
+            const alertBox = document.getElementById('obs-alert-box');
+            if (alertBox) {
+                alertBox.style.setProperty('--flex-primary', primaryColor);
+                alertBox.style.setProperty('--flex-accent', primaryColor);
+            }
 
             // Màu thanh tiến trình: thiết kế thanh thoát, tinh tế hơn
             const progressPrimary = `hsl(${primaryH}, 78%, 56%)`;
@@ -8315,16 +8328,7 @@
                     drawer.style.setProperty('--next-cover-url', coverUrl);
                     fullscreenCard.style.setProperty('--next-cover-url', coverUrl);
 
-                    const nextSongDurationLimit = calculateNextSongLimitDuration(nextSong);
-                    const nextSongDurationEl = document.getElementById('next-fullscreen-duration');
-                    if (nextSongDurationEl) {
-                        if (nextSongDurationLimit > 0) {
-                            nextSongDurationEl.textContent = `Thời lượng: ${formatTime(nextSongDurationLimit)}`;
-                            nextSongDurationEl.style.display = 'block';
-                        } else {
-                            nextSongDurationEl.style.display = 'none';
-                        }
-                    }
+
 
                     const hasThemeChanged = (titleEl.dataset.lastTheme !== currentTheme);
                     if (titleEl && (titleEl.dataset.originalTitle !== nextSong.title || hasThemeChanged)) {
@@ -8383,8 +8387,9 @@
                     if (countdownEl) {
                         const nextSongDurationLimit = calculateNextSongLimitDuration(nextSong);
                         const durStr = nextSongDurationLimit > 0 ? formatTime(nextSongDurationLimit) : '--:--';
-                        if (countdownEl.textContent !== durStr) {
-                            countdownEl.textContent = durStr;
+                        const targetHtml = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width: 12px; height: 12px; vertical-align: middle; margin-right: 4px; display: inline-block; margin-top: -2px;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>${durStr}`;
+                        if (countdownEl.innerHTML !== targetHtml) {
+                            countdownEl.innerHTML = targetHtml;
                         }
                     }
 
@@ -8572,7 +8577,7 @@
                     const drawerDurationEl = document.getElementById('obs-next-duration');
                     if (drawerDurationEl) {
                         if (nextSongDurationLimit > 0) {
-                            drawerDurationEl.textContent = `Thời lượng: ${formatTime(nextSongDurationLimit)}`;
+                            drawerDurationEl.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width: 11px; height: 11px; vertical-align: middle; margin-right: 4px; display: inline-block; margin-top: -2px;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>${formatTime(nextSongDurationLimit)}`;
                             drawerDurationEl.style.display = 'block';
                         } else {
                             drawerDurationEl.style.display = 'none';
@@ -8673,7 +8678,7 @@
                     const drawerDurationEl = document.getElementById('obs-next-duration');
                     if (drawerDurationEl) {
                         if (nextSongDurationLimit > 0) {
-                            drawerDurationEl.textContent = `Thời lượng: ${formatTime(nextSongDurationLimit)}`;
+                            drawerDurationEl.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width: 11px; height: 11px; vertical-align: middle; margin-right: 4px; display: inline-block; margin-top: -2px;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>${formatTime(nextSongDurationLimit)}`;
                             drawerDurationEl.style.display = 'block';
                         } else {
                             drawerDurationEl.style.display = 'none';
@@ -9647,16 +9652,7 @@
                         }
 
                         if (titleEl) {
-                            const nextSongDurationLimit = calculateNextSongLimitDuration(nextSong);
-                            const nextSongDurationEl = document.getElementById('next-fullscreen-duration');
-                            if (nextSongDurationEl) {
-                                if (nextSongDurationLimit > 0) {
-                                    nextSongDurationEl.textContent = `Thời lượng: ${formatTime(nextSongDurationLimit)}`;
-                                    nextSongDurationEl.style.display = 'block';
-                                } else {
-                                    nextSongDurationEl.style.display = 'none';
-                                }
-                            }
+
 
                             const currentTheme = localStorage.getItem('dua_theme') || 'flex';
                             const isClassic = ['classic', 'classic-dark'].includes(currentTheme);
@@ -9742,7 +9738,8 @@
                         }
                         if (countdownEl) {
                             const nextSongDurationLimit = calculateNextSongLimitDuration(nextSong);
-                            countdownEl.textContent = nextSongDurationLimit > 0 ? formatTime(nextSongDurationLimit) : '--:--';
+                            const durStr = nextSongDurationLimit > 0 ? formatTime(nextSongDurationLimit) : '--:--';
+                            countdownEl.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width: 12px; height: 12px; vertical-align: middle; margin-right: 4px; display: inline-block; margin-top: -2px;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>${durStr}`;
                         }
 
                         voteSkipCountdownInterval = setInterval(() => {
@@ -11510,7 +11507,7 @@
                 const classicDurEl = document.getElementById('alert-classic-duration');
                 if (classicDurEl) {
                     if (alertDurationLimit > 0) {
-                        classicDurEl.textContent = `Thời lượng: ${formatTime(alertDurationLimit)}`;
+                        classicDurEl.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width: 13px; height: 13px; vertical-align: middle; margin-right: 4px; display: inline-block; margin-top: -2px;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>${formatTime(alertDurationLimit)}`;
                         classicDurEl.style.display = 'block';
                     } else {
                         classicDurEl.style.display = 'none';
@@ -11547,7 +11544,7 @@
                 const modernDurEl = document.getElementById('alert-modern-duration');
                 if (modernDurEl) {
                     if (alertDurationLimit > 0) {
-                        modernDurEl.textContent = `Thời lượng: ${formatTime(alertDurationLimit)}`;
+                        modernDurEl.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width: 12px; height: 12px; vertical-align: middle; margin-right: 4px; display: inline-block; margin-top: -2px;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>${formatTime(alertDurationLimit)}`;
                         modernDurEl.style.display = 'block';
                     } else {
                         modernDurEl.style.display = 'none';
