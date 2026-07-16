@@ -4185,6 +4185,8 @@ function normalizeFancyText(str) {
         { start: 0x1D5EE, end: 0x1D607, base: 97 },  // Sans-serif Italic a-z
         { start: 0x1D608, end: 0x1D621, base: 65 },  // Sans-serif Bold Italic A-Z
         { start: 0x1D622, end: 0x1D63B, base: 97 },  // Sans-serif Bold Italic a-z
+        { start: 0x1D63C, end: 0x1D655, base: 65 },  // Sans-serif Bold Italic A-Z (Bổ sung)
+        { start: 0x1D656, end: 0x1D66F, base: 97 },  // Sans-serif Bold Italic a-z (Bổ sung)
         { start: 0x1D670, end: 0x1D689, base: 65 },  // Monospace A-Z
         { start: 0x1D68A, end: 0x1D6A3, base: 97 },  // Monospace a-z
         
@@ -6493,6 +6495,43 @@ function disconnectZyPageLive() {
     initMqtt();
 }
 
+// --- TỰ ĐỘNG SỬA TIÊU ĐỀ LỖI ENCODE (DẤU HỎI CHẤM) CHO CÁC BÀI TRONG HÀNG ĐỢI ---
+async function autoFixQueueEncodings() {
+    if (!state.queue || state.queue.length === 0) return;
+    
+    let isChanged = false;
+    for (let i = 0; i < state.queue.length; i++) {
+        const song = state.queue[i];
+        // Nếu tiêu đề bị vỡ font (chứa dấu hỏi chấm)
+        if (song && song.title && (song.title.includes('???') || song.title.includes(''))) {
+            try {
+                logSystem(`⚠️ [Auto Fix] Phát hiện bài hát trong hàng đợi bị lỗi tiêu đề encode: "${song.title}". Đang tự động cào lại...`, 'system');
+                const meta = await fetchSongMetadata(song.type, song.videoId, song.soundcloudUrl);
+                if (meta && meta.title && !meta.title.includes('???')) {
+                    song.title = normalizeFancyText(meta.title);
+                    isChanged = true;
+                    logSystem(`✅ [Auto Fix] Đã sửa tiêu đề bài hát thành công: <strong>${song.title}</strong>`, 'system');
+                }
+            } catch (e) {
+                console.error("Lỗi khi tự động sửa encoding bài hát:", e);
+            }
+        }
+    }
+    
+    if (isChanged) {
+        // Cập nhật lại bài đang phát nếu nó bị thay đổi tiêu đề
+        if (state.currentSong && (state.currentSong.title.includes('???') || state.currentSong.title.includes(''))) {
+            const currentInQueue = state.queue.find(s => String(s.id) === String(state.currentSong.id));
+            if (currentInQueue) {
+                state._currentSong = currentInQueue;
+                localStorage.setItem('dua_current_song_raw', JSON.stringify(currentInQueue));
+                publishMqtt('current_song', currentInQueue);
+            }
+        }
+        sortAndRefreshQueue(true);
+    }
+}
+
 // Gọi API lấy hàng đợi bài hát mới nhất từ máy chủ ZyPage
 async function syncQueueFromZyPageApi(shopId, isManual = false) {
     if (state.isSyncingQueue) {
@@ -6502,6 +6541,9 @@ async function syncQueueFromZyPageApi(shopId, isManual = false) {
     state.isSyncingQueue = true;
 
     try {
+        // Tự động quét và sửa lỗi tiêu đề bị vỡ encode của hàng đợi hiện tại
+        await autoFixQueueEncodings();
+
         const getUrl = `${state.zypageDomain}/api/get_data_by_id?table=shop&data=donate&id=${shopId}&v=${Date.now()}`;
         logSystem(`[ZyPage API] Đang gửi yêu cầu đồng bộ tới ZyPage${isManual ? ' (Thủ công)' : ''}: ${getUrl}`, 'system');
         
@@ -6535,8 +6577,8 @@ async function syncQueueFromZyPageApi(shopId, isManual = false) {
         let addedCount = 0;
         let maxTimestamp = state.lastSyncedDonateTime;
 
-        Object.entries(musicList).forEach(([key, item]) => {
-            if (!item.music || !item.music.id) return;
+        for (const [key, item] of Object.entries(musicList)) {
+            if (!item.music || !item.music.id) continue;
 
             const songTimestamp = normalizeTimestamp(item.order?.time || item.music?.key || key);
 
@@ -6549,7 +6591,7 @@ async function syncQueueFromZyPageApi(shopId, isManual = false) {
                         id: item.music?.key || key,
                         name: item.order.name || 'Khách ZyPage',
                         amount: Number(amountStr) || 0,
-                        message: item.order.message || '',
+                        message: item.order?.message || item.order?.text || item.message || item.text || item.order?.note || '',
                         timestamp: songTimestamp,
                         isMusicOrder: true,
                         songLink: item.music.id
@@ -6567,19 +6609,19 @@ async function syncQueueFromZyPageApi(shopId, isManual = false) {
             }
 
             if (isExtended) {
-                return;
+                continue;
             }
 
             if (!isManual) {
                 // Chỉ lấy bài hát mới được donate trong khoảng thời gian ngắn, bỏ qua các bài đã đồng bộ trước đó
                 if (songTimestamp <= state.lastSyncedDonateTime) {
-                    return;
+                    continue;
                 }
 
                 // Bỏ qua các bài hát có thời gian donate quá 7 ngày trước để tránh nhận nhầm lệnh cũ
                 const now = Date.now();
                 if (now - songTimestamp > 7 * 24 * 60 * 60 * 1000) {
-                    return;
+                    continue;
                 }
             }
 
@@ -6595,13 +6637,13 @@ async function syncQueueFromZyPageApi(shopId, isManual = false) {
 
             if (musicIdStr.includes('spotify.com') || musicIdStr.startsWith('spotify:')) {
                 logSystem(`Bỏ qua bài hát từ Spotify (đã dừng hỗ trợ): <strong>${item.music.title || musicIdStr}</strong>`, 'system');
-                return;
+                continue;
             } else if (musicIdStr.includes('soundcloud.com')) {
                 soundcloudUrl = musicIdStr;
                 type = 'soundcloud';
             } else {
                 videoId = parseYoutubeId(musicIdStr);
-                if (!videoId) return;
+                if (!videoId) continue;
                 type = 'youtube';
             }
 
@@ -6609,7 +6651,7 @@ async function syncQueueFromZyPageApi(shopId, isManual = false) {
             
             // Bỏ qua nếu không phải đồng bộ thủ công và bài hát đã phát xong hoặc bị xóa trước đó
             if (!isManual && state.endedKeys.some(e => e.key === String(musicKey))) {
-                return;
+                continue;
             }
 
             const uniqueKey = musicKey || item.order?.time || (videoId || spotifyId || soundcloudUrl);
@@ -6622,6 +6664,22 @@ async function syncQueueFromZyPageApi(shopId, isManual = false) {
             );
 
             if (!isExist) {
+                let title = item.music.title || `Nhạc ${type.toUpperCase()}`;
+                
+                // Tự động cào lại tiêu đề từ YouTube/SoundCloud nếu tiêu đề từ ZyPage bị vỡ encode thành dấu hỏi chấm
+                if (!title || title.includes('???') || title.includes('')) {
+                    try {
+                        logSystem(`⚠️ [ZyPage Sync] Phát hiện tiêu đề từ ZyPage bị lỗi encode hoặc trống ("${title}"). Đang tự động cào lại siêu dữ liệu trực tiếp...`, 'system');
+                        const meta = await fetchSongMetadata(type, videoId, soundcloudUrl);
+                        if (meta && meta.title && !meta.title.includes('???')) {
+                            title = meta.title;
+                            logSystem(`✅ [ZyPage Sync] Cào lại tiêu đề thành công: <strong>${title}</strong>`, 'system');
+                        }
+                    } catch (err) {
+                        console.error("Lỗi khi tự động cào lại metadata:", err);
+                    }
+                }
+
                 const localItem = {
                     id: uniqueKey,
                     musicKey: musicKey,
@@ -6630,13 +6688,13 @@ async function syncQueueFromZyPageApi(shopId, isManual = false) {
                     videoId: videoId,
                     spotifyId: spotifyId,
                     soundcloudUrl: soundcloudUrl,
-                    title: item.music.title || `Nhạc ${type.toUpperCase()}`,
+                    title: title,
                     thumbnail: item.music.thumbnail || (type === 'youtube' 
                         ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` 
                         : "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=200&auto=format&fit=crop"),
                     donorName: item.order?.name || 'Khách ZyPage',
                     amount: Number(String(item.order?.amount || '0').replace(/[^0-9]/g, '')) || 0,
-                    message: item.order?.message || '',
+                    message: item.order?.message || item.order?.text || item.message || item.text || item.order?.note || '',
                     start: Number(item.music.start) || 0,
                     end: null, // Bỏ qua trường end từ ZyPage để tránh xung đột với giới hạn của Introvert Player
                     timestamp: songTimestamp,
@@ -6647,7 +6705,7 @@ async function syncQueueFromZyPageApi(shopId, isManual = false) {
                 broadcastNewDonationAlert(localItem);
                 addedCount++;
             }
-        });
+        }
 
         // --- QUÉT TIN NHẮN DONATE THƯỜNG ĐỂ TÌM LINK NHẠC ---
         // Người donate paste link YouTube/SoundCloud trực tiếp vào message thay vì dùng tính năng order nhạc

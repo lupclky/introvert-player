@@ -766,6 +766,16 @@ if (!gotTheLock) {
       activeWsClients.add(ws);
       console.log(`[WebSocket] OBS Overlay đã kết nối. Tổng số client: ${activeWsClients.size}`);
 
+      // Gửi trạng thái PUBG hiện tại cho client mới kết nối
+      try {
+        ws.send(JSON.stringify({
+          type: 'pubg_state',
+          data: { running: isPubgRunning }
+        }));
+      } catch (e) {
+        console.error('[WebSocket] Lỗi gửi trạng thái PUBG ban đầu:', e);
+      }
+
       ws.on('message', (message) => {
         try {
           const msgStr = message.toString();
@@ -2874,5 +2884,48 @@ function showTaskbarNotification(title, message, isDarkMode = false, duration) {
     console.error('Lỗi khi tạo thông báo Taskbar:', err);
   }
 }
+
+// --- THEO DÕI TIẾN TRÌNH PUBG ĐỂ TỰ ĐỘNG ẨN OVERLAY ---
+const { exec } = require('child_process');
+let isPubgRunning = false;
+
+function checkPubgProcess() {
+  if (process.platform !== 'win32') return;
+
+  exec('tasklist /FI "IMAGENAME eq TslGame.exe" /NH', (err, stdout, stderr) => {
+    if (err) return;
+    
+    // Kiểm tra xem PUBG (TslGame.exe) có đang chạy không
+    const running = stdout.toLowerCase().includes('tslgame.exe');
+    
+    if (running !== isPubgRunning) {
+      isPubgRunning = running;
+      console.log(`[PUBG Detector] Trạng thái chạy thay đổi: ${isPubgRunning ? 'Đang chạy (Ẩn overlay)' : 'Đã tắt (Hiện overlay)'}`);
+      
+      // Gửi tin nhắn qua WebSocket tới OBS Overlay
+      const alertPayload = {
+        type: 'pubg_state',
+        data: {
+          running: isPubgRunning
+        }
+      };
+      
+      const msgStr = JSON.stringify(alertPayload);
+      activeWsClients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+          try {
+            client.send(msgStr);
+          } catch (e) {
+            console.error('[WebSocket] Lỗi gửi trạng thái PUBG tới overlay:', e);
+          }
+        }
+      });
+    }
+  });
+}
+
+// Chạy kiểm tra mỗi 4 giây
+setInterval(checkPubgProcess, 4000);
+
 
 

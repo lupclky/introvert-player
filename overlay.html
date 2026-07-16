@@ -5479,6 +5479,22 @@
             z-index: 1;
         }
 
+        /* Hiệu ứng chuyển động mờ loang Fluid Gradient giống Apple Music */
+        @keyframes appleMusicFluid {
+            0% {
+                transform: scale(2.2) rotate(0deg) translate(0, 0);
+            }
+            33% {
+                transform: scale(2.4) rotate(120deg) translate(-2%, 3%);
+            }
+            66% {
+                transform: scale(2.1) rotate(240deg) translate(3%, -2%);
+            }
+            100% {
+                transform: scale(2.2) rotate(360deg) translate(0, 0);
+            }
+        }
+
         /* Lớp hiển thị ảnh bìa mờ đè lên dải màu gradient */
         body.theme-flex .obs-flex-bg-image {
             position: absolute;
@@ -5488,11 +5504,14 @@
             bottom: 0;
             background-size: cover;
             background-position: center;
-            filter: var(--flex-bg-img-filter, blur(30px) saturate(200%));
+            filter: var(--flex-bg-img-filter, blur(35px) saturate(220%));
             opacity: var(--flex-bg-img-opacity, 0.38);
             /* Duy trì độ mờ cho ảnh bìa */
             z-index: 2;
             transition: filter 0.8s ease, opacity 0.8s ease;
+            animation: appleMusicFluid 25s linear infinite;
+            transform-origin: center center;
+            will-change: transform;
         }
 
 
@@ -6294,10 +6313,8 @@
             background: transparent !important;
             border: none !important;
             font-weight: 800 !important;
-        }
             padding: 0 !important;
             border-radius: 0 !important;
-            font-weight: 600 !important;
             box-shadow: none !important;
         }
 
@@ -6748,6 +6765,90 @@
                 } catch(e) {}
             };
         })();
+
+        // Hàm chuẩn hóa font chữ điệu đà (Mathematical Alphanumeric Symbols) thành chữ thường chuẩn
+        function normalizeFancyText(str) {
+            if (!str) return '';
+            const ranges = [
+                { start: 0x1D400, end: 0x1D419, base: 65 },  // Bold A-Z
+                { start: 0x1D41A, end: 0x1D433, base: 97 },  // Bold a-z
+                { start: 0x1D434, end: 0x1D44D, base: 65 },  // Italic A-Z
+                { start: 0x1D44E, end: 0x1D467, base: 97 },  // Italic a-z
+                { start: 0x1D468, end: 0x1D481, base: 65 },  // Bold Italic A-Z
+                { start: 0x1D482, end: 0x1D49B, base: 97 },  // Bold Italic a-z
+                { start: 0x1D49C, end: 0x1D4B5, base: 65 },  // Script A-Z
+                { start: 0x1D4B6, end: 0x1D4CF, base: 97 },  // Script a-z
+                { start: 0x1D4D0, end: 0x1D4E9, base: 65 },  // Bold Script A-Z
+                { start: 0x1D4EA, end: 0x1D503, base: 97 },  // Bold Script a-z
+                { start: 0x1D504, end: 0x1D51D, base: 65 },  // Fraktur A-Z
+                { start: 0x1D51E, end: 0x1D537, base: 97 },  // Fraktur a-z
+                { start: 0x1D538, end: 0x1D551, base: 65 },  // Double-struck A-Z
+                { start: 0x1D552, end: 0x1D56B, base: 97 },  // Double-struck a-z
+                { start: 0x1D56C, end: 0x1D585, base: 65 },  // Sans-serif A-Z
+                { start: 0x1D586, end: 0x1D59F, base: 97 },  // Sans-serif a-z
+                { start: 0x1D5A0, end: 0x1D5B9, base: 65 },  // Sans-serif Bold A-Z
+                { start: 0x1D5BA, end: 0x1D5D3, base: 97 },  // Sans-serif Bold a-z
+                { start: 0x1D5D4, end: 0x1D5ED, base: 65 },  // Sans-serif Italic A-Z
+                { start: 0x1D5EE, end: 0x1D607, base: 97 },  // Sans-serif Italic a-z
+                { start: 0x1D608, end: 0x1D621, base: 65 },  // Sans-serif Bold Italic A-Z
+                { start: 0x1D622, end: 0x1D63B, base: 97 },  // Sans-serif Bold Italic a-z
+                { start: 0x1D63C, end: 0x1D655, base: 65 },  // Sans-serif Bold Italic A-Z (Bổ sung)
+                { start: 0x1D656, end: 0x1D66F, base: 97 },  // Sans-serif Bold Italic a-z (Bổ sung)
+                { start: 0x1D670, end: 0x1D689, base: 65 },  // Monospace A-Z
+                { start: 0x1D68A, end: 0x1D6A3, base: 97 },  // Monospace a-z
+                
+                { start: 0x1D7CE, end: 0x1D7D7, base: 48 },  // Bold 0-9
+                { start: 0x1D7D8, end: 0x1D7E1, base: 48 },  // Double-struck 0-9
+                { start: 0x1D7E2, end: 0x1D7EB, base: 48 },  // Sans-serif 0-9
+                { start: 0x1D7EC, end: 0x1D7F5, base: 48 },  // Sans-serif Bold 0-9
+                { start: 0x1D7F6, end: 0x1D7FF, base: 48 }   // Monospace 0-9
+            ];
+
+            const exceptions = {
+                0x210E: 'h', 0x2102: 'C', 0x210D: 'H', 0x2115: 'N', 0x2119: 'P',
+                0x211A: 'Q', 0x211D: 'R', 0x2124: 'Z', 0x212C: 'B', 0x2130: 'E',
+                0x2131: 'F', 0x210B: 'H', 0x2110: 'I', 0x2112: 'L', 0x2133: 'M',
+                0x211B: 'R', 0x212F: 'e', 0x210A: 'g', 0x2134: 'o'
+            };
+
+            let result = '';
+            for (const char of str) {
+                const cp = char.codePointAt(0);
+                if (exceptions[cp]) {
+                    result += exceptions[cp];
+                    continue;
+                }
+                let matched = false;
+                for (const r of ranges) {
+                    if (cp >= r.start && cp <= r.end) {
+                        const offset = cp - r.start;
+                        result += String.fromCharCode(r.base + offset);
+                        matched = true;
+                        break;
+                    }
+                }
+                if (!matched) {
+                    result += char;
+                }
+            }
+            return result;
+        }
+
+        // Đệ quy chuẩn hóa toàn bộ chuỗi trong payload nhận được
+        function normalizePayloadStrings(obj) {
+            if (!obj) return obj;
+            if (typeof obj === 'string') {
+                return normalizeFancyText(obj);
+            }
+            if (typeof obj === 'object') {
+                for (const key in obj) {
+                    if (obj.hasOwnProperty(key)) {
+                        obj[key] = normalizePayloadStrings(obj[key]);
+                    }
+                }
+            }
+            return obj;
+        }
 
         // Tự động chuyển hướng từ 127.0.0.1 sang localhost để tránh lệch origin localStorage
         if (window.location.hostname === '127.0.0.1') {
@@ -11775,8 +11876,9 @@
 
         function handleMqttMessage(topic, messageStr) {
             try {
-                const payload = JSON.parse(messageStr);
+                let payload = JSON.parse(messageStr);
                 if (!payload) return;
+                payload = normalizePayloadStrings(payload);
 
                 console.log("Overlay nhận lệnh MQTT:", payload.type);
 
@@ -11902,6 +12004,18 @@
                         localStorage.removeItem('dua_queue');
                     }
                     updateOverlayUI();
+                } else if (payload.type === 'pubg_state') {
+                    const running = payload.data?.running;
+                    const overlayContainer = document.getElementById('obs-player-widget') || document.body;
+                    if (running) {
+                        overlayContainer.style.opacity = '0';
+                        overlayContainer.style.pointerEvents = 'none';
+                        overlayContainer.style.transition = 'opacity 0.5s ease';
+                    } else {
+                        overlayContainer.style.opacity = '';
+                        overlayContainer.style.pointerEvents = '';
+                        overlayContainer.style.transition = 'opacity 0.5s ease';
+                    }
                 }
             } catch (e) {
                 console.error("Overlay: Lỗi xử lý tin nhắn MQTT:", e);
