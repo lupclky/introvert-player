@@ -146,6 +146,7 @@ const state = {
     volume: localStorage.getItem('dua_volume') !== null ? parseInt(localStorage.getItem('dua_volume')) : 80,
     maxDurationEnabled: localStorage.getItem('dua_max_duration_enabled') === 'true',
     hideEmptyOverlay: localStorage.getItem('dua_hide_empty_overlay') === 'true',
+    showIdlePriceTable: localStorage.getItem('dua_show_idle_price_table') !== 'false',
     maxDuration: parseInt(localStorage.getItem('dua_max_duration_val')) || 180,
     limitMode: localStorage.getItem('dua_limit_mode') || 'fixed',
     milestones: (() => {
@@ -406,10 +407,34 @@ let mockIndex = 0;
 // Tự động đồng bộ các chế độ SponsorBlock lúc khởi động
 localStorage.setItem('dua_sb_categories', JSON.stringify(sponsorBlockCategories));
 
-// Đồng bộ giới hạn thời gian phát sang cả localStorage và MQTT
+function buildTimeLimitConfig() {
+    const milestones = (Array.isArray(state.milestones) ? state.milestones : [])
+        .map(item => ({
+            amount: Math.max(0, Number(item?.amount) || 0),
+            durationMinutes: Math.max(0, Number(item?.duration) || 0)
+        }))
+        .filter(item => item.amount > 0 && item.durationMinutes > 0)
+        .sort((a, b) => a.amount - b.amount);
+
+    return {
+        version: 1,
+        enabled: Boolean(state.maxDurationEnabled),
+        showIdlePriceTable: state.showIdlePriceTable !== false,
+        mode: state.limitMode === 'milestone' ? 'milestone' : 'fixed',
+        fixedDurationSeconds: Math.max(0, Number(state.maxDuration) || 0),
+        milestones,
+        defaultDurationMinutes: Math.max(0, Number(state.defaultDuration) || 0)
+    };
+}
+
+// Đồng bộ giới hạn thời gian phát và bảng mốc sang Overlay.
+// Overlay cũ vẫn tương thích vì tiếp tục đọc trường value như trước.
 function syncMaxDurationToOverlay(val) {
     localStorage.setItem('dua_max_duration', val);
-    publishMqtt('max_duration', { value: val });
+    publishMqtt('max_duration', {
+        value: val,
+        config: buildTimeLimitConfig()
+    });
 }
 
 // Tạm thời bật/tắt giới hạn thời gian cho bài hát đang phát
@@ -1666,6 +1691,22 @@ document.addEventListener("DOMContentLoaded", () => {
             localStorage.setItem('dua_hide_empty_overlay', isChecked);
             publishMqtt('hide_empty_overlay', { value: isChecked });
             logSystem(`Đã cấu hình ${isChecked ? 'Ẩn' : 'Hiện'} overlay khi không có nhạc.`);
+        });
+    }
+
+    const showIdlePriceTableToggle = document.getElementById('show-idle-price-table-toggle');
+    if (showIdlePriceTableToggle) {
+        showIdlePriceTableToggle.checked = state.showIdlePriceTable;
+        showIdlePriceTableToggle.addEventListener('change', (e) => {
+            state.showIdlePriceTable = e.target.checked;
+            localStorage.setItem('dua_show_idle_price_table', state.showIdlePriceTable);
+
+            const currentDur = state.bypassCurrentSongDuration ? 0
+                : (state.currentSong
+                    ? calculateMaxDurationForSong(state.currentSong)
+                    : (state.maxDurationEnabled && state.limitMode === 'fixed' ? state.maxDuration : 0));
+            syncMaxDurationToOverlay(currentDur);
+            logSystem(`Đã ${state.showIdlePriceTable ? 'bật' : 'tắt'} bảng giá khi hết nhạc.`);
         });
     }
 
@@ -7274,10 +7315,14 @@ function initMqtt() {
     
     // Đồng bộ cấu hình ban đầu ngay khi gọi initMqtt
     setTimeout(() => {
-        publishMqtt('max_duration', { value: state.maxDurationEnabled ? state.maxDuration : 0 });
+        publishMqtt('max_duration', {
+            value: state.maxDurationEnabled ? state.maxDuration : 0,
+            config: buildTimeLimitConfig()
+        });
         publishMqtt('opacity_change', { opacity: state.opacity });
         publishMqtt('theme_change', { theme: state.theme });
         publishMqtt('alert_action_text', { text: state.alertActionText });
+        publishMqtt('empty_queue_message', { text: state.emptyQueueMessage });
         publishMqtt('hide_empty_overlay', { value: state.hideEmptyOverlay });
         publishMqtt('focus_mode', { value: state.focusMode });
         publishMqtt('focus_mode_message', { text: state.focusModeMessage });
@@ -7391,7 +7436,10 @@ function handleMqttMessage(topic, messageStrOrObj) {
             // Gửi giới hạn thời gian phát hiện tại (tôn trọng bypass)
             const currentDur = state.bypassCurrentSongDuration ? 0 : 
                 (state.currentSong ? calculateMaxDurationForSong(state.currentSong) : (state.maxDurationEnabled ? state.maxDuration : 0));
-            publishMqtt('max_duration', { value: currentDur });
+            publishMqtt('max_duration', {
+                value: currentDur,
+                config: buildTimeLimitConfig()
+            });
             // Gửi alert action text
             publishMqtt('alert_action_text', { text: state.alertActionText });
             // Gửi trạng thái ẩn/hiện overlay khi hết nhạc
@@ -7400,13 +7448,12 @@ function handleMqttMessage(topic, messageStrOrObj) {
             publishMqtt('focus_mode', { value: state.focusMode });
             // Gửi lời hiển thị khi bật Tập trung
             publishMqtt('focus_mode_message', { text: state.focusModeMessage });
+            // Luôn gửi lời chờ, kể cả khi Overlay kết nối lúc hàng đợi đang trống.
+            publishMqtt('empty_queue_message', { text: state.emptyQueueMessage });
             // Gửi link Gist JSON cảnh báo nhạy cảm
             publishMqtt('sensitive_videos_url', { url: state.sensitiveVideosUrl });
             // Gửi bài hát hiện tại (nếu có) - chỉ gửi khi không ở trong trạng thái chờ lựa chọn phát tiếp
             if (state.currentSong && !document.getElementById('resume-playback-modal')) {
-                // Gửi lời hiển thị khi hết nhạc
-                publishMqtt('empty_queue_message', { text: state.emptyQueueMessage });
-                
                 const nextSong = getNextSong();
                 const payloadSong = {
                     id: state.currentSong.id,

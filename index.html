@@ -799,6 +799,7 @@
                                                 onchange="onThemeChange(this.value)">
                                                 <option value="pineapple">Dứa mặc định</option>
                                                 <option value="spacegods">TFT Spacegods</option>
+                                                <option value="enchanted-wild">TFT Set 18 Enchanted Wild</option>
                                                 <option value="cutepink">Hồng dễ thương</option>
                                                 <option value="classic">Cổ điển</option>
                                                 <option value="classic-dark">Cổ điển Tối</option>
@@ -943,7 +944,12 @@
                                     </div>
                                 </div>
                                 <div
-                                    style="margin-top: 1rem; border-top: 2px dashed var(--pineapple-border-color); padding-top: 1rem;">
+                                    style="margin-top: 1rem; border-top: 2px dashed var(--pineapple-border-color); padding-top: 1rem; display: flex; flex-direction: column; align-items: flex-start; gap: 0.65rem;">
+                                    <label class="sb-checkbox-label"
+                                        style="font-size: 0.95rem; font-weight: 700; color: var(--pineapple-text); cursor: pointer; user-select: none; display: inline-flex; align-items: center; gap: 0.4rem;">
+                                        <input type="checkbox" class="sb-checkbox" id="show-idle-price-table-toggle">
+                                        <span>Hiển thị bảng giá khi hết nhạc</span>
+                                    </label>
                                     <label class="sb-checkbox-label"
                                         style="font-size: 0.95rem; font-weight: 700; color: var(--pineapple-text); cursor: pointer; user-select: none; display: inline-flex; align-items: center; gap: 0.4rem;">
                                         <input type="checkbox" class="sb-checkbox" id="hide-empty-overlay-toggle">

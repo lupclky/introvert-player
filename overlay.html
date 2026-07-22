@@ -9,7 +9,7 @@
     <!-- CSS & Fonts -->
     <link rel="stylesheet" href="styles.css">
     <link
-        href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..700&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Outfit:wght@200;300;400;600;700;900&family=Merriweather:ital,wght@0,300;0,400;0,700;0,900;1,300;1,400;1,700;1,900&family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&family=Lora:ital,wght@0,400..700;1,400..700&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Outfit:wght@200;300;400;600;700;900&family=Merriweather:ital,wght@0,300;0,400;0,700;0,900;1,300;1,400;1,700;1,900&family=Inter:wght@300;400;500;600;700;800;900&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
@@ -199,6 +199,101 @@
             font-size: 1.25rem !important;
             padding: 0.5rem 0.8rem !important;
             line-height: 1.3 !important;
+        }
+
+        .obs-empty-overlay.idle-slideshow-active {
+            overflow: hidden;
+            padding: 0.65rem 0.9rem;
+        }
+
+        .idle-slide {
+            width: 100%;
+            min-width: 0;
+            color: inherit;
+            font-family: inherit;
+        }
+
+        .idle-slide-message {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100%;
+            font-weight: 800;
+            line-height: 1.35;
+            animation: idleFadeIn 0.55s ease-out both;
+        }
+
+        .idle-price-slide {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 0.46rem;
+            height: 100%;
+            animation: idleFadeIn 0.55s ease-out both;
+        }
+
+        .idle-price-title {
+            color: var(--theme-text-color);
+            font-size: 0.88rem;
+            font-weight: 900;
+            letter-spacing: 0.065em;
+            line-height: 1.1;
+            text-align: center;
+            text-transform: uppercase;
+        }
+
+        .idle-price-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.35rem;
+            width: 100%;
+        }
+
+        .idle-price-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.35rem;
+            min-width: 0;
+            padding: 0.34rem 0.48rem;
+            color: var(--theme-text-color);
+            background: rgba(255, 255, 255, 0.28);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border: 1px solid color-mix(in srgb, var(--theme-highlight-color) 26%, transparent);
+            border-radius: 10px;
+        }
+
+        .idle-price-threshold {
+            min-width: 0;
+            overflow: hidden;
+            font-size: 0.76rem;
+            font-weight: 750;
+            line-height: 1.12;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .idle-price-duration {
+            flex-shrink: 0;
+            color: var(--theme-highlight-color);
+            font-size: 0.94rem;
+            font-weight: 900;
+            line-height: 1;
+            white-space: nowrap;
+        }
+
+        body.theme-flex .idle-price-title,
+        body.theme-flex .idle-price-item {
+            color: var(--flex-sub-text);
+        }
+
+        body.theme-flex .idle-price-duration {
+            color: var(--flex-accent);
+        }
+
+        @keyframes idleFadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
 
         /* Overlay cảnh báo nội dung nhạy cảm */
@@ -501,6 +596,228 @@
                 0 4px 10px rgba(255, 117, 143, 0.45),
                 inset 0 1px 1px rgba(255, 255, 255, 0.5);
             border-radius: 50%;
+        }
+
+        /* TFT Set 18: Enchanted Wild */
+        body.theme-enchanted-wild {
+            --theme-bg: linear-gradient(135deg, #e8fbd8, #bdeedc);
+            --theme-border-color: rgba(26, 116, 76, .78);
+            --theme-border-width: 2px;
+            --theme-border-radius: 24px;
+            --theme-box-shadow: 0 13px 32px rgba(20, 106, 76, .27), 0 0 22px rgba(190, 247, 126, .34), inset 0 1px 0 rgba(255, 255, 255, .78);
+            --theme-text-color: #155b43;
+            --theme-sub-text-color: #34785e;
+            --theme-highlight-color: #7750b6;
+            --theme-progress-bg: rgba(255, 255, 255, .66);
+            --theme-progress-fill: linear-gradient(90deg, #26b978, #8ddc58 55%, #f0c84c);
+            --theme-progress-thumb: #fff5a8;
+            --theme-alert-bg: linear-gradient(135deg, rgba(232, 251, 216, .97), rgba(189, 238, 220, .96));
+            --theme-alert-border-color: rgba(26, 116, 76, .72);
+            --theme-alert-text-color: #155b43;
+            --theme-alert-donor-color: #7750b6;
+            --theme-alert-action-text-color: #34785e;
+            --theme-box-shadow-alert: 0 16px 36px rgba(20, 106, 76, .3), 0 0 22px rgba(190, 247, 126, .3);
+            --badge-playing-bg: linear-gradient(135deg, #20b978, #79df8e);
+            --badge-playing-border: rgba(220, 255, 207, .75);
+            --badge-playing-text: #052f2d;
+            --badge-playing-shadow: 0 0 14px rgba(100, 255, 164, .38);
+            --badge-next-bg: linear-gradient(135deg, #7357ce, #a986f0);
+            --badge-next-border: rgba(226, 208, 255, .7);
+            --badge-next-text: #fff;
+            --badge-next-shadow: 0 0 14px rgba(161, 118, 244, .38);
+            --badge-queue-bg: linear-gradient(135deg, #f2c95d, #fff09b);
+            --badge-queue-border: rgba(255, 248, 192, .85);
+            --badge-queue-text: #29472f;
+            --badge-queue-shadow: 0 0 14px rgba(255, 222, 112, .35);
+            --badge-radius: 999px;
+            --badge-border-width: 1px;
+            --badge-padding: .24rem .72rem;
+            --badge-font-size: .82rem;
+            font-family: 'Be Vietnam Pro', 'Inter', sans-serif;
+        }
+
+        body.theme-enchanted-wild .obs-compact-player,
+        body.theme-enchanted-wild .obs-alert-box,
+        body.theme-enchanted-wild .obs-next-song-drawer,
+        body.theme-enchanted-wild .obs-next-fullscreen-card {
+            font-family: 'Be Vietnam Pro', 'Inter', sans-serif;
+            background-color: #cce9cf;
+            background-image: linear-gradient(105deg, rgba(24, 91, 67, .13), rgba(45, 112, 84, .09)), url('asset/tft-set18-enchanted-wild-bg.png');
+            background-size: cover;
+            background-position: center;
+            border: 2px solid rgba(31, 126, 82, .72);
+            box-shadow: var(--theme-box-shadow);
+            backdrop-filter: blur(10px);
+        }
+
+        /* Keep the legacy player DOM in its original stacking context. */
+        body.theme-enchanted-wild .obs-player-classic-layout-wrapper {
+            position: relative;
+            z-index: 2;
+        }
+
+        body.theme-enchanted-wild .obs-alert-content { position: relative; z-index: 1; }
+
+        body.theme-enchanted-wild .obs-cover-wrapper {
+            width: 72px;
+            height: 72px;
+            border-radius: 14px;
+            border: 2px solid #3aa66a;
+            box-shadow: 0 0 0 4px rgba(223, 255, 193, .72), 0 0 18px rgba(55, 184, 111, .42);
+            overflow: hidden;
+            animation: none !important;
+            transform: none !important;
+        }
+
+        body.theme-enchanted-wild .obs-cover-wrapper.spinning,
+        body.theme-enchanted-wild .obs-cover-wrapper.changing-disc {
+            animation: none !important;
+            transform: none !important;
+        }
+
+        body.theme-enchanted-wild .obs-song-cover {
+            border-radius: 11px;
+            object-fit: cover;
+        }
+
+        body.theme-enchanted-wild .obs-song-title,
+        body.theme-enchanted-wild .next-title,
+        body.theme-enchanted-wild .obs-alert-song {
+            font-family: 'Be Vietnam Pro', 'Inter', sans-serif;
+            font-weight: 800;
+            color: #155b43;
+            letter-spacing: -.02em;
+            -webkit-text-stroke: 0;
+            text-shadow: 0 1px 2px rgba(7, 53, 38, .18);
+        }
+
+        body.theme-enchanted-wild .obs-donor-name,
+        body.theme-enchanted-wild .obs-next-donor-name,
+        body.theme-enchanted-wild .obs-alert-donor { color: #7750b6; font-weight: 800; }
+
+        body.theme-enchanted-wild .obs-donor-amount,
+        body.theme-enchanted-wild .obs-next-donor-amount,
+        body.theme-enchanted-wild #alert-amount { color: #16885c; font-weight: 800; }
+
+        body.theme-enchanted-wild .obs-song-message {
+            background: rgba(255, 255, 255, .56);
+            border: 1px solid rgba(45, 144, 91, .3);
+            color: #286d51;
+        }
+
+        body.theme-enchanted-wild .obs-progress-bar-bg { border: 1px solid rgba(170, 245, 180, .34); box-shadow: inset 0 2px 5px rgba(0, 17, 22, .65); }
+        body.theme-enchanted-wild .obs-progress-bar-fill { box-shadow: 0 0 12px rgba(120, 244, 157, .7); }
+        body.theme-enchanted-wild .obs-progress-bar-thumb { box-shadow: 0 0 0 3px rgba(255, 240, 163, .2), 0 0 12px #f6d36d; }
+
+        body.theme-enchanted-wild .next-tag {
+            font-family: 'Be Vietnam Pro', 'Inter', sans-serif;
+            background: linear-gradient(135deg, #6a48bd, #9a73df);
+            color: #fff;
+            border: 1px solid #d9c2ff;
+            box-shadow: 0 0 12px rgba(157, 111, 231, .42);
+        }
+
+        body.theme-enchanted-wild .obs-empty-overlay {
+            font-family: 'Be Vietnam Pro', 'Inter', sans-serif;
+            background: linear-gradient(rgba(24, 91, 67, .12), rgba(45, 112, 84, .09)), url('asset/tft-set18-enchanted-wild-bg.png') center / cover;
+            color: #155b43;
+            -webkit-text-stroke: 0;
+            text-shadow: 0 1px 3px rgba(7, 53, 38, .2);
+            position: absolute;
+            z-index: 100;
+        }
+
+        /* Chủ kênh tự phát khi chưa có order: ưu tiên lời mời order và thu gọn bài đang phát. */
+        body.theme-enchanted-wild #obs-player-widget.owner-promo-mode .obs-player-main {
+            min-height: 82px;
+            align-items: stretch;
+        }
+
+        body.theme-enchanted-wild #obs-player-widget.owner-promo-mode .obs-cover-wrapper,
+        body.theme-enchanted-wild #obs-player-widget.owner-promo-mode #obs-song-title-container,
+        body.theme-enchanted-wild #obs-player-widget.owner-promo-mode .obs-progress-bar-bg {
+            display: none !important;
+        }
+
+        body.theme-enchanted-wild #obs-player-widget.owner-promo-mode .obs-details {
+            width: 100%;
+            min-width: 0;
+            flex: 1 1 auto;
+            justify-content: center;
+            align-items: stretch;
+            gap: 0;
+        }
+
+        body.theme-enchanted-wild #obs-player-widget.owner-promo-mode #obs-donor-container {
+            display: flex !important;
+            min-height: 76px;
+            align-items: center !important;
+            justify-content: center !important;
+            padding: 0 0.65rem;
+        }
+
+        body.theme-enchanted-wild #obs-player-widget.owner-promo-mode #obs-donor-name-container {
+            flex: 1 1 auto !important;
+            margin: 0 !important;
+            overflow: visible !important;
+            white-space: normal !important;
+            text-align: center;
+        }
+
+        body.theme-enchanted-wild #obs-player-widget.owner-promo-mode .obs-donor-name {
+            display: block !important;
+            width: 100%;
+            max-width: none !important;
+            overflow: visible !important;
+            white-space: normal !important;
+            color: #16885c !important;
+            font-family: 'Be Vietnam Pro', 'Inter', sans-serif !important;
+            font-size: clamp(1.18rem, 5vw, 1.46rem) !important;
+            font-weight: 800 !important;
+            line-height: 1.16 !important;
+            letter-spacing: -.025em;
+            text-align: center;
+            text-shadow: 0 1px 3px rgba(7, 53, 38, .2);
+        }
+
+        body.theme-enchanted-wild #obs-player-widget.owner-promo-mode .obs-donor-name.marquee {
+            animation: none !important;
+            transform: none !important;
+        }
+
+        body.theme-enchanted-wild #obs-player-widget.owner-promo-mode .obs-progress-container {
+            display: flex !important;
+            align-items: center;
+            gap: 0.48rem;
+            width: 100%;
+            margin-top: 0.1rem;
+            padding: 0 0.25rem;
+        }
+
+        body.theme-enchanted-wild #obs-player-widget.owner-promo-mode .obs-owner-promo-title-container {
+            display: block !important;
+            flex: 1 1 auto;
+            width: auto;
+            min-width: 0;
+            overflow: hidden;
+            white-space: nowrap;
+            padding: 0 3px;
+            -webkit-mask-image: none;
+            mask-image: none;
+        }
+
+        body.theme-enchanted-wild #obs-player-widget.owner-promo-mode .obs-owner-promo-title-container:has(.obs-owner-promo-title.marquee) {
+            -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 9px, #000 calc(100% - 9px), transparent 100%);
+            mask-image: linear-gradient(90deg, transparent 0, #000 9px, #000 calc(100% - 9px), transparent 100%);
+        }
+
+        body.theme-enchanted-wild #obs-player-widget.owner-promo-mode .obs-owner-promo-title {
+            color: #155b43 !important;
+            font-family: 'Be Vietnam Pro', 'Inter', sans-serif !important;
+            font-size: 0.94rem !important;
+            font-weight: 700 !important;
+            line-height: 1.35;
+            text-shadow: 0 1px 2px rgba(7, 53, 38, .18);
         }
 
         body.theme-cutepink {
@@ -2712,6 +3029,7 @@
         }
 
         .obs-song-title.marquee,
+        .obs-owner-promo-title.marquee,
         .next-title.marquee,
         .obs-alert-song.marquee,
         .next-fullscreen-title.marquee,
@@ -3261,6 +3579,21 @@
             width: 100%;
             margin-top: 0.2rem;
             transition: opacity 0.3s ease;
+        }
+
+        .obs-owner-promo-title-container {
+            display: none;
+            min-width: 0;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+
+        .obs-owner-promo-title {
+            display: inline-block;
+            max-width: none;
+            color: var(--theme-text-color);
+            font-family: var(--font-title);
+            white-space: nowrap;
         }
 
         .obs-flex-play-state {
@@ -4987,6 +5320,117 @@
             color: #FF4D6D;
         }
 
+        /* --- TFT Set 18: Enchanted Wild — Donate & Up Next --- */
+        body.theme-enchanted-wild .obs-alert-box,
+        body.theme-enchanted-wild .obs-next-song-fullscreen {
+            font-family: 'Be Vietnam Pro', 'Inter', sans-serif;
+            background-color: #cce9cf !important;
+            background-image:
+                linear-gradient(105deg, rgba(24, 91, 67, .13), rgba(45, 112, 84, .09)),
+                url('asset/tft-set18-enchanted-wild-bg.png') !important;
+            background-size: cover !important;
+            background-position: center !important;
+            border: 2px solid rgba(31, 126, 82, .72) !important;
+            border-radius: 24px !important;
+            box-shadow: 0 14px 34px rgba(20, 106, 76, .28), 0 0 20px rgba(190, 247, 126, .32), inset 0 1px 0 rgba(255, 255, 255, .82) !important;
+        }
+
+        body.theme-enchanted-wild .obs-next-song-fullscreen {
+            top: -4px;
+            left: -4px;
+            width: calc(100% + 8px);
+            height: calc(100% + 14px);
+            padding: 10px;
+        }
+
+        body.theme-enchanted-wild .obs-alert-box .next-fullscreen-container,
+        body.theme-enchanted-wild .obs-next-song-fullscreen .next-fullscreen-container {
+            position: relative;
+            z-index: 1;
+        }
+
+        body.theme-enchanted-wild .next-fullscreen-thumb-wrapper,
+        body.theme-enchanted-wild .obs-alert-box .next-fullscreen-thumb-wrapper {
+            width: min(100%, 231px) !important;
+            height: auto !important;
+            aspect-ratio: 16 / 9 !important;
+            border-radius: 15px !important;
+            border: 2px solid #3aa66a !important;
+            box-shadow: 0 0 0 4px rgba(235, 255, 209, .72), 0 7px 18px rgba(37, 133, 83, .28) !important;
+            -webkit-mask-image: none !important;
+            mask-image: none !important;
+            background: #dff8d7 !important;
+        }
+
+        body.theme-enchanted-wild .next-fullscreen-thumb {
+            border-radius: 12px;
+            object-fit: cover;
+        }
+
+        body.theme-enchanted-wild .next-fullscreen-badge {
+            font-family: 'Be Vietnam Pro', 'Inter', sans-serif;
+            background: linear-gradient(135deg, #704ab5, #a570dc) !important;
+            color: #fff !important;
+            border: 1px solid rgba(255, 255, 255, .68) !important;
+            border-radius: 999px !important;
+            box-shadow: 0 4px 12px rgba(112, 74, 181, .3) !important;
+            padding: 3px 9px !important;
+            letter-spacing: .04em;
+        }
+
+        body.theme-enchanted-wild .next-fullscreen-countdown {
+            color: #176f50 !important;
+            background: rgba(255, 245, 168, .72);
+            border: 1px solid rgba(209, 170, 53, .42);
+            border-radius: 999px;
+            padding: 3px 9px;
+            box-shadow: 0 3px 10px rgba(187, 150, 31, .16);
+        }
+
+        body.theme-enchanted-wild .next-fullscreen-title {
+            font-family: 'Be Vietnam Pro', 'Inter', sans-serif !important;
+            color: #155b43 !important;
+            font-weight: 800 !important;
+            -webkit-text-stroke: 0;
+            text-shadow: 0 1px 2px rgba(7, 53, 38, .18);
+        }
+
+        body.theme-enchanted-wild .next-fullscreen-donor-name {
+            color: #704ab5 !important;
+            font-weight: 800;
+        }
+
+        body.theme-enchanted-wild .next-fullscreen-donor-amount {
+            color: #16885c !important;
+            font-weight: 900;
+        }
+
+        body.theme-enchanted-wild .obs-alert-action-text { color: #34785e !important; }
+
+        body.theme-enchanted-wild .next-fullscreen-details .obs-song-message {
+            color: #286d51 !important;
+            background: rgba(255, 255, 255, .58) !important;
+            border: 1px solid rgba(45, 144, 91, .28) !important;
+            border-left: 3px solid #8a5dc5 !important;
+            border-radius: 10px !important;
+        }
+
+        body.theme-enchanted-wild .obs-next-song-drawer {
+            background-color: #cce9cf !important;
+            background-image: linear-gradient(105deg, rgba(24, 91, 67, .13), rgba(45, 112, 84, .09)), url('asset/tft-set18-enchanted-wild-bg.png') !important;
+            background-size: cover !important;
+            background-position: center !important;
+            border-color: rgba(31, 126, 82, .62) !important;
+            box-shadow: 0 12px 28px rgba(20, 106, 76, .24) !important;
+        }
+
+        body.theme-enchanted-wild .obs-next-song-drawer .next-title {
+            color: #155b43 !important;
+            font-family: 'Be Vietnam Pro', 'Inter', sans-serif !important;
+            -webkit-text-stroke: 0;
+            text-shadow: 0 1px 2px rgba(7, 53, 38, .18);
+        }
+
 
 
         /* --- Theme Frosted Glass Dark --- */
@@ -6561,7 +7005,7 @@
             </div>
             <!-- Overlay thông báo khi không có nhạc (hiển thị nhiều dòng đè lên player) -->
             <div id="obs-empty-overlay" class="obs-empty-overlay">
-                Order nhạc tự động Zypage 50k
+                <div class="idle-slide idle-slide-message">Order nhạc tự động Zypage 50k</div>
             </div>
 
             <!-- Giao diện quay số Lucky Roll (quay số ngẫu nhiên chọn bài tiếp theo) -->
@@ -6660,6 +7104,9 @@
                             </svg>
                         </div>
                         <span id="obs-current-time" class="obs-time">0:00</span>
+                        <div id="obs-owner-promo-title-container" class="obs-owner-promo-title-container">
+                            <span id="obs-owner-promo-title" class="obs-owner-promo-title"></span>
+                        </div>
                         <div class="obs-progress-bar-bg" id="obs-progress-bar-bg">
                             <div id="obs-progress-fill" class="obs-progress-bar-fill"></div>
                             <div id="obs-progress-thumb" class="obs-progress-bar-thumb"></div>
@@ -6867,6 +7314,154 @@
             }
             if (baseSize < 1.0) baseSize = 1.0; // clamp minimum to 1.0rem
             element.style.fontSize = `${baseSize}rem`;
+        }
+
+        const IDLE_SLIDE_DURATION_MS = 6500;
+        const IDLE_PRICE_PAGE_SIZE = 4;
+        let idleSlideshowActive = false;
+        let idleSlideshowStartedAt = 0;
+        let idleSlideshowSignature = '';
+        let idleLastRenderedSlide = '';
+
+        function escapeIdleHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function readIdleTimeLimitConfig() {
+            try {
+                const synced = JSON.parse(localStorage.getItem('dua_time_limit_config') || 'null');
+                if (synced && typeof synced === 'object') {
+                    const localShowSetting = localStorage.getItem('dua_show_idle_price_table');
+                    if (localShowSetting !== null) {
+                        synced.showIdlePriceTable = localShowSetting !== 'false';
+                    }
+                    return synced;
+                }
+            } catch (e) { }
+
+            let milestones = [];
+            try {
+                const stored = JSON.parse(localStorage.getItem('dua_milestones') || '[]');
+                if (Array.isArray(stored)) milestones = stored;
+            } catch (e) { }
+
+            return {
+                enabled: localStorage.getItem('dua_max_duration_enabled') === 'true',
+                showIdlePriceTable: localStorage.getItem('dua_show_idle_price_table') !== 'false',
+                mode: localStorage.getItem('dua_limit_mode') || 'fixed',
+                milestones,
+                defaultDurationMinutes: Number(localStorage.getItem('dua_default_duration')) || 0
+            };
+        }
+
+        function buildIdlePriceRows() {
+            const config = readIdleTimeLimitConfig();
+            if (!config || config.showIdlePriceTable === false || config.enabled !== true || config.mode !== 'milestone') return [];
+
+            const normalized = (Array.isArray(config.milestones) ? config.milestones : [])
+                .map(item => ({
+                    amount: Math.max(0, Number(item?.amount) || 0),
+                    duration: Math.max(0, Number(item?.durationMinutes ?? item?.duration) || 0)
+                }))
+                .filter(item => item.amount > 0 && item.duration > 0)
+                .sort((a, b) => a.amount - b.amount)
+                .filter((item, index, list) => index === 0 || item.amount !== list[index - 1].amount);
+
+            if (normalized.length === 0) return [];
+
+            const numberFormat = new Intl.NumberFormat('vi-VN');
+            const rows = normalized.map(item => ({
+                threshold: `Dưới ${numberFormat.format(item.amount)} ₫`,
+                duration: `${numberFormat.format(item.duration)} phút`
+            }));
+
+            const defaultDuration = Math.max(0, Number(config.defaultDurationMinutes) || 0);
+            if (defaultDuration > 0) {
+                rows.push({
+                    threshold: `Từ ${numberFormat.format(normalized[normalized.length - 1].amount)} ₫`,
+                    duration: `${numberFormat.format(defaultDuration)} phút`
+                });
+            }
+            return rows;
+        }
+
+        function buildIdleSlides(message) {
+            const rows = buildIdlePriceRows();
+            const slides = [{ type: 'message', message }];
+            for (let index = 0; index < rows.length; index += IDLE_PRICE_PAGE_SIZE) {
+                slides.push({
+                    type: 'prices',
+                    rows: rows.slice(index, index + IDLE_PRICE_PAGE_SIZE),
+                    page: Math.floor(index / IDLE_PRICE_PAGE_SIZE) + 1,
+                    totalPages: Math.ceil(rows.length / IDLE_PRICE_PAGE_SIZE)
+                });
+            }
+            return { slides, rows };
+        }
+
+        function renderIdleSlideshow(element, message) {
+            if (!element) return;
+            const safeMessage = message || 'Order nhạc tự động Zypage 50k';
+            const { slides, rows } = buildIdleSlides(safeMessage);
+            const signature = JSON.stringify({ message: safeMessage, rows });
+
+            if (!idleSlideshowActive || signature !== idleSlideshowSignature) {
+                idleSlideshowActive = true;
+                idleSlideshowStartedAt = Date.now();
+                idleSlideshowSignature = signature;
+                idleLastRenderedSlide = '';
+            }
+
+            const elapsed = Math.max(0, Date.now() - idleSlideshowStartedAt);
+            const slideIndex = slides.length > 1
+                ? Math.floor(elapsed / IDLE_SLIDE_DURATION_MS) % slides.length
+                : 0;
+            const slide = slides[slideIndex];
+            const renderKey = `${signature}|${slideIndex}`;
+            if (renderKey === idleLastRenderedSlide) return;
+
+            idleLastRenderedSlide = renderKey;
+            element.classList.add('idle-slideshow-active');
+            element.classList.remove('focus-active');
+            element.style.removeProperty('font-size');
+
+            if (slide.type === 'message') {
+                element.innerHTML = `<div class="idle-slide idle-slide-message">${escapeIdleHtml(slide.message)}</div>`;
+                adjustEmptyOverlayFontSize(element.querySelector('.idle-slide-message'), slide.message);
+                return;
+            }
+
+            const pageLabel = slide.totalPages > 1 ? ` · ${slide.page}/${slide.totalPages}` : '';
+            const itemsHtml = slide.rows.map(row => `
+                <div class="idle-price-item">
+                    <span class="idle-price-threshold">${escapeIdleHtml(row.threshold)}</span>
+                    <span class="idle-price-duration">${escapeIdleHtml(row.duration)}</span>
+                </div>
+            `).join('');
+
+            element.innerHTML = `
+                <div class="idle-slide idle-price-slide">
+                    <div class="idle-price-title">Bảng giá${pageLabel}</div>
+                    <div class="idle-price-grid">${itemsHtml}</div>
+                </div>
+            `;
+        }
+
+        function stopIdleSlideshow(element) {
+            if (!idleSlideshowActive && !idleSlideshowSignature && !idleLastRenderedSlide) return;
+            idleSlideshowActive = false;
+            idleSlideshowStartedAt = 0;
+            idleSlideshowSignature = '';
+            idleLastRenderedSlide = '';
+            if (element) {
+                element.classList.remove('idle-slideshow-active');
+                element.style.removeProperty('font-size');
+            }
         }
 
         // Phân tích tham số URL
@@ -7675,6 +8270,9 @@
 
             if (theme === 'spacegods') {
                 document.body.classList.add('theme-spacegods');
+            } else if (theme === 'enchanted-wild') {
+                document.body.classList.add('theme-enchanted-wild');
+                clearFullscreenCardStyles();
             } else if (theme === 'cutepink') {
                 document.body.classList.add('theme-cutepink');
             } else if (theme === 'classic') {
@@ -8083,6 +8681,16 @@
         function applyFullscreenNextSongColors(palette) {
             const fullscreenCard = document.getElementById('obs-next-song-fullscreen');
             if (!fullscreenCard) return;
+
+            // Enchanted Wild has a fixed illustrated background. The legacy
+            // dynamic-color routine writes an inline `background: ... !important`
+            // which would otherwise replace the forest artwork with a translucent
+            // palette sampled from the video thumbnail.
+            const activeTheme = localStorage.getItem('dua_theme') || 'flex';
+            if (activeTheme === 'enchanted-wild' || document.body.classList.contains('theme-enchanted-wild')) {
+                clearFullscreenCardStyles();
+                return;
+            }
             
             const colors = getColorsFromPalette(palette.primary, palette.secondary, palette.avgL, palette.isDark);
             
@@ -9963,6 +10571,7 @@
                 const waitWidget = document.getElementById('obs-player-widget');
                 const waitOverlay = document.getElementById('obs-empty-overlay');
                 if (waitWidget && waitOverlay) {
+                    stopIdleSlideshow(waitOverlay);
                     waitWidget.classList.add('active');
                     waitWidget.style.display = '';
                     waitOverlay.classList.add('active', 'focus-active');
@@ -10604,7 +11213,7 @@
             if (widget) {
                 widget.classList.add('active');
                 widget.style.display = '';
-                widget.classList.remove('obs-ext-active', 'obs-voteskip-active', 'next-fullscreen-active');
+                widget.classList.remove('obs-ext-active', 'obs-voteskip-active', 'next-fullscreen-active', 'owner-promo-mode');
             }
 
             const emptyOverlay = document.getElementById('obs-empty-overlay');
@@ -10703,6 +11312,73 @@
         // Start the rAF loop immediately (it stays idle until a snapshot is available)
         startFlexProgressRAF();
 
+        let lastOwnerPromoTitleSignature = '';
+
+        function updateOwnerPromoMode(widgetElement, song) {
+            const promoContainer = document.getElementById('obs-owner-promo-title-container');
+            const promoTitle = document.getElementById('obs-owner-promo-title');
+            const promoDonorName = document.getElementById('obs-donor-name');
+
+            if (!widgetElement || !song) {
+                if (widgetElement) widgetElement.classList.remove('owner-promo-mode');
+                lastOwnerPromoTitleSignature = '';
+                if (promoTitle) {
+                    promoTitle.classList.remove('marquee');
+                    promoTitle.style.animationDuration = '0s';
+                    promoTitle.textContent = '';
+                }
+                return false;
+            }
+
+            let queue = [];
+            try {
+                const rawQueue = localStorage.getItem('dua_queue');
+                queue = rawQueue ? JSON.parse(rawQueue) : [];
+            } catch (_error) {
+                queue = [];
+            }
+
+            const currentQueueId = song.playlistQueueId || song.id;
+            const hasViewerOrder = Array.isArray(queue) && queue.some(item => {
+                if (!item) return false;
+                if (currentQueueId != null && String(item.id) === String(currentQueueId)) return false;
+                if (item.type === 'playlist') return true;
+                return item.isOwnerAdd !== true;
+            });
+            const isEnchantedWild = document.body.classList.contains('theme-enchanted-wild');
+            const isOwnerPromo = isEnchantedWild && song.isOwnerAdd === true && !hasViewerOrder;
+            widgetElement.classList.toggle('owner-promo-mode', isOwnerPromo);
+
+            if (isOwnerPromo && promoDonorName) {
+                const promoMessage = localStorage.getItem('dua_empty_queue_message') || 'Order nhạc tự động Zypage 50k';
+                if (promoDonorName.dataset.ownerPromoText !== promoMessage || promoDonorName.classList.contains('marquee')) {
+                    promoDonorName.dataset.ownerPromoText = promoMessage;
+                    promoDonorName.classList.remove('marquee');
+                    promoDonorName.style.animationDuration = '0s';
+                    promoDonorName.textContent = promoMessage;
+                }
+            } else if (promoDonorName) {
+                delete promoDonorName.dataset.ownerPromoText;
+            }
+
+            if (isOwnerPromo && promoContainer && promoTitle) {
+                const titleText = song.title || 'Bài hát do chủ kênh phát';
+                const signature = `${song.id || ''}|${titleText}`;
+                if (lastOwnerPromoTitleSignature !== signature) {
+                    lastOwnerPromoTitleSignature = signature;
+                    applyMarquee(promoContainer, promoTitle, titleText, 27);
+                }
+            } else {
+                lastOwnerPromoTitleSignature = '';
+                if (promoTitle) {
+                    promoTitle.classList.remove('marquee');
+                    promoTitle.style.animationDuration = '0s';
+                    promoTitle.textContent = '';
+                }
+            }
+            return isOwnerPromo;
+        }
+
         // Cập nhật Giao diện Overlay
         function updateOverlayUI() {
             if (isPreview) {
@@ -10727,6 +11403,7 @@
                     const waitWidget = document.getElementById('obs-player-widget');
                     const waitOverlay = document.getElementById('obs-empty-overlay');
                     if (waitWidget && waitOverlay) {
+                        stopIdleSlideshow(waitOverlay);
                         waitWidget.classList.add('active');
                         waitWidget.style.display = '';
                         waitOverlay.classList.add('active', 'focus-active');
@@ -10742,6 +11419,7 @@
 
                 const dataRaw = localStorage.getItem('dua_current_song');
                 if (!dataRaw) {
+                    updateOwnerPromoMode(widget, null);
                     const currentTheme = localStorage.getItem('dua_theme') || 'flex';
                     const isDynamicColorsEnabled = (currentTheme === 'flex' || localStorage.getItem('dua_dynamic_colors') === 'true');
                     if (isDynamicColorsEnabled) {
@@ -10774,6 +11452,7 @@
                     const hideEmpty = localStorage.getItem('dua_hide_empty_overlay') === 'true';
                     const isFocus = localStorage.getItem('dua_focus_mode') === 'true';
                     if (hideEmpty && !isFocus) {
+                        stopIdleSlideshow(document.getElementById('obs-empty-overlay'));
                         widget.classList.remove('active');
                         widget.style.display = 'none';
                     } else {
@@ -10785,15 +11464,15 @@
                         if (emptyOverlay) {
                             emptyOverlay.classList.add('active');
                             if (isFocus) {
+                                stopIdleSlideshow(emptyOverlay);
                                 emptyOverlay.classList.add('focus-active');
                                 const storedFocusMsg = localStorage.getItem('dua_focus_mode_message');
                                 emptyOverlay.textContent = storedFocusMsg || 'Đang bật chế độ Tập trung 🤫 Hàng đợi tạm dừng';
                             } else {
-                                emptyOverlay.classList.remove('focus-active');
                                 const storedMsg = localStorage.getItem('dua_empty_queue_message');
-                                emptyOverlay.textContent = storedMsg || 'Order nhạc tự động Zypage 50k';
+                                renderIdleSlideshow(emptyOverlay, storedMsg || 'Order nhạc tự động Zypage 50k');
                             }
-                            adjustEmptyOverlayFontSize(emptyOverlay, emptyOverlay.textContent);
+                            if (isFocus) adjustEmptyOverlayFontSize(emptyOverlay, emptyOverlay.textContent);
                         }
                     }
 
@@ -10834,6 +11513,7 @@
                     const isFocus = localStorage.getItem('dua_focus_mode') === 'true';
                     const emptyOverlay = document.getElementById('obs-empty-overlay');
                     if (emptyOverlay) {
+                        stopIdleSlideshow(emptyOverlay);
                         if (isFocus && (lastCommandType === 'pause' || lastCommandType === 'stop')) {
                             emptyOverlay.classList.add('active', 'focus-active');
                             const storedFocusMsg = localStorage.getItem('dua_focus_mode_message');
@@ -10849,6 +11529,7 @@
                 }
 
                 const data = JSON.parse(dataRaw);
+                const isOwnerPromo = updateOwnerPromoMode(widget, data);
 
                 const isLuckyNewSong = (lastSongId !== data.id);
                 if (isLuckyNewSong) {
@@ -11050,7 +11731,11 @@
                     const donorNameContainer = document.getElementById('obs-donor-name-container');
                     if (songData.isOwnerAdd) {
                         const storedMsg = localStorage.getItem('dua_empty_queue_message') || 'Order nhạc tự động Zypage 50k';
-                        if (donorNameContainer) {
+                        if (isOwnerPromo) {
+                            donorName.classList.remove('marquee');
+                            donorName.style.animationDuration = '0s';
+                            donorName.textContent = storedMsg;
+                        } else if (donorNameContainer) {
                             applyMarquee(donorNameContainer, donorName, storedMsg, 25);
                         } else {
                             donorName.textContent = storedMsg;
@@ -11770,7 +12455,7 @@
                 applyOpacity(e.newValue || '100');
             } else if (e.key === 'dua_alert_action_text') {
                 updateAlertActionTextDisplay();
-            } else if (e.key === 'dua_hide_empty_overlay') {
+            } else if (e.key === 'dua_hide_empty_overlay' || e.key === 'dua_empty_queue_message' || e.key === 'dua_time_limit_config' || e.key === 'dua_show_idle_price_table') {
                 updateOverlayUI();
             } else if (e.key === 'dua_sensitive_videos_url') {
                 fetchSensitiveVideosConfig();
@@ -11907,6 +12592,18 @@
                     const maxDurVal = payload.data?.value;
                     if (maxDurVal !== undefined) {
                         localStorage.setItem('dua_max_duration', maxDurVal);
+                    }
+                    const timeLimitConfig = payload.data?.config;
+                    if (timeLimitConfig && typeof timeLimitConfig === 'object') {
+                        const nextConfig = JSON.stringify(timeLimitConfig);
+                        const oldConfig = localStorage.getItem('dua_time_limit_config');
+                        if (timeLimitConfig.showIdlePriceTable !== undefined) {
+                            localStorage.setItem('dua_show_idle_price_table', timeLimitConfig.showIdlePriceTable ? 'true' : 'false');
+                        }
+                        if (oldConfig !== nextConfig) {
+                            localStorage.setItem('dua_time_limit_config', nextConfig);
+                            updateOverlayUI();
+                        }
                     }
                 } else if (payload.type === 'empty_queue_message') {
                     const text = payload.data?.text;
