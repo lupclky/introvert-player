@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, Tray, ipcMain, session, shell } = require('electron');
+const { app, BrowserWindow, Menu, Tray, ipcMain, session, shell, clipboard } = require('electron');
 app.disableHardwareAcceleration();
 const http = require('http');
 const https = require('https');
@@ -842,6 +842,89 @@ if (!gotTheLock) {
       }
     });
 
+    // Mở tất cả liên kết bên ngoài (HTTP/HTTPS) bằng trình duyệt mặc định của hệ thống Windows
+    mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+      if (url && /^https?:\/\//i.test(url)) {
+        shell.openExternal(url);
+      }
+      return { action: 'deny' };
+    });
+
+    // Menu chuột phải native cho Dashboard.
+    mainWindow.webContents.on('context-menu', (event, params) => {
+      const template = [];
+      const editFlags = params.editFlags || {};
+
+      if (params.misspelledWord) {
+        (params.dictionarySuggestions || []).slice(0, 5).forEach((suggestion) => {
+          template.push({
+            label: suggestion,
+            click: () => mainWindow.webContents.replaceMisspelling(suggestion)
+          });
+        });
+        if ((params.dictionarySuggestions || []).length > 0) template.push({ type: 'separator' });
+        template.push({
+          label: 'Thêm vào từ điển',
+          click: () => mainWindow.webContents.session.addWordToSpellCheckerDictionary(params.misspelledWord)
+        });
+        template.push({ type: 'separator' });
+      }
+
+      if (params.isEditable) {
+        template.push(
+          { label: 'Hoàn tác', role: 'undo', enabled: Boolean(editFlags.canUndo) },
+          { label: 'Làm lại', role: 'redo', enabled: Boolean(editFlags.canRedo) },
+          { type: 'separator' },
+          { label: 'Cắt', role: 'cut', enabled: Boolean(editFlags.canCut) },
+          { label: 'Sao chép', role: 'copy', enabled: Boolean(editFlags.canCopy) },
+          { label: 'Dán', role: 'paste', enabled: Boolean(editFlags.canPaste) },
+          { label: 'Dán không định dạng', role: 'pasteAndMatchStyle', enabled: Boolean(editFlags.canPaste) },
+          { label: 'Xóa', role: 'delete', enabled: Boolean(editFlags.canDelete) },
+          { type: 'separator' },
+          { label: 'Chọn tất cả', role: 'selectAll', enabled: Boolean(editFlags.canSelectAll) }
+        );
+      } else {
+        if (params.selectionText && params.selectionText.trim()) {
+          template.push({ label: 'Sao chép', role: 'copy' });
+        }
+        template.push({ label: 'Chọn tất cả', role: 'selectAll' });
+      }
+
+      if (params.linkURL && /^https?:\/\//i.test(params.linkURL)) {
+        if (template.length > 0) template.push({ type: 'separator' });
+        template.push(
+          { label: 'Mở liên kết trong trình duyệt', click: () => shell.openExternal(params.linkURL) },
+          { label: 'Sao chép địa chỉ liên kết', click: () => clipboard.writeText(params.linkURL) }
+        );
+      }
+
+      if (params.mediaType === 'image' && params.srcURL) {
+        if (template.length > 0) template.push({ type: 'separator' });
+        template.push(
+          { label: 'Sao chép hình ảnh', click: () => mainWindow.webContents.copyImageAt(params.x, params.y) },
+          { label: 'Sao chép địa chỉ hình ảnh', click: () => clipboard.writeText(params.srcURL) }
+        );
+        if (/^https?:\/\//i.test(params.srcURL)) {
+          template.push({ label: 'Mở hình ảnh trong trình duyệt', click: () => shell.openExternal(params.srcURL) });
+        }
+      }
+
+      if (template.length > 0) template.push({ type: 'separator' });
+      template.push(
+        { label: 'Tải lại giao diện', role: 'reload' },
+        {
+          label: 'Thu phóng',
+          submenu: [
+            { label: 'Phóng to', role: 'zoomIn' },
+            { label: 'Thu nhỏ', role: 'zoomOut' },
+            { label: 'Đặt lại 100%', role: 'resetZoom' }
+          ]
+        }
+      );
+
+      Menu.buildFromTemplate(template).popup({ window: mainWindow });
+    });
+
     // Load trang Dashboard thông qua URL của local server
     mainWindow.loadURL(`http://127.0.0.1:${port}/index.html`);
 
@@ -1016,6 +1099,53 @@ ipcMain.on('send-to-overlay', (event, message) => {
 });
 
 let lastIsDarkMode = false;
+
+// Lắng nghe yêu cầu mở liên kết bằng trình duyệt mặc định của hệ thống
+ipcMain.on('open-external-url', (event, url) => {
+  if (url && /^https?:\/\//i.test(url)) {
+    shell.openExternal(url);
+  }
+});
+
+ipcMain.on('show-favorite-context-menu', (event, favorite) => {
+  const ownerWindow = BrowserWindow.fromWebContents(event.sender);
+  if (!ownerWindow || !favorite || typeof favorite !== 'object') return;
+
+  const key = String(favorite.key || '').slice(0, 512);
+  const title = String(favorite.title || 'Bài hát yêu thích').slice(0, 300);
+  const displayTitle = title.length > 72 ? `${title.slice(0, 69)}...` : title;
+  const url = typeof favorite.url === 'string' && /^https?:\/\//i.test(favorite.url)
+    ? favorite.url
+    : '';
+  if (!key) return;
+
+  const sendAction = (action) => {
+    if (!event.sender.isDestroyed()) {
+      event.sender.send('favorite-context-action', { action, key });
+    }
+  };
+
+  const template = [
+    { label: displayTitle, enabled: false },
+    { type: 'separator' },
+    { label: 'Thêm vào hàng đợi', click: () => sendAction('queue') }
+  ];
+
+  if (url) {
+    template.push(
+      { label: 'Mở bài hát trong trình duyệt', click: () => shell.openExternal(url) },
+      { label: 'Sao chép liên kết', click: () => clipboard.writeText(url) }
+    );
+  }
+
+  template.push(
+    { label: 'Sao chép tên bài hát', click: () => clipboard.writeText(title) },
+    { type: 'separator' },
+    { label: 'Xóa khỏi yêu thích', click: () => sendAction('delete') }
+  );
+
+  Menu.buildFromTemplate(template).popup({ window: ownerWindow });
+});
 
 // Lắng nghe yêu cầu hiển thị thông báo taskbar từ Dashboard (Renderer)
 ipcMain.on('show-taskbar-notification', (event, data) => {
@@ -2603,28 +2733,46 @@ function showTaskbarNotification(title, message, isDarkMode = false, duration) {
     const { x, y, width, height } = targetDisplay.workArea;
     
     // Tách tiêu đề nhạc và tin nhắn từ message (phân cách bằng \n)
-    const lines = (message || '').split('\n');
-    const songTitle = lines[0] || '';
-    const cleanMsg = lines.slice(1).join('\n') || '';
+    const rawMsgStr = (message || '').trim();
+    const lines = rawMsgStr.split('\n');
+    let songTitle = '';
+    let cleanMsg = '';
+    
+    if (lines.length > 1) {
+        songTitle = (lines[0] || '').replace(/^(\[MUSIC\]|🎵|▶)\s*/u, '').replace(/[\uD800-\uDFFF]/g, '').trim();
+        cleanMsg = lines.slice(1).join('\n').trim();
+    } else if (lines.length === 1 && rawMsgStr) {
+        const singleLine = lines[0].trim();
+        if (singleLine.startsWith('[MUSIC]') || singleLine.startsWith('🎵') || singleLine.startsWith('▶') || singleLine.toLowerCase().includes('youtube') || singleLine.toLowerCase().includes('http://') || singleLine.toLowerCase().includes('https://')) {
+            songTitle = singleLine.replace(/^(\[MUSIC\]|🎵|▶)\s*/u, '').replace(/[\uD800-\uDFFF]/g, '').trim();
+            cleanMsg = '';
+        } else {
+            songTitle = '';
+            cleanMsg = singleLine;
+        }
+    }
     const cleanMsgLines = cleanMsg ? cleanMsg.split('\n') : [];
 
     const notifWidth = 480;
     
-    // Calculate title lines and additional height (title font size is large, around 38 chars max per line)
-    const titleLines = Math.ceil((title || '').length / 38);
-    const titleAdditional = (titleLines - 1) * 24;
+    // Tính toán độ cao linh hoạt 100% theo nội dung thực tế (không dùng ellipsis ...)
+    const titleLines = Math.max(1, Math.ceil((title || '').length / 36));
+    let calculatedHeight = 55 + (titleLines * 24);
 
-    let notifHeight = 125 + titleAdditional;
-    
-    if (cleanMsg) {
-      const charLines = Math.ceil(cleanMsg.length / 45);
-      const explicitLines = cleanMsgLines.length;
-      const estimatedLines = Math.max(charLines, explicitLines);
-      const additionalHeight = estimatedLines * 24;
-      notifHeight = Math.min(340, Math.max(125, 115 + additionalHeight + titleAdditional));
-    } else if (songTitle) {
-      notifHeight = 110 + titleAdditional;
+    if (songTitle) {
+        const songLines = Math.max(1, Math.ceil((songTitle || '').length / 36));
+        calculatedHeight += (songLines * 22) + 12;
     }
+
+    if (cleanMsg) {
+        let msgLinesCount = 0;
+        cleanMsgLines.forEach(line => {
+            msgLinesCount += Math.max(1, Math.ceil((line || '').length / 40));
+        });
+        calculatedHeight += (msgLinesCount * 24) + 14;
+    }
+
+    const notifHeight = Math.max(120, Math.min(650, calculatedHeight));
     
     // Tính toán vị trí Y dựa trên số lượng thông báo hiện có
     let offset = 0;
@@ -2757,20 +2905,8 @@ function showTaskbarNotification(title, message, isDarkMode = false, duration) {
             font-weight: 700;
             color: ${textSongColor};
             line-height: 1.35;
-          }
-          .song-title.single-line {
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-            text-overflow: ellipsis;
-          }
-          .song-title.double-line {
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            word-break: break-word;
+            white-space: normal;
           }
           .message {
             font-size: 1.08rem;
@@ -2783,8 +2919,7 @@ function showTaskbarNotification(title, message, isDarkMode = false, duration) {
             display: block;
             word-break: break-word;
             white-space: pre-wrap;
-            overflow-y: auto;
-            max-height: 180px;
+            overflow: visible;
           }
           .message::-webkit-scrollbar {
             width: 4px;
@@ -2806,7 +2941,7 @@ function showTaskbarNotification(title, message, isDarkMode = false, duration) {
           <div class="close-btn" onclick="closeNotification()">&times;</div>
           <div class="content">
             <div class="title">${escapeHtml(title)}</div>
-            ${songTitle ? `<div class="song-title ${cleanMsg ? 'single-line' : 'double-line'}">${escapeHtml(songTitle)}</div>` : ''}
+            ${songTitle ? `<div class="song-title"><svg style="width: 16px; height: 16px; fill: #FF0000; vertical-align: -3px; margin-right: 5px; flex-shrink: 0; display: inline-block;" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>${escapeHtml(songTitle)}</div>` : ''}
             ${cleanMsg ? `<div class="message">${escapeHtml(cleanMsg)}</div>` : ''}
           </div>
         </div>

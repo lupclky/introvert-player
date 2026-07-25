@@ -45,6 +45,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // Custom Taskbar Notification
     showTaskbarNotification: (title, message, isDarkMode, duration) => ipcRenderer.send('show-taskbar-notification', { title, message, isDarkMode, duration }),
 
+    // Open link in default external browser
+    openExternal: (url) => ipcRenderer.send('open-external-url', url),
+
+    // Native context menu for favorite songs
+    showFavoriteContextMenu: (favorite) => ipcRenderer.send('show-favorite-context-menu', favorite),
+    onFavoriteContextAction: (callback) => ipcRenderer.on('favorite-context-action', (event, action) => callback(action)),
+
     // SQLite Database for Donations
     dbGetDonations: () => ipcRenderer.invoke('db-get-donations'),
     dbAddDonation: (donation) => ipcRenderer.invoke('db-add-donation', donation),

@@ -18,16 +18,9 @@ Tài liệu này tổng hợp toàn bộ các tính năng, giao diện, và cơ 
 ## 🎨 2. Hệ thống Giao diện & Chủ đề (Themes) của OBS Overlay
 
 OBS Overlay hỗ trợ nhiều chủ đề thiết kế đa dạng phù hợp với phong cách của từng streamer:
-*   **Theme Dứa (Mặc định):** Tông màu vàng/cam năng động kèm hiệu ứng thanh cuộn đặc trưng.
-*   **TFT Spacegods:** Thiết kế phong cách vũ trụ, viền neon cá tính.
+*   **TFT Set 18 — Khu Rừng Kỳ Bí (Mặc định):** Tông xanh rừng, bề mặt gỗ bo tròn và chữ rõ nét trên OBS.
+*   **Theme Dứa:** Tông màu vàng/cam năng động kèm hiệu ứng thanh cuộn đặc trưng.
 *   **Cute Pink (Hồng dễ thương):** Tông hồng phấn ngọt ngào, nhẹ nhàng.
-*   **Classic & Classic Dark (Cổ điển):**
-    *   Mô phỏng máy hát đĩa than cổ điển.
-    *   **Hiệu ứng cơ học thay đĩa (Vinyl Swap Animation):** Khi chuyển bài, cần đọc nhấc ra -> đĩa cũ trượt sang trái -> đĩa mới trượt vào -> cần đọc hạ xuống.
-*   **Frosted Glass Light & Dark (Kính mờ):**
-    *   Hiệu ứng kính mờ xuyên thấu hiện đại.
-    *   Sử dụng ảnh bìa (thumbnail) vuông phẳng đứng yên không xoay tròn.
-    *   Phông chữ **Inter** phẳng, thanh tiến trình siêu mỏng dẹt màu xanh pastel.
 *   **Tùy chỉnh hiển thị Overlay:**
     *   **Zoom (Tỷ lệ):** Chọn từ 100% đến 200% để phóng to/thu nhỏ overlay trên stream.
     *   **Opacity (Độ mờ):** Kéo thanh trượt điều chỉnh độ trong suốt từ 0% đến 100%.

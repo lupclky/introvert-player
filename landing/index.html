@@ -109,7 +109,7 @@
                 <div class="feature-card">
                     <div class="feature-icon bg-pink"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
                     <h3>Multi-Theme OBS</h3>
-                    <p>Hỗ trợ đa dạng phong cách thiết kế từ Dứa Brunch Brutalism tươi sáng, Spacegods huyền ảo, Cute Pink ngọt ngào đến Classic cổ điển sang trọng.</p>
+                    <p>Ba phong cách được tối ưu riêng cho OBS: Dứa tươi sáng, Cute Pink ngọt ngào và Khu Rừng Kỳ Bí của TFT Set 18.</p>
                 </div>
                 
                 <!-- Feature 4 -->
@@ -132,10 +132,8 @@
                 <!-- Theme Tabs Selector -->
                 <div class="theme-tabs" id="theme-tabs-selector">
                     <button class="theme-tab active" data-theme="pineapple" id="tab-pineapple">Theme Dứa</button>
-                    <button class="theme-tab" data-theme="spacegods" id="tab-spacegods">Cosmic Lavender</button>
+                    <button class="theme-tab" data-theme="enchanted-wild" id="tab-enchanted-wild">Khu Rừng Kỳ Bí</button>
                     <button class="theme-tab" data-theme="cutepink" id="tab-cutepink">Cute Pink</button>
-                    <button class="theme-tab" data-theme="classic" id="tab-classic">Classic Cổ Điển</button>
-                    <button class="theme-tab" data-theme="classic-dark" id="tab-classic-dark">Classic Dark</button>
                 </div>
 
                 <!-- Simulated OBS Screen viewport (16:9 box with green screen background) -->
@@ -150,11 +148,6 @@
                                 <div class="obs-cover-wrapper" id="obs-cover-wrapper">
                                     <img id="obs-song-cover" class="obs-song-cover" src="https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=200&auto=format&fit=crop" alt="Cover">
                                 </div>
-                                <!-- Cần đọc đĩa than (chỉ hiển thị trong theme classic) -->
-                                <div class="obs-tonearm" id="obs-tonearm">
-                                    <div class="obs-tonearm-needle"></div>
-                                </div>
-                                
                                 <!-- Chi tiết bài hát bên phải -->
                                 <div class="obs-details">
                                     <div id="obs-song-title-container" class="obs-song-title-container">
@@ -162,21 +155,13 @@
                                     </div>
                                     <div id="obs-donor-container" class="obs-donor-info" style="display: flex;">
                                         <span id="obs-donor-name" class="obs-donor-name">Lâm</span>
-                                        <span id="obs-donor-amount" class="obs-donor-amount">50.000 VNĐ</span>
+                                        <span id="obs-donor-amount" class="obs-donor-amount">50K</span>
                                     </div>
                                 </div>
                             </div>
 
                             <!-- Thanh tiến trình phát nhạc thu gọn -->
                             <div class="obs-progress-container">
-                                <div class="obs-flex-play-state">
-                                    <svg class="play-icon" viewBox="0 0 24 24" fill="currentColor">
-                                        <path d="M8 5v14l11-7z"/>
-                                    </svg>
-                                    <svg class="pause-icon" viewBox="0 0 24 24" fill="currentColor">
-                                        <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
-                                    </svg>
-                                </div>
                                 <span id="obs-current-time" class="obs-time">1:15</span>
                                 <div class="obs-progress-bar-bg">
                                     <div id="obs-progress-fill" class="obs-progress-bar-fill" style="width: 45%;"></div>
@@ -192,10 +177,9 @@
                             <div id="obs-next-title-container">
                                 <span id="obs-next-text" class="next-title">Faded — Alan Walker</span>
                             </div>
-                            <!-- Hàng 2 và Hàng 3 cho Theme Cổ Điển -->
-                            <div id="obs-next-donor-info" class="obs-next-donor-info" style="display: none;">
+                            <div id="obs-next-donor-info" class="obs-next-donor-info">
                                 <span id="obs-next-donor-name" class="obs-next-donor-name">Khách</span>
-                                <span id="obs-next-donor-amount" class="obs-next-donor-amount">20.000 VNĐ</span>
+                                <span id="obs-next-donor-amount" class="obs-next-donor-amount">20K</span>
                             </div>
                         </div>
                     </div>

@@ -26,6 +26,10 @@
       "preload.js",
       "package.json",
       "CHANGELOG.md",
+      "landing/walkthrough.html",
+      "landing/walkthrough.css",
+      "landing/walkthrough.js",
+      "landing/image",
       "asset",
       "build/icon.ico"
     ],

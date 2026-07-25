@@ -1,6 +1,6 @@
-/* Stylesheet cho Hệ thống Hàng đợi Nhạc Donate (Phong cách Dứa) */
+/* Stylesheet cho Hệ thống Hàng đợi Nhạc Donate */
 
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;600;700&family=Nunito:wght@300;400;600;700;800;900&family=Quicksand:wght@400;500;600;700&family=Dancing+Script:wght@600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&family=Dancing+Script:wght@600;700&family=Inter:wght@400;500;600;700;800;900&family=Nunito:wght@300;400;600;700;800;900&family=Outfit:wght@200;300;400;600;700&family=Quicksand:wght@400;500;600;700&family=Share+Tech+Mono&display=swap');
 
 :root {
     --font-primary: 'Nunito', sans-serif;
@@ -22,6 +22,57 @@
     --pineapple-shadow: transparent;
 }
 
+/* Dashboard dùng Be Vietnam Pro; Malgun Gothic xử lý phần chữ Hàn. */
+body.app-dashboard {
+    --font-primary: 'Be Vietnam Pro', 'Segoe UI', 'Malgun Gothic', Arial, system-ui, sans-serif;
+    --font-title: 'Be Vietnam Pro', 'Segoe UI', 'Malgun Gothic', Arial, system-ui, sans-serif;
+    font-family: var(--font-primary);
+    font-kerning: normal;
+    font-feature-settings: 'kern' 1, 'liga' 1;
+    font-optical-sizing: auto;
+    text-rendering: optimizeLegibility;
+}
+
+body.app-dashboard button,
+body.app-dashboard input,
+body.app-dashboard select,
+body.app-dashboard textarea {
+    font-family: var(--font-primary);
+}
+
+body.app-dashboard .app-titlebar *,
+body.app-dashboard .app-content *,
+body.app-dashboard .app-loading-screen * {
+    letter-spacing: normal !important;
+}
+
+/* Light mode — TFT Set 18: Khu Rừng Kỳ Bí */
+body.app-dashboard:not(.dark-mode) {
+    --pineapple-yellow: #B7C48F;
+    --pineapple-yellow-light: #E4E1D8;
+    --pineapple-orange: #4B8063;
+    --pineapple-orange-dark: #35654E;
+    --pineapple-text: #343731;
+    --pineapple-bg: #D8D6CF;
+    --pineapple-white: #EEECE5;
+    --pineapple-card-bg: #EEECE5;
+    --pineapple-success: #578267;
+    --pineapple-info: #6C7F75;
+    --pineapple-gray: #DDDAD2;
+    --pineapple-border-color: rgba(62, 78, 66, 0.2);
+    --pineapple-shadow: transparent;
+    background-color: var(--pineapple-bg);
+}
+
+.song-title-link {
+    color: inherit;
+    text-decoration: none;
+    transition: color 0.2s ease, text-decoration 0.2s ease;
+}
+.song-title-link:hover {
+    color: var(--pineapple-orange-dark, #ea580c) !important;
+    text-decoration: underline !important;
+}
 
 * {
     box-sizing: border-box;
@@ -116,7 +167,7 @@ body.obs-mode .obs-overlay-wrapper {
 }
 
 .brand-text h1 {
-    font-family: 'Dancing Script', cursive;
+    font-family: var(--font-title);
     font-size: 2.6rem;
     font-weight: 700;
     letter-spacing: 0.02em;
@@ -1133,7 +1184,7 @@ body.dark-mode .settings-sidebar::-webkit-scrollbar-thumb {
 @keyframes newly-added-glow-light {
     0% {
         border-color: var(--pineapple-orange);
-        background-color: #FEF3C7; /* Nền vàng ấm sáng */
+        background-color: #E3DFC9;
         box-shadow: none;
     }
     100% {
@@ -1627,6 +1678,12 @@ body.dark-mode .app-loading-screen {
     background: linear-gradient(135deg, #090d16 0%, #111029 50%, #200a2b 100%);
 }
 
+body.app-dashboard:not(.dark-mode) .app-loading-screen {
+    background:
+        linear-gradient(135deg, rgba(228, 225, 217, 0.96), rgba(212, 216, 208, 0.94)),
+        url('asset/tft-set18-enchanted-wild-bg.png') center / cover;
+}
+
 .app-loading-screen.fade-out {
     opacity: 0;
     visibility: hidden;
@@ -1634,6 +1691,8 @@ body.dark-mode .app-loading-screen {
 
 /* Splash Screen Redesign Elements */
 .splash-title-line1 {
+    font-family: 'Be Vietnam Pro', 'Segoe UI', sans-serif !important;
+    display: inline-block;
     color: var(--pineapple-text, #2D2727);
     transition: color 0.3s ease;
 }
@@ -1642,6 +1701,8 @@ body.dark-mode .splash-title-line1 {
 }
 
 .splash-title-line2 {
+    font-family: 'Be Vietnam Pro', 'Segoe UI', sans-serif !important;
+    display: inline-block;
     color: var(--pineapple-orange-dark, #FF5722);
     transition: color 0.3s ease;
 }
@@ -1659,7 +1720,7 @@ body.dark-mode .splash-loading-text {
 }
 
 .splash-credit {
-    font-family: 'Quicksand', sans-serif;
+    font-family: var(--font-primary);
     font-size: 0.85rem;
     font-weight: 500;
     letter-spacing: 0.03em;
@@ -1698,6 +1759,10 @@ body.dark-mode .splash-credit {
 body.dark-mode .loading-overlay::before {
     background: radial-gradient(circle, rgba(0, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.65) 100%),
                 rgba(0, 0, 0, 0.2);
+}
+
+body.app-dashboard:not(.dark-mode) .loading-overlay::before {
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.04) 0%, rgba(32, 82, 60, 0.1) 100%);
 }
 
 .loading-subtitle-bottom {
@@ -1749,7 +1814,7 @@ body.dark-mode .loading-subtitle-bottom {
 }
 
 .titlebar-introvert {
-    font-family: 'Dancing Script', cursive;
+    font-family: var(--font-title);
     font-size: 2.1rem;
     font-weight: 700;
     color: var(--pineapple-text);
@@ -1758,7 +1823,7 @@ body.dark-mode .loading-subtitle-bottom {
 }
 
 .titlebar-player {
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--font-primary);
     font-weight: 200;
     font-size: 0.95rem;
     letter-spacing: 0.15em;
@@ -2596,11 +2661,6 @@ body.dark-mode .db-owner-toast-label {
     .app-content {
         padding: 0.75rem;
     }
-    .donation-tab-sticky-header {
-        top: -0.75rem;
-        padding-top: 0.75rem;
-        margin-top: -0.75rem;
-    }
 }
 
 
@@ -2618,7 +2678,7 @@ body.dark-mode .db-owner-toast-label {
 
 
 .footer-copyright {
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--font-primary);
     font-size: 0.8rem;
     color: #6B7280;
     font-weight: 500;
@@ -2861,7 +2921,7 @@ body.dark-mode .qa-tab-btn.active {
 .quick-add-popover *:not(i):not([class*="fa-"]),
 .quick-add-search-results,
 .quick-add-search-results *:not(i):not([class*="fa-"]) {
-    font-family: 'Quicksand', var(--font-primary) !important;
+    font-family: var(--font-primary) !important;
 }
 
 /* Responsive Grid Layout for Recommendations, Playlists & Favorites */
@@ -2979,12 +3039,6 @@ body.dark-mode .qa-tab-btn.active {
     margin-bottom: 0.6rem;
     font-size: 0.92rem;
     font-weight: 500;
-}
-
-/* Loại bỏ hiệu ứng hover nảy và xoay trên thẻ changelog */
-#changelog-modal .blocked-card:hover {
-    transform: none !important;
-    box-shadow: 8px 8px 0px var(--pineapple-shadow) !important;
 }
 
 /* Chế độ tập trung (Focus Mode Active) - Vô hiệu hóa và làm mờ các tương tác */
@@ -3571,7 +3625,7 @@ body.dark-mode .spotify-left .spotify-message {
 }
 
 .donation-alert-amount-box {
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--font-title);
     font-size: 3.5rem;
     font-weight: 900;
     color: var(--pineapple-text);
@@ -3624,22 +3678,15 @@ body.dark-mode .donation-alert-message {
 
 /* Sticky Header for Donation Tab */
 .donation-tab-sticky-header {
-    position: sticky;
-    top: -1.5rem;
-    background-color: var(--pineapple-bg);
-    padding-top: 1.5rem;
-    padding-bottom: 1rem;
-    margin-top: -1.5rem;
-    z-index: 10;
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    border-bottom: 2px dashed var(--pineapple-border-color);
-    margin-bottom: 1.5rem;
-}
-
-body.dark-mode .donation-tab-sticky-header {
-    background-color: #121016;
+    position: relative;
+    top: auto;
+    background: transparent;
+    padding-top: 0;
+    padding-bottom: 0.65rem;
+    margin-top: 0;
+    z-index: auto;
+    border: none;
+    margin-bottom: 0.65rem;
 }
 
 .donation-tab-wrapper {
@@ -3650,16 +3697,67 @@ body.dark-mode .donation-tab-sticky-header {
 
 .donation-tab-header {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    flex-wrap: wrap;
-    gap: 1rem;
+    width: 100%;
+    gap: 0.75rem;
 }
 
 .donation-title-group {
     display: flex;
-    flex-direction: column;
-    gap: 0.2rem;
+    align-items: center;
+    flex: 0 0 auto;
+    min-width: 7.5rem;
+}
+
+#donation-stats-line {
+    color: var(--pineapple-text);
+    font-size: 0.82rem;
+    font-weight: 500;
+    white-space: nowrap;
+    opacity: 0.78;
+}
+
+.donation-view-toggle {
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+    gap: 2px;
+    height: 34px;
+    padding: 2px;
+    border-radius: 9px;
+    background: var(--pineapple-gray);
+}
+
+.donation-view-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 29px;
+    height: 29px;
+    padding: 0;
+    border: none;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--pineapple-text);
+    font: inherit;
+    font-size: 0.78rem;
+    opacity: 0.55;
+    cursor: pointer;
+}
+
+.donation-view-button:hover {
+    opacity: 0.82;
+}
+
+.donation-view-button.active {
+    background: var(--pineapple-white);
+    color: var(--pineapple-orange-dark);
+    opacity: 1;
+}
+
+.donation-view-button:focus-visible {
+    outline: 2px solid var(--pineapple-orange);
+    outline-offset: 1px;
 }
 
 .donation-title-group h1 {
@@ -3679,30 +3777,41 @@ body.dark-mode .donation-tab-sticky-header {
 
 .donation-action-buttons {
     display: flex;
-    gap: 0.5rem;
+    gap: 0.4rem;
     align-items: center;
+    flex: 0 0 auto;
 }
 
 .donation-action-buttons .dua-btn {
-    padding: 0.35rem 0.8rem;
-    font-size: 0.8rem;
-    border-radius: 10px;
-    border-width: 2px;
-    box-shadow: 2px 2px 0px var(--pineapple-text);
-    font-weight: 800;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    min-height: 34px;
+    padding: 0.35rem 0.7rem;
+    font-size: 0.78rem;
+    font-weight: 500;
+    line-height: 1;
+    border: 1px solid var(--pineapple-border-color);
+    border-radius: 9px;
+    box-shadow: none;
 }
 
 .donation-action-buttons .btn-mark-read {
     background: var(--pineapple-white);
+    color: var(--pineapple-text);
 }
 
 .donation-action-buttons .btn-clear-all {
-    background: var(--pineapple-yellow);
-    color: #2D2727 !important;
+    background: var(--pineapple-white);
+    color: #A84F4F !important;
 }
 
 .donation-search-container {
-    width: 100%;
+    flex: 1 1 20rem;
+    width: min(100%, 22.5rem);
+    max-width: 22.5rem;
+    margin-left: auto;
 }
 
 .donation-search-wrapper {
@@ -3714,17 +3823,41 @@ body.dark-mode .donation-tab-sticky-header {
 
 .donation-search-wrapper i {
     position: absolute;
-    left: 12px;
-    color: #6B7280;
-    font-size: 0.9rem;
+    left: 0.7rem;
+    color: var(--pineapple-text);
+    font-size: 0.76rem;
+    opacity: 0.48;
+    pointer-events: none;
 }
 
 .donation-search-wrapper .dua-input {
     width: 100%;
-    padding: 0.5rem 0.8rem;
-    font-size: 0.9rem;
-    border-radius: 10px;
+    height: 34px;
+    padding: 0.35rem 0.75rem 0.35rem 2rem;
+    font-size: 0.8rem;
+    border: 1px solid var(--pineapple-border-color);
+    border-radius: 9px;
+    background: var(--pineapple-white);
     box-shadow: none;
+}
+
+@media (max-width: 720px) {
+    .donation-tab-header {
+        flex-wrap: wrap;
+        gap: 0.55rem;
+    }
+
+    .donation-action-buttons {
+        margin-left: auto;
+    }
+
+    .donation-search-container {
+        order: 3;
+        flex-basis: 100%;
+        width: 100%;
+        max-width: none;
+        margin-left: 0;
+    }
 }
 
 /* Donation History List Box inside Dashboard */
@@ -3813,6 +3946,82 @@ body.dark-mode .timeline-date-count {
     width: 100%;
 }
 
+/* Chế độ danh sách: mỗi donate là một hàng, vẫn giữ nhóm theo ngày. */
+.donation-history-list.view-list .donation-timeline {
+    margin-top: 0.5rem;
+}
+
+.donation-history-list.view-list .timeline-group {
+    margin-bottom: 1.25rem;
+}
+
+.donation-history-list.view-list .timeline-date-header {
+    margin-bottom: 0.65rem;
+}
+
+.donation-history-list.view-list .timeline-group-items {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.donation-history-list.view-list .donation-history-item {
+    display: grid;
+    grid-template-columns: minmax(210px, 0.7fr) minmax(0, 1.5fr);
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.65rem 0.8rem;
+    border-radius: 10px;
+}
+
+.donation-history-list.view-list .donation-history-item.has-song-attachment {
+    grid-template-columns: minmax(210px, 0.75fr) minmax(220px, 1fr) minmax(260px, 1.15fr);
+}
+
+.donation-history-list.view-list .donation-history-meta {
+    min-width: 0;
+    gap: 0.5rem;
+}
+
+.donation-history-list.view-list .donation-history-donor {
+    min-width: 0;
+    flex-wrap: wrap;
+}
+
+.donation-history-list.view-list .donation-history-message {
+    min-width: 0;
+    margin: 0;
+}
+
+.donation-history-list.view-list .donation-song-attachment,
+.donation-history-list.view-list .song-attachment-loading {
+    min-width: 0;
+    margin-top: 0;
+}
+
+@media (max-width: 980px) {
+    .donation-history-list.view-list .donation-history-item.has-song-attachment {
+        grid-template-columns: minmax(190px, 0.65fr) minmax(0, 1.35fr);
+    }
+
+    .donation-history-list.view-list .donation-history-item.has-song-attachment .donation-song-attachment,
+    .donation-history-list.view-list .donation-history-item.has-song-attachment .song-attachment-loading {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (max-width: 640px) {
+    .donation-history-list.view-list .donation-history-item,
+    .donation-history-list.view-list .donation-history-item.has-song-attachment {
+        grid-template-columns: 1fr;
+    }
+
+    .donation-history-list.view-list .donation-history-item.has-song-attachment .donation-song-attachment,
+    .donation-history-list.view-list .donation-history-item.has-song-attachment .song-attachment-loading {
+        grid-column: auto;
+    }
+}
+
 @media (max-width: 768px) {
     .timeline-group-items {
         grid-template-columns: 1fr;
@@ -3890,7 +4099,7 @@ body.dark-mode .donation-amount-badge {
 }
 
 .donation-history-message {
-    font-family: 'Quicksand', var(--font-primary);
+    font-family: var(--font-primary);
     font-size: 0.85rem;
     color: #374151;
     font-style: normal;
@@ -4075,24 +4284,6 @@ body.dark-mode .empty-history-title {
     font-weight: 400;
 }
 
-#donation-stats-line {
-    font-size: 0.85rem;
-    color: #6B7280;
-    font-weight: 600;
-    padding: 0.2rem 0.4rem;
-    margin-bottom: 0.2rem;
-}
-
-body.dark-mode .donation-stats-line {
-    color: #9CA3AF;
-}
-
-
-
-
-
-
-
 
 
 
@@ -4207,6 +4398,104 @@ body.dark-mode .theme-preview-title {
 body.dark-mode .obs-settings-controls {
     background: rgba(255, 255, 255, 0.02);
     border-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Dashboard light mode kế thừa bề mặt và màu nhấn của Set 18. */
+body.app-dashboard:not(.dark-mode) .app-content {
+    background-color: var(--pineapple-bg);
+    background-image:
+        linear-gradient(135deg, rgba(224, 222, 215, 0.97), rgba(211, 215, 207, 0.95)),
+        url('asset/tft-set18-enchanted-wild-bg.png');
+    background-position: center;
+    background-size: cover;
+    background-attachment: fixed;
+}
+
+body.app-dashboard:not(.dark-mode) .app-titlebar {
+    background: rgba(232, 230, 223, 0.98);
+    border-bottom-color: rgba(62, 78, 66, 0.22);
+    backdrop-filter: blur(12px);
+}
+
+body.app-dashboard:not(.dark-mode) .dua-card,
+body.app-dashboard:not(.dark-mode) .player-widget,
+body.app-dashboard:not(.dark-mode) .quick-add-popover {
+    background-color: rgba(238, 236, 229, 0.98);
+    border-color: var(--pineapple-border-color);
+}
+
+body.app-dashboard:not(.dark-mode) .dua-card-title {
+    color: #355E4A;
+}
+
+body.app-dashboard:not(.dark-mode) .dua-btn-secondary {
+    background: #DFE3DD;
+    color: var(--pineapple-text);
+}
+
+body.app-dashboard:not(.dark-mode) .dua-btn-secondary:hover {
+    background: #D3DAD4;
+}
+
+body.app-dashboard:not(.dark-mode) .queue-item.playing-now {
+    background: #E6E1D2;
+}
+
+body.app-dashboard:not(.dark-mode) .queue-item.playing-now .queue-item-title {
+    color: var(--pineapple-text) !important;
+}
+
+body.app-dashboard:not(.dark-mode) .recent-donation-item,
+body.app-dashboard:not(.dark-mode) .grid-result-item {
+    background: transparent !important;
+    border-color: var(--pineapple-border-color) !important;
+}
+
+body.app-dashboard:not(.dark-mode) .qa-tabs-row {
+    background: transparent;
+    border-bottom: 1px solid var(--pineapple-border-color);
+    padding: 0 4px;
+}
+
+body.app-dashboard:not(.dark-mode) .qa-tab-btn {
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    margin-bottom: -1px;
+}
+
+body.app-dashboard:not(.dark-mode) .qa-tab-btn.active {
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid var(--pineapple-orange);
+    color: var(--pineapple-orange-dark);
+}
+
+body.app-dashboard:not(.dark-mode) .qa-tab-content,
+body.app-dashboard:not(.dark-mode) .queue-control-toolbar,
+body.app-dashboard:not(.dark-mode) .obs-settings-controls {
+    background: transparent;
+}
+
+body.app-dashboard:not(.dark-mode) .dua-btn.active-bypass,
+body.app-dashboard:not(.dark-mode) .dua-btn.active-extension {
+    background: var(--pineapple-success) !important;
+    border-color: var(--pineapple-orange-dark) !important;
+}
+
+body.app-dashboard:not(.dark-mode) .dua-btn.active-bypass:hover,
+body.app-dashboard:not(.dark-mode) .dua-btn.active-extension:hover {
+    background: var(--pineapple-orange-dark) !important;
+}
+
+body.app-dashboard:not(.dark-mode) .dua-btn-primary,
+body.app-dashboard:not(.dark-mode) .dua-btn-primary *,
+body.app-dashboard:not(.dark-mode) .dua-btn.active,
+body.app-dashboard:not(.dark-mode) .dua-btn.active *,
+body.app-dashboard:not(.dark-mode) .settings-tab-btn.active,
+body.app-dashboard:not(.dark-mode) .settings-tab-btn.active * {
+    color: #0F5138 !important;
 }
 
 /* ===================== CLEAN FLAT DASHBOARD (NO SOLID SHADOWS) ===================== */
@@ -4724,6 +5013,544 @@ body.dark-mode .notification-item.unread:hover {
 .fav-item-remove-btn:hover {
     transform: scale(1.15);
     background: rgba(0, 0, 0, 0.8) !important;
+}
+
+/* ============================================================
+   Dolby Atmos Badge Styling (Flat, Larger, No Shadow, No Animation)
+   ============================================================ */
+.dolby-atmos-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.42rem 0.95rem;
+    border-radius: 24px;
+    user-select: none;
+    cursor: default;
+    box-shadow: none !important;
+    transition: none;
+    line-height: 1;
+}
+
+.dolby-atmos-img {
+    height: 22px;
+    width: auto;
+    object-fit: contain;
+    display: block;
+    transition: none;
+}
+
+/* Dark Mode Style */
+body.dark-mode .dolby-atmos-badge {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1.2px solid rgba(255, 255, 255, 0.25);
+    box-shadow: none !important;
+}
+
+body.dark-mode .dolby-atmos-badge .dolby-atmos-img {
+    filter: brightness(0) invert(1);
+}
+
+body.dark-mode .dolby-atmos-badge:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.35);
+    box-shadow: none !important;
+    transform: none;
+}
+
+/* Light Mode Style */
+body:not(.dark-mode) .dolby-atmos-badge {
+    background: #111827;
+    border: 1.2px solid #000000;
+    box-shadow: none !important;
+}
+
+body:not(.dark-mode) .dolby-atmos-badge .dolby-atmos-img {
+    filter: brightness(0) invert(1);
+}
+
+body:not(.dark-mode) .dolby-atmos-badge:hover {
+    background: #1F2937;
+    box-shadow: none !important;
+    transform: none;
+}
+
+/* Walkthrough shown after an app version upgrade */
+#walkthrough-modal {
+    padding: 1.25rem;
+    background: rgba(12, 10, 15, 0.82);
+}
+
+.walkthrough-modal-card {
+    width: min(1180px, calc(100vw - 2.5rem));
+    height: calc(100vh - 2.5rem);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--pineapple-white);
+    border: 1px solid var(--pineapple-border-color);
+    border-radius: 18px;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.38);
+}
+
+.walkthrough-modal-header {
+    min-height: 54px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.65rem 0.8rem 0.65rem 1.1rem;
+    color: var(--pineapple-text);
+    background: var(--pineapple-white);
+    border-bottom: 1px solid var(--pineapple-border-color);
+    flex-shrink: 0;
+}
+
+.walkthrough-modal-heading {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    font-family: var(--font-title);
+    font-size: 1rem;
+    font-weight: 800;
+}
+
+.walkthrough-modal-heading > i {
+    color: var(--pineapple-orange-dark);
+}
+
+.walkthrough-version-label {
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    color: var(--pineapple-orange-dark);
+    background: var(--pineapple-yellow-light);
+    font-size: 0.78rem;
+    white-space: nowrap;
+}
+
+.walkthrough-modal-close {
+    width: 36px;
+    height: 36px;
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    border: 0;
+    border-radius: 10px;
+    color: var(--pineapple-text);
+    background: transparent;
+    font-size: 1.15rem;
+    cursor: pointer;
+}
+
+.walkthrough-modal-close:hover {
+    background: var(--pineapple-gray);
+}
+
+.walkthrough-frame {
+    width: 100%;
+    min-height: 0;
+    flex: 1 1 auto;
+    border: 0;
+    background: #f5f0e4;
+}
+
+@media (max-width: 700px) {
+    #walkthrough-modal {
+        padding: 0;
+    }
+
+    .walkthrough-modal-card {
+        width: 100vw;
+        height: 100vh;
+        border: 0;
+        border-radius: 0;
+    }
+}
+
+/* Settings: grouped navigation and one continuous content surface. */
+#tab-settings.active {
+    gap: 0.9rem;
+    max-width: 1120px;
+}
+
+.settings-page-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0 0.15rem;
+}
+
+.settings-page-header h2 {
+    margin: 0;
+    color: var(--pineapple-text);
+    font-family: var(--font-title);
+    font-size: 1.45rem;
+    line-height: 1.2;
+}
+
+#tab-settings .settings-layout {
+    align-items: flex-start;
+    gap: 1.15rem !important;
+}
+
+#tab-settings .settings-sidebar {
+    position: sticky;
+    top: 0.5rem;
+    width: 210px;
+    gap: 0.65rem;
+    padding: 0.65rem;
+    background: var(--pineapple-card-bg);
+    border: 1px solid var(--pineapple-border-color);
+    border-radius: 16px;
+    box-sizing: border-box;
+}
+
+.settings-nav-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.12rem;
+}
+
+.settings-nav-label {
+    padding: 0.45rem 0.62rem 0.25rem;
+    color: var(--pineapple-text);
+    font-size: 0.66rem;
+    font-weight: 800;
+    letter-spacing: 0.075em;
+    line-height: 1.2;
+    text-transform: uppercase;
+    opacity: 0.46;
+}
+
+#tab-settings .settings-tab-btn {
+    width: 100%;
+    min-height: 34px;
+    gap: 0;
+    padding: 0.5rem 0.62rem;
+    color: var(--pineapple-text);
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none !important;
+    font-size: 0.84rem;
+    font-weight: 700;
+    line-height: 1.25;
+}
+
+#tab-settings .settings-tab-btn:hover {
+    color: var(--pineapple-orange-dark);
+    background: transparent;
+}
+
+#tab-settings .settings-tab-btn.active {
+    color: var(--pineapple-orange-dark);
+    background: transparent;
+    font-weight: 900;
+}
+
+body.dark-mode #tab-settings .settings-tab-btn.active {
+    color: #ffd18b;
+    background: transparent;
+}
+
+#tab-settings .settings-content-panel {
+    gap: 0;
+    padding: 1.25rem 1.35rem 1.4rem;
+    background: var(--pineapple-card-bg);
+    border: 1px solid var(--pineapple-border-color);
+    border-radius: 18px;
+    box-shadow: 0 5px 22px rgba(0, 0, 0, 0.035);
+    box-sizing: border-box;
+}
+
+body.dark-mode #tab-settings .settings-content-panel {
+    box-shadow: 0 8px 26px rgba(0, 0, 0, 0.2);
+}
+
+.settings-panel-header {
+    margin-bottom: 1.15rem;
+    padding-bottom: 0.9rem;
+    border-bottom: 1px solid var(--pineapple-border-color);
+}
+
+.settings-panel-header h3 {
+    margin: 0;
+    color: var(--pineapple-text);
+    font-family: var(--font-title);
+    font-size: 1.18rem;
+    line-height: 1.3;
+}
+
+#tab-settings .settings-section {
+    gap: 0 !important;
+}
+
+#tab-settings .settings-section > .dua-card {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible;
+    background: transparent;
+    border: 0 !important;
+    border-radius: 0;
+    box-shadow: none !important;
+}
+
+#tab-settings .settings-section > .dua-card + .dua-card {
+    margin-top: 1.25rem !important;
+    padding-top: 1.25rem !important;
+    border-top: 1px solid var(--pineapple-border-color) !important;
+}
+
+#tab-settings .dua-card-title {
+    margin: 0 0 0.85rem !important;
+    padding: 0 0 0.6rem !important;
+    border-bottom: 1px solid var(--pineapple-border-color) !important;
+    color: var(--pineapple-text);
+    font-size: 1rem !important;
+    line-height: 1.35;
+}
+
+/* Keep icons for actions and service status; section and navigation labels stay typographic. */
+#tab-settings .dua-card-title > i,
+#tab-settings .dua-card-title > span > i {
+    display: none;
+}
+
+#tab-settings .obs-settings-controls {
+    margin-top: 0.8rem;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+}
+
+@media (max-width: 900px) {
+    #tab-settings .settings-sidebar {
+        width: 188px;
+    }
+}
+
+@media (max-width: 768px) {
+    #tab-settings .settings-layout {
+        flex-direction: column;
+        gap: 0.8rem !important;
+    }
+
+    #tab-settings .settings-sidebar {
+        position: static;
+        width: 100%;
+        flex-direction: row;
+        gap: 0.25rem;
+        padding: 0.45rem;
+        overflow-x: auto;
+    }
+
+    #tab-settings .settings-nav-group {
+        display: contents;
+    }
+
+    #tab-settings .settings-nav-label {
+        display: none;
+    }
+
+    #tab-settings .settings-tab-btn {
+        width: auto;
+        min-width: max-content;
+    }
+
+    #tab-settings .settings-content-panel {
+        padding: 1rem;
+    }
+}
+
+/* Dashboard typography — Be Vietnam Pro với độ đậm vừa phải. */
+body.app-dashboard .app-titlebar :where(*:not(i):not([class*="fa-"])),
+body.app-dashboard .app-content :where(*:not(i):not([class*="fa-"])),
+body.app-dashboard .app-loading-screen :where(*:not(i):not([class*="fa-"])) {
+    font-weight: 400 !important;
+}
+
+body.app-dashboard :where(
+    button,
+    .dua-btn,
+    .titlebar-menu-btn,
+    .settings-tab-btn,
+    .qa-tab-btn,
+    [class*="label"]
+) {
+    font-weight: 500 !important;
+}
+
+body.app-dashboard button :where(span:not([class*="fa-"])),
+body.app-dashboard [class*="label"] :where(span:not([class*="fa-"])) {
+    font-weight: 500 !important;
+}
+
+body.app-dashboard :where(
+    [class*="title"]
+) {
+    font-weight: 500 !important;
+}
+
+body.app-dashboard :where(
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    strong,
+    b,
+    [class*="amount"]
+) {
+    font-weight: 600 !important;
+}
+
+body.app-dashboard .app-content :where(
+    p,
+    .song-message,
+    .queue-item-message,
+    .donation-history-message,
+    .db-alert-message-bubble,
+    [class*="description"]
+) {
+    line-height: 1.55 !important;
+}
+
+body.app-dashboard .splash-title-line1 {
+    font-family: 'Be Vietnam Pro', 'Segoe UI', sans-serif !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.01em !important;
+    transform: scaleX(1.07);
+    transform-origin: left center;
+}
+
+body.app-dashboard .splash-title-line2 {
+    font-family: 'Be Vietnam Pro', 'Segoe UI', sans-serif !important;
+    font-weight: 500 !important;
+    letter-spacing: -0.01em !important;
+    transform: scaleX(1.07);
+    transform-origin: left center;
+}
+
+body.app-dashboard:not(.dark-mode) .splash-title-line1 {
+    color: #285E49;
+}
+
+body.app-dashboard:not(.dark-mode) .splash-title-line2 {
+    color: #438C69;
+}
+
+/* Trình phát dashboard dạng gọn. */
+body.app-dashboard .player-widget {
+    padding: 0.75rem;
+    gap: 0.5rem;
+}
+
+body.app-dashboard .player-header .dua-card-title {
+    font-size: 1.02rem;
+}
+
+body.app-dashboard .song-info-container {
+    gap: 0.65rem;
+}
+
+body.app-dashboard .song-cover-wrapper {
+    width: 58px;
+    height: 58px;
+    border-radius: 10px;
+}
+
+body.app-dashboard .song-title {
+    font-size: 1rem;
+    line-height: 1.25;
+}
+
+body.app-dashboard .song-donor {
+    gap: 0.5rem;
+    margin-top: 0.05rem;
+    font-size: 0.8rem;
+    line-height: 1.3;
+}
+
+body.app-dashboard #current-donor-name,
+body.app-dashboard .queue-item-donor-name {
+    color: var(--pineapple-text);
+    font-weight: 400 !important;
+}
+
+body.app-dashboard #current-donor-amount,
+body.app-dashboard .queue-item-donor-amount {
+    color: var(--pineapple-orange-dark);
+    font-weight: 600 !important;
+    white-space: nowrap;
+}
+
+body.app-dashboard .player-controls,
+body.app-dashboard .control-buttons-row {
+    gap: 0.4rem !important;
+}
+
+body.app-dashboard .progress-container {
+    gap: 0.4rem;
+}
+
+body.app-dashboard .progress-time {
+    min-width: 34px;
+    font-size: 0.76rem;
+}
+
+body.app-dashboard .control-main-row {
+    gap: 0.55rem !important;
+    flex-wrap: wrap !important;
+}
+
+body.app-dashboard .control-playback {
+    gap: 0.4rem !important;
+}
+
+body.app-dashboard .control-volume {
+    gap: 0.35rem;
+    flex-wrap: nowrap;
+}
+
+body.app-dashboard .volume-slider {
+    width: 86px;
+}
+
+body.app-dashboard .player-widget .dua-btn {
+    min-height: 36px;
+    padding: 0.42rem 0.7rem;
+    border-radius: 10px;
+}
+
+body.app-dashboard .player-widget .focus-wrapper {
+    gap: 0.4rem !important;
+    padding: 0.3rem 0.6rem !important;
+    background: transparent !important;
+    border-radius: 10px !important;
+    white-space: nowrap;
+}
+
+body.app-dashboard #control-features-row {
+    gap: 0.4rem !important;
+    margin-top: 0.15rem !important;
+    padding-top: 0.45rem !important;
+    border-top-width: 1px !important;
+}
+
+body.app-dashboard #control-features-row:not(:has(> button[style*="inline-flex"])) {
+    display: none !important;
+}
+
+body.app-dashboard .player-widget .dolby-atmos-badge {
+    padding: 0.3rem 0.7rem;
+}
+
+body.app-dashboard .player-widget .dolby-atmos-img {
+    height: 18px;
 }
 
 

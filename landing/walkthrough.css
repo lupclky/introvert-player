@@ -651,3 +651,8 @@ body.view-mode .document-paper {
 body:not(.view-mode) .edit-mode-toggle-btn {
     display: none !important;
 }
+
+/* Embedded walkthrough inside the app is always read-only. */
+body.embedded-view .edit-mode-toggle-btn {
+    display: none !important;
+}

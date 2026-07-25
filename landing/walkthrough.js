@@ -347,7 +347,10 @@ document.addEventListener("DOMContentLoaded", () => {
     // 6. Editor Initializers
     function initEditor() {
         const urlParams = new URLSearchParams(window.location.search);
-        const isEditMode = urlParams.get('edit') === 'true';
+        const isEmbedded = urlParams.get('embedded') === 'true';
+        const isEditMode = urlParams.get('edit') === 'true' && !isEmbedded;
+
+        document.body.classList.toggle("embedded-view", isEmbedded);
 
         if (!isEditMode) {
             document.body.classList.add("view-mode");

@@ -137,16 +137,12 @@ Tài liệu này cung cấp danh sách đầy đủ, chi tiết từng thay đ�
 
 ### 12. Phiên bản [2.0.8] - 2026-06-10
 * **Các thay đổi:**
-  - **Tông màu Kính Mờ (Frosted Glass Dark & Light):** 2 theme kính mờ hiện đại phẳng.
   - **Thumbnail Square:** Thumbnail vuông bo góc phẳng tĩnh (không xoay).
   - **Phông chữ Inter:** Phông chữ phẳng sắc nét.
   - **Tăng cỡ chữ khi hết nhạc:** Tăng kích thước chữ hiển thị khi hết nhạc lên `1.85rem` to rõ.
   - **Thanh chạy nhạc tinh gọn:** Thanh tiến trình mỏng dẹt màu xanh pastel.
   - **Hiệu ứng chuyển bài phẳng (Fade/Slide):** Chuyển bài bằng hiệu ứng trượt nhẹ thay vì co giãn/nảy động cũ.
-* **Cách kiểm thử:**
-  - Thay đổi theme sang **Frosted Glass Dark** và **Frosted Glass Light** trong tab Cấu hình.
-  - Xác nhận thumbnail bài hát hiển thị dạng vuông phẳng tĩnh. Khi đổi bài, thông tin trượt nhẹ và mờ dần rất hiện đại.
-  - Khi hàng đợi trống, kiểm tra xem dòng chữ thông báo hết bài hiển thị to rõ hơn trên OBS Overlay hay không.
+* **Cách kiểm thử:** Không còn áp dụng cho bản hiện tại.
 
 ---
 
@@ -166,8 +162,8 @@ flowchart TD
 
 ### Quy trình các bước thực hiện:
 1. **Đồng bộ ban đầu:** Đăng nhập tài khoản YouTube, chọn xem danh sách phát cá nhân để nạp nhạc vào hàng đợi. Đảm bảo toàn bộ thao tác click trực tiếp trên card video hoạt động.
-2. **Cấu hình OBS:** Mở link OBS Overlay trên trình duyệt hoặc OBS Studio, đổi theme sang `Frosted Glass Dark`. Bật tùy chọn `Ẩn Overlay hoàn toàn khi không có nhạc`. Xác nhận khi hàng đợi trống, màn hình Overlay ẩn đi hoàn toàn.
-3. **Thêm nhạc:** Thêm nhanh một bài hát. Xác nhận Overlay hiển thị trở lại mượt mà với giao diện kính mờ, thumbnail vuông phẳng tĩnh và phông chữ Inter sắc nét.
+2. **Cấu hình OBS:** Mở link OBS Overlay trên trình duyệt hoặc OBS Studio, đổi theme sang `Khu Rừng Kỳ Bí`. Bật tùy chọn `Ẩn Overlay hoàn toàn khi không có nhạc`. Xác nhận khi hàng đợi trống, màn hình Overlay ẩn đi hoàn toàn.
+3. **Thêm nhạc:** Thêm nhanh một bài hát. Xác nhận Overlay hiển thị trở lại mượt mà với giao diện TFT Set 18 và nội dung rõ nét.
 4. **Kiểm thử Focus Mode:** Bấm bật **Tập trung**. Xác nhận nhạc dừng, toàn bộ Dashboard mờ đi và bị khóa không cho click bất kỳ nút nào. Bấm tắt **Tập trung**, xác nhận nhạc tiếp tục phát lại từ giây đã dừng.
 5. **Kiểm thử cảnh báo nhạy cảm:** Dán link Gist chứa danh sách video nhạy cảm mặc định. Thêm bài hát `Wv7t22rx7Ik` vào hàng đợi. Xác nhận Overlay hiển thị màn hình đỏ đè lên trên, đếm ngược 5 giây màu vàng rực rỡ và tắt tiếng video. Sau 5 giây, video tự phát bình thường và Dashboard hiển thị dải cảnh báo nhạy cảm màu đỏ.
 6. **Kiểm thử phát tiếp tục:** Cho bài hát chạy đến giây thứ 20, bấm chuyển bài khác. Bấm phát lại bài cũ đó, chọn **Có (Phát tiếp)** trên Dashboard. Xác nhận Overlay hiển thị chữ `⏳ Đang chờ tiếp tục...` và tự động tua phát chính xác từ giây thứ 20.
