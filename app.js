@@ -73,7 +73,7 @@ window.openExternalLink = openExternalLink;
 
 const songMetadataCache = new Map();
 
-// Lấy thông tin tiêu đề và ảnh thu nhỏ cho các bài hát từ URL
+// Lấy thông tin tiêu đề, ảnh thu nhỏ, thời lượng và lượt xem cho các bài hát từ URL
 async function fetchSongMetadata(type, videoId, soundcloudUrl) {
     const cacheKey = type === 'youtube' ? `yt_${videoId}` : `sc_${soundcloudUrl}`;
     if (cacheKey && songMetadataCache.has(cacheKey)) {
@@ -83,6 +83,8 @@ async function fetchSongMetadata(type, videoId, soundcloudUrl) {
     let title = '';
     let thumbnail = '';
     let author = '';
+    let duration = '';
+    let views = '';
 
     function cleanChannelName(name) {
         if (!name || typeof name !== 'string') return name || '';
@@ -104,12 +106,34 @@ async function fetchSongMetadata(type, videoId, soundcloudUrl) {
                 thumbnail = data.thumbnail_url || `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
                 author = cleanChannelName(data.author_name || '');
             }
+
+            try {
+                const durRes = await fetch(getApiUrl(`/api/youtube-duration?videoId=${videoId}`));
+                const durData = await durRes.json();
+                if (durData && durData.duration) {
+                    duration = formatTime(parseFloat(durData.duration));
+                }
+                if (durData && durData.views) {
+                    views = durData.views;
+                }
+            } catch (e) {}
         } else if (type === 'soundcloud') {
             const response = await fetch(`https://soundcloud.com/oembed?format=json&url=${encodeURIComponent(soundcloudUrl)}`);
             const data = await response.json();
             title = data.title || `Nhạc SoundCloud`;
             thumbnail = data.thumbnail_url || "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=200&auto=format&fit=crop";
             author = data.author_name || 'SoundCloud';
+
+            try {
+                const durRes = await fetch(getApiUrl(`/api/soundcloud-duration?url=${encodeURIComponent(soundcloudUrl)}`));
+                const durData = await durRes.json();
+                if (durData && durData.duration) {
+                    duration = formatTime(parseFloat(durData.duration));
+                }
+                if (durData && durData.playCount) {
+                    views = durData.playCount;
+                }
+            } catch (e) {}
         }
     } catch (e) {
         console.error("Lỗi lấy siêu dữ liệu bài nhạc:", e);
@@ -124,7 +148,7 @@ async function fetchSongMetadata(type, videoId, soundcloudUrl) {
         }
     }
 
-    const result = { title, thumbnail, author };
+    const result = { title, thumbnail, author, duration, views, videoId, soundcloudUrl };
     if (title && !title.includes('???')) {
         songMetadataCache.set(cacheKey, result);
     }
@@ -712,6 +736,14 @@ function checkAndApplyVoteSkip(donation) {
     if (!state.currentSong) return false;
     if (!state.currentSong.voteSkipActive) return false;
 
+    // Chỉ tính các donate phát sinh SAU KHI bật vote skip
+    if (state.currentSong.voteSkipStartTime && donation.timestamp && donation.timestamp < state.currentSong.voteSkipStartTime) {
+        if (donation.id) {
+            markMusicKeyAsEnded(donation.id);
+        }
+        return false;
+    }
+
     // Tránh xử lý lại các key đã hoàn thành/hết hạn
     if (donation.id && state.endedKeys.some(e => e.key === String(donation.id))) {
         return false;
@@ -1027,6 +1059,7 @@ function finalizeVoteSkipToggle() {
             payload.voteSkipActive = state.currentSong.voteSkipActive;
             payload.voteAmount = state.currentSong.voteAmount;
             payload.voteSkipTarget = state.currentSong.voteSkipTarget;
+            payload.voteSkipStartTime = state.currentSong.voteSkipStartTime || null;
             payload.voteSkipSuccess = state.currentSong.voteSkipSuccess || false;
             payload.voteSkipContributors = state.currentSong.voteSkipContributors || [];
             localStorage.setItem('dua_current_song', JSON.stringify(payload));
@@ -1061,6 +1094,7 @@ function toggleVoteSkip() {
         promptVoteSkipTarget(defaultTarget, (parsedTarget) => {
             state.currentSong.voteSkipActive = true;
             state.currentSong.voteAmount = 0;
+            state.currentSong.voteSkipStartTime = Date.now();
             state.currentSong.voteSkipTarget = parsedTarget;
             
             logSystem(`🗳️ <strong>[Mở Vote Skip]</strong> Đã bật tính năng vote skip cho bài hát: <strong>${state.currentSong.title}</strong> (Mục tiêu: ${parsedTarget.toLocaleString('vi-VN')} ₫)`, 'system');
@@ -2413,12 +2447,40 @@ document.addEventListener("DOMContentLoaded", () => {
                         if (meta && meta.title) {
                             renderSearchResults([{
                                 id: ytId,
+                                videoId: ytId,
+                                type: 'youtube',
                                 title: meta.title,
                                 thumbnail: meta.thumbnail,
                                 author: cleanChannelName(meta.author || 'YouTube'),
                                 channel: cleanChannelName(meta.author || 'YouTube'),
-                                duration: '',
-                                views: ''
+                                duration: meta.duration || '',
+                                views: meta.views || ''
+                            }], 'quick-add-search-results');
+                        } else {
+                            searchResultsContainer.innerHTML = '<div style="padding: 10px; text-align: center; color: #6B7280; font-weight: 700;">Nhấn Enter để thêm bài hát!</div>';
+                        }
+                    } catch (e) {
+                        searchResultsContainer.innerHTML = '<div style="padding: 10px; text-align: center; color: #6B7280; font-weight: 700;">Nhấn Enter để thêm bài hát!</div>';
+                    }
+                    return;
+                }
+
+                if (query.includes('soundcloud.com')) {
+                    searchResultsContainer.innerHTML = '<div style="padding: 10px; text-align: center; font-weight: 700; color: var(--pineapple-text); display: flex; align-items: center; justify-content: center; gap: 0.5rem;"><svg class="m3-spinner" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5" fill="none"></circle></svg> Đang tải thông tin SoundCloud...</div>';
+                    try {
+                        const meta = await fetchSongMetadata('soundcloud', null, query);
+                        if (urlInput.value.trim() !== query) return;
+                        if (meta && meta.title) {
+                            renderSearchResults([{
+                                id: query,
+                                soundcloudUrl: query,
+                                type: 'soundcloud',
+                                title: meta.title,
+                                thumbnail: meta.thumbnail,
+                                author: cleanChannelName(meta.author || 'SoundCloud'),
+                                channel: cleanChannelName(meta.author || 'SoundCloud'),
+                                duration: meta.duration || '',
+                                views: meta.views || ''
                             }], 'quick-add-search-results');
                         } else {
                             searchResultsContainer.innerHTML = '<div style="padding: 10px; text-align: center; color: #6B7280; font-weight: 700;">Nhấn Enter để thêm bài hát!</div>';
@@ -3275,7 +3337,7 @@ async function broadcastNewDonationAlert(song) {
     if (!song) return;
     
     if ((song.type === 'youtube' || song.type === 'soundcloud') && !song.duration) {
-        await resolveSongDuration(song);
+        resolveSongDuration(song);
     }
     
     // Nếu là chủ kênh thêm nhạc, phát thông báo "Đã thêm nhạc" riêng thay vì alert donate
@@ -3392,14 +3454,14 @@ async function broadcastNewDonationAlert(song) {
 
     const alertPayload = {
         id: song.id,
-        donorName: song.donorName,
-        amount: song.amount,
-        title: song.title,
-        message: song.message,
+        donorName: String(song.donorName || 'Khách').trim(),
+        amount: Number(song.amount) || 0,
+        title: String(song.title || 'Nhạc Youtube').trim(),
+        message: String(song.message || '').trim(),
         position: positionStr,
-        thumbnail: song.thumbnail || '',
-        type: song.type || '',
-        videoId: song.videoId || '',
+        thumbnail: String(song.thumbnail || '').trim(),
+        type: String(song.type || '').trim(),
+        videoId: String(song.videoId || '').trim(),
         duration: song.duration,
         start: song.start,
         end: song.end,
@@ -4834,7 +4896,7 @@ function changeDarkModeSetting(val) {
 }
 
 function applyDarkModeState() {
-    const setting = localStorage.getItem('dua_dark_mode') || 'dark';
+    const setting = localStorage.getItem('dua_dark_mode') || 'light';
     let isDark = true;
     if (setting === 'light' || setting === 'false') {
         isDark = false;
@@ -4864,7 +4926,7 @@ function toggleDarkMode(isDark) {
 
 // Lắng nghe sự thay đổi giao diện của hệ thống
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-    const setting = localStorage.getItem('dua_dark_mode') || 'dark';
+    const setting = localStorage.getItem('dua_dark_mode') || 'light';
     if (setting === 'system') {
         applyDarkModeState();
     }
@@ -5359,6 +5421,31 @@ function formatTime(seconds) {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+}
+
+// --- CHUYỂN ĐỔI CHUỖI THỜI LƯỢNG (HH:MM:SS HOẶC MM:SS) SANG GIÂY ---
+function parseDurationToSeconds(duration) {
+    if (duration === null || duration === undefined || duration === '') {
+        return 0;
+    }
+    if (typeof duration === 'number') {
+        return duration;
+    }
+    const str = String(duration).trim();
+    if (/^\d+(\.\d+)?$/.test(str)) {
+        return parseFloat(str);
+    }
+    const parts = str.split(':').map(Number);
+    if (parts.some(isNaN)) return 0;
+    
+    if (parts.length === 3) {
+        return parts[0] * 3600 + parts[1] * 60 + parts[2];
+    } else if (parts.length === 2) {
+        return parts[0] * 60 + parts[1];
+    } else if (parts.length === 1) {
+        return parts[0];
+    }
+    return 0;
 }
 
 // --- GIỚI HẠN TƯƠNG TÁC CHUNG (7 LẦN TRONG 18 GIỜ) ---
@@ -5868,14 +5955,34 @@ async function handleNewDonation(donation, shouldAlert = true) {
         const willBeSong = (donation.isMusicOrder || (hasLink && donation.amount >= minAmount));
         
         if (!willBeSong) {
-            showDashboardNewDonationAlert({
+            const textAlert = {
                 id: donation.id,
-                donorName: donation.name,
-                amount: donation.amount,
-                title: donation.message || '(Không có lời nhắn)',
+                donorName: String(donation.name || 'Khách').trim(),
+                amount: Number(donation.amount) || 0,
+                title: String(donation.message || '(Không có lời nhắn)').trim(),
                 position: 'DONATE',
                 timestamp: donation.timestamp
-            });
+            };
+            showDashboardNewDonationAlert(textAlert);
+
+            // Đồng thời gửi MQTT để overlay OBS hiển thị thông báo
+            const alertPayload = {
+                id: textAlert.id,
+                donorName: textAlert.donorName,
+                amount: textAlert.amount,
+                title: 'Ủng hộ kênh',
+                message: textAlert.title,
+                position: 'DONATE',
+                thumbnail: '',
+                type: 'donate',
+                videoId: '',
+                duration: 0,
+                start: 0,
+                end: null,
+                timestamp: Date.now() + Math.random()
+            };
+            localStorage.setItem('dua_new_donation_alert', JSON.stringify(alertPayload));
+            publishMqtt('new_donation_alert', alertPayload);
         }
     }
     renderDonationHistory();
@@ -6750,7 +6857,10 @@ function startFirebaseListener(shopId, token) {
                     }
                 }
                 
-                syncQueueFromZyPageApi(shopId);
+                // Trì hoãn 1.5 giây để đợi máy chủ ZyPage cập nhật dữ liệu hoàn tất
+                setTimeout(() => {
+                    syncQueueFromZyPageApi(shopId);
+                }, 1500);
             } else if (val.type === 'donateMusicPause') {
                 togglePlayPause();
             } else if (val.type === 'donateMusicEnd') {
@@ -8254,8 +8364,8 @@ function toggleFavoriteStatus(song) {
         }
         const favItem = {
             id: song.id || Date.now() + Math.random().toString(36).substr(2, 5),
-            type: song.type || 'youtube',
-            videoId: song.videoId || null,
+            type: song.type || (song.soundcloudUrl ? 'soundcloud' : 'youtube'),
+            videoId: song.videoId || (song.type !== 'soundcloud' ? (parseYoutubeId(song.id) || parseYoutubeId(song.songLink)) : null) || null,
             spotifyId: song.spotifyId || null,
             soundcloudUrl: song.soundcloudUrl || null,
             songLink: song.songLink || null,
@@ -8322,13 +8432,14 @@ function addFavoriteToQueue(favorite) {
     const newSong = {
         id: Date.now() + Math.random().toString(36).substr(2, 5),
         type: favorite.type || 'youtube',
-        videoId: favorite.videoId || null,
+        videoId: favorite.videoId || (favorite.type !== 'soundcloud' ? (parseYoutubeId(favorite.id) || parseYoutubeId(favorite.songLink)) : null) || null,
         spotifyId: favorite.spotifyId || null,
         soundcloudUrl: favorite.soundcloudUrl || null,
         songLink: favorite.songLink || null,
         title: favorite.title,
         thumbnail: favorite.thumbnail,
         author: favorite.author || '',
+        duration: parseDurationToSeconds(favorite.duration) || '',
         donorName: 'Chủ kênh',
         amount: 0,
         message: '',
@@ -8443,13 +8554,14 @@ function addSearchResultToQueue(video) {
 
     const newSong = {
         id: Date.now() + Math.random().toString(36).substr(2, 5),
-        type: 'youtube',
-        videoId: video.videoId,
-        spotifyId: null,
-        soundcloudUrl: null,
+        type: video.type || (video.soundcloudUrl ? 'soundcloud' : 'youtube'),
+        videoId: video.videoId || (video.type !== 'soundcloud' ? (parseYoutubeId(video.id) || parseYoutubeId(video.songLink)) : null) || null,
+        spotifyId: video.spotifyId || null,
+        soundcloudUrl: video.soundcloudUrl || null,
         title: video.title,
         thumbnail: video.thumbnail,
         author: video.author || '',
+        duration: parseDurationToSeconds(video.duration) || '',
         donorName: donorName,
         amount: donorAmount,
         message: "",
@@ -8759,6 +8871,49 @@ function showWalkthroughModal(version) {
     if (versionLabel) versionLabel.textContent = `v${version}`;
     frame.src = `landing/walkthrough.html?embedded=true&version=${encodeURIComponent(version)}`;
     modal.style.display = 'flex';
+}
+
+async function openWhatsNewWalkthrough(event) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+    let ver = '26.8.0';
+    if (window.electronAPI && typeof window.electronAPI.getAppVersion === 'function') {
+        try {
+            ver = await window.electronAPI.getAppVersion();
+        } catch (e) {
+            console.error(e);
+        }
+    }
+    showWalkthroughModal(ver);
+}
+
+function toggleWalkthroughEditMode() {
+    const frame = document.getElementById('walkthrough-frame');
+    if (!frame) return;
+
+    // Convert src to a URL object to modify params safely
+    let currentSrc = frame.src;
+    if (currentSrc === 'about:blank') return;
+
+    try {
+        const url = new URL(currentSrc, window.location.href);
+        const isEdit = url.searchParams.get('edit') === 'true';
+
+        if (isEdit) {
+            url.searchParams.delete('edit');
+            url.searchParams.set('embedded', 'true');
+            showDashboardSystemAlert("Chế độ xem", "Đã quay về chế độ xem giới thiệu.");
+        } else {
+            url.searchParams.delete('embedded');
+            url.searchParams.set('edit', 'true');
+            showDashboardSystemAlert("Chế độ soạn thảo ✍️", "Đã chuyển sang chế độ soạn thảo trực tiếp trong app Electron!");
+        }
+        frame.src = url.toString();
+    } catch (e) {
+        console.error("Lỗi chuyển đổi chế độ soạn thảo:", e);
+    }
 }
 
 // --- GIÁM SÁT TRẠNG THÁI KẾT NỐI DỊCH VỤ ---
@@ -9075,5 +9230,58 @@ if (window.electronAPI && typeof window.electronAPI.onAddSongExternal === 'funct
         }
     });
 }
+
+// Cross-frame walkthrough persistence bridge
+window.addEventListener('message', async (event) => {
+    if (!event.data || typeof event.data !== 'object') return;
+    
+    if (event.data.type === 'save-walkthrough-image') {
+        if (window.electronAPI && typeof window.electronAPI.saveWalkthroughImage === 'function') {
+            try {
+                const res = await window.electronAPI.saveWalkthroughImage(event.data.fileName, event.data.base64Data);
+                event.source.postMessage({
+                    type: 'save-walkthrough-image-response',
+                    requestId: event.data.requestId,
+                    result: res
+                }, '*');
+            } catch (err) {
+                event.source.postMessage({
+                    type: 'save-walkthrough-image-response',
+                    requestId: event.data.requestId,
+                    result: { success: false, error: err.message }
+                }, '*');
+            }
+        } else {
+            event.source.postMessage({
+                type: 'save-walkthrough-image-response',
+                requestId: event.data.requestId,
+                result: { success: false, error: 'electronAPI.saveWalkthroughImage is not available' }
+            }, '*');
+        }
+    } else if (event.data.type === 'save-walkthrough-html') {
+        if (window.electronAPI && typeof window.electronAPI.saveWalkthroughHTML === 'function') {
+            try {
+                const res = await window.electronAPI.saveWalkthroughHTML(event.data.cleanHTML);
+                event.source.postMessage({
+                    type: 'save-walkthrough-html-response',
+                    requestId: event.data.requestId,
+                    result: res
+                }, '*');
+            } catch (err) {
+                event.source.postMessage({
+                    type: 'save-walkthrough-html-response',
+                    requestId: event.data.requestId,
+                    result: { success: false, error: err.message }
+                }, '*');
+            }
+        } else {
+            event.source.postMessage({
+                type: 'save-walkthrough-html-response',
+                requestId: event.data.requestId,
+                result: { success: false, error: 'electronAPI.saveWalkthroughHTML is not available' }
+            }, '*');
+        }
+    }
+});
 
 

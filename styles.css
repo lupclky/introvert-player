@@ -5022,17 +5022,18 @@ body.dark-mode .notification-item.unread:hover {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 0.42rem 0.95rem;
-    border-radius: 24px;
+    padding: 0;
     user-select: none;
-    cursor: default;
+    cursor: pointer;
     box-shadow: none !important;
-    transition: none;
+    transition: transform 0.2s ease !important;
     line-height: 1;
+    margin-right: 4px;
 }
 
 .dolby-atmos-img {
-    height: 22px;
+    height: 56px;
+    margin: -15px 0;
     width: auto;
     object-fit: contain;
     display: block;
@@ -5041,8 +5042,8 @@ body.dark-mode .notification-item.unread:hover {
 
 /* Dark Mode Style */
 body.dark-mode .dolby-atmos-badge {
-    background: rgba(255, 255, 255, 0.08);
-    border: 1.2px solid rgba(255, 255, 255, 0.25);
+    background: transparent !important;
+    border: none !important;
     box-shadow: none !important;
 }
 
@@ -5051,33 +5052,35 @@ body.dark-mode .dolby-atmos-badge .dolby-atmos-img {
 }
 
 body.dark-mode .dolby-atmos-badge:hover {
-    background: rgba(255, 255, 255, 0.12);
-    border-color: rgba(255, 255, 255, 0.35);
+    background: transparent !important;
+    border-color: transparent !important;
     box-shadow: none !important;
-    transform: none;
+    transform: scale(1.08);
 }
 
 /* Light Mode Style */
 body:not(.dark-mode) .dolby-atmos-badge {
-    background: #111827;
-    border: 1.2px solid #000000;
+    background: transparent !important;
+    border: none !important;
     box-shadow: none !important;
 }
 
 body:not(.dark-mode) .dolby-atmos-badge .dolby-atmos-img {
-    filter: brightness(0) invert(1);
+    filter: brightness(0);
 }
 
 body:not(.dark-mode) .dolby-atmos-badge:hover {
-    background: #1F2937;
+    background: transparent !important;
+    border-color: transparent !important;
     box-shadow: none !important;
-    transform: none;
+    transform: scale(1.08);
 }
 
 /* Walkthrough shown after an app version upgrade */
 #walkthrough-modal {
     padding: 1.25rem;
     background: rgba(12, 10, 15, 0.82);
+    backdrop-filter: none !important;
 }
 
 .walkthrough-modal-card {
@@ -5113,6 +5116,26 @@ body:not(.dark-mode) .dolby-atmos-badge:hover {
     font-family: var(--font-title);
     font-size: 1rem;
     font-weight: 800;
+}
+
+.walkthrough-edit-btn {
+    background: transparent;
+    border: none;
+    color: var(--pineapple-text);
+    opacity: 0.15;
+    cursor: pointer;
+    margin-left: 8px;
+    font-size: 0.85rem;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    vertical-align: middle;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.walkthrough-edit-btn:hover {
+    opacity: 0.9;
+    transform: scale(1.1);
 }
 
 .walkthrough-modal-heading > i {
@@ -5546,11 +5569,13 @@ body.app-dashboard #control-features-row:not(:has(> button[style*="inline-flex"]
 }
 
 body.app-dashboard .player-widget .dolby-atmos-badge {
-    padding: 0.3rem 0.7rem;
+    padding: 0;
+    margin-right: 6px;
 }
 
 body.app-dashboard .player-widget .dolby-atmos-img {
-    height: 18px;
+    height: 48px;
+    margin: -12px 0;
 }
 
 

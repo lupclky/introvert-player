@@ -66,6 +66,7 @@ if (!gotTheLock) {
     '.png': 'image/png',
     '.jpg': 'image/jpeg',
     '.gif': 'image/gif',
+    '.webp': 'image/webp',
     '.svg': 'image/svg+xml',
     '.ico': 'image/x-icon'
   };
@@ -831,8 +832,8 @@ if (!gotTheLock) {
       frame: false,
       titleBarStyle: isWin ? 'hidden' : 'hidden',
       titleBarOverlay: isWin ? {
-        color: '#0C0A0F',      // Match dark mode background initially
-        symbolColor: '#E2E8F0', // Match dark mode text
+        color: '#F5F2EB',      // Match light mode background initially
+        symbolColor: '#2D2727', // Match light mode text
         height: 41
       } : false,
       webPreferences: {
@@ -2359,6 +2360,71 @@ ipcMain.handle('youtube-get-recommendations', async () => {
 
 
 ipcMain.handle('get-app-version', () => app.getVersion());
+
+// Walkthrough persistence and asset saving
+ipcMain.handle('save-walkthrough-html', async (event, cleanHTML) => {
+  try {
+    const filePath = path.join(__dirname, 'landing', 'walkthrough.html');
+    if (!fs.existsSync(filePath)) {
+      return { success: false, error: 'walkthrough.html not found on disk' };
+    }
+    let fileContent = fs.readFileSync(filePath, 'utf8');
+    const startMarker = '<!-- EDITOR_CANVAS_START -->';
+    const endMarker = '<!-- EDITOR_CANVAS_END -->';
+    const startIndex = fileContent.indexOf(startMarker);
+    const endIndex = fileContent.indexOf(endMarker);
+
+    if (startIndex !== -1 && endIndex !== -1) {
+      const before = fileContent.substring(0, startIndex + startMarker.length);
+      const after = fileContent.substring(endIndex);
+      
+      const newCanvasHTML = `\n                <div id="editor-canvas" class="article-content" contenteditable="true" placeholder="Bắt đầu viết bài viết của bạn tại đây...">\n${cleanHTML}\n                </div>\n`;
+      fileContent = before + newCanvasHTML + after;
+      fs.writeFileSync(filePath, fileContent, 'utf8');
+      return { success: true };
+    } else {
+      return { success: false, error: 'Could not find EDITOR_CANVAS markers in walkthrough.html' };
+    }
+  } catch (error) {
+    console.error('save-walkthrough-html error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('save-walkthrough-image', async (event, fileName, base64Data) => {
+  try {
+    const imageDir = path.join(__dirname, 'landing', 'image');
+    if (!fs.existsSync(imageDir)) {
+      fs.mkdirSync(imageDir, { recursive: true });
+    }
+
+    const base64Content = base64Data.replace(/^data:image\/\w+;base64,/, "");
+    const buffer = Buffer.from(base64Content, 'base64');
+
+    const originalExt = path.extname(fileName);
+    const fileBase = path.basename(fileName, originalExt).replace(/[^a-zA-Z0-9_-]/g, "_");
+
+    // Detect actual extension from mime type
+    const mimeMatch = base64Data.match(/^data:(image\/\w+);base64,/);
+    let fileExt = '.webp';
+    if (mimeMatch) {
+      const mime = mimeMatch[1];
+      if (mime === 'image/gif') fileExt = '.gif';
+      else if (mime === 'image/png') fileExt = '.png';
+      else if (mime === 'image/jpeg') fileExt = '.jpg';
+    }
+
+    const uniqueFileName = `${fileBase}_${Date.now()}${fileExt}`;
+    const filePath = path.join(imageDir, uniqueFileName);
+
+    fs.writeFileSync(filePath, buffer);
+
+    return { success: true, relativePath: `image/${uniqueFileName}` };
+  } catch (error) {
+    console.error('save-walkthrough-image error:', error);
+    return { success: false, error: error.message };
+  }
+});
 
 // SQLite operations
 ipcMain.handle('db-get-donations', () => {

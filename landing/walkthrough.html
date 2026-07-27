@@ -2,45 +2,42 @@
 <html lang="vi"><head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pineapple Studio 26.7.0</title>
-    <meta name="description" content="Trình soạn thảo văn bản trực tiếp (WYSIWYG) giới thiệu tính năng mới của Dứa Corner Player.">
+    <title>Pineapple Studio 26.8.0 — Có gì mới</title>
+    <meta name="description" content="Giới thiệu các thay đổi và tính năng mới của Pineapple Studio.">
     
     <!-- Fonts & Icons -->
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;600;700&amp;family=Nunito:wght@300;400;600;700;800;900&amp;family=Quicksand:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&amp;family=Outfit:wght@300;400;600;700&amp;display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <!-- Styling -->
     <link rel="stylesheet" href="walkthrough.css">
 </head>
 <body>
-
+ 
     <!-- Sticky Header Toolbar (App Style) -->
     <header class="editor-header">
         <div class="header-container">
             <div class="brand">
-                <span class="brand-emoji">🍍</span>
                 <div class="brand-text">
-                    <h1>Dứa Corner</h1>
-                    <p>Trình Soạn Thảo Giới Thiệu</p>
+                    <h1>Pineapple Editor</h1>
                 </div>
-                <span class="status-indicator" id="save-status">Đã lưu thay đổi</span>
+                <span class="status-indicator" id="save-status">Đã lưu trên máy</span>
             </div>
             
             <div class="header-actions">
-                <button class="dua-btn dua-btn-success" id="btn-save-html" title="Lưu bài viết xuống đĩa cứng" disabled="true">
-                    <i class="fa-solid fa-floppy-disk"></i> Lưu thay đổi
+                <button class="dua-btn dua-btn-success" id="btn-save-html" title="Lưu walkthrough vào dữ liệu ứng dụng trên máy" disabled="true">
+                    <i class="fa-solid fa-hard-drive"></i> Lưu trên máy
                 </button>
                 <button class="dua-btn dua-btn-danger" id="btn-reset-html" title="Khôi phục nội dung gốc hệ thống">
                     <i class="fa-solid fa-rotate-left"></i> Khôi phục gốc
                 </button>
-                <button class="dua-btn dua-btn-primary" id="btn-deploy-vercel" title="Deploy trực tiếp lên Vercel"><i class="fa-solid fa-cloud-arrow-up"></i> Deploy lên Vercel</button>
                 <a href="index.html" class="dua-btn" title="Quay lại Trang chủ">
                     <i class="fa-solid fa-house"></i> Trang chủ
                 </a>
             </div>
         </div>
     </header>
-
+ 
     <!-- Editor Workspace (Single Canvas with Rich Toolbar) -->
     <main class="editor-workspace">
         
@@ -72,7 +69,7 @@
                     <i class="fa-solid fa-quote-left"></i>
                 </button>
             </div>
-
+ 
             <div class="format-group">
                 <button class="format-btn" data-command="insertUnorderedList" title="Danh sách chấm tròn">
                     <i class="fa-solid fa-list-ul"></i>
@@ -81,7 +78,7 @@
                     <i class="fa-solid fa-list-ol"></i>
                 </button>
             </div>
-
+ 
             <div class="format-group">
                 <button class="format-btn" id="btn-insert-kbd" title="Thêm nút phím tắt KBD">
                     <i class="fa-solid fa-keyboard"></i>
@@ -96,39 +93,214 @@
                     <i class="fa-solid fa-eraser"></i>
                 </button>
             </div>
+ 
+            <div class="format-group" aria-label="Thành phần giới thiệu phiên bản">
+                <button class="format-btn" id="btn-insert-stat-card" title="Chèn thẻ số liệu so sánh">
+                    <i class="fa-solid fa-chart-column"></i>
+                </button>
+                <button class="format-btn" id="btn-insert-feature-card" title="Chèn thẻ tính năng">
+                    <i class="fa-solid fa-table-cells-large"></i>
+                </button>
+                <button class="format-btn" id="btn-insert-release-note" title="Chèn ghi chú phát hành">
+                    <i class="fa-solid fa-bullhorn"></i>
+                </button>
+            </div>
         </div>
-
+ 
+        <div class="layout-toolbar" id="layout-toolbar">
+            <div class="layout-selection-label">
+                <i class="fa-solid fa-up-down-left-right"></i>
+                <span id="editor-selection-label">Chọn một thẻ hoặc hình ảnh để chỉnh bố cục</span>
+            </div>
+            <div class="layout-controls" id="card-layout-controls" hidden>
+                <button type="button" id="btn-card-move-prev" title="Đưa thẻ về trước"><i class="fa-solid fa-arrow-left"></i></button>
+                <button type="button" id="btn-card-move-next" title="Đưa thẻ về sau"><i class="fa-solid fa-arrow-right"></i></button>
+                <button type="button" id="btn-card-toggle-wide" title="Cho thẻ chiếm toàn bộ hàng"><i class="fa-solid fa-arrows-left-right-to-line"></i></button>
+            </div>
+            <div class="layout-controls image-layout-controls" id="image-layout-controls" hidden>
+                <label for="selected-image-width">Rộng</label>
+                <input type="range" id="selected-image-width" min="25" max="100" step="5" value="100">
+                <output id="selected-image-width-output" for="selected-image-width">100%</output>
+                <button type="button" data-image-align="left" title="Căn trái"><i class="fa-solid fa-align-left"></i></button>
+                <button type="button" data-image-align="center" title="Căn giữa"><i class="fa-solid fa-align-center"></i></button>
+                <button type="button" data-image-align="right" title="Căn phải"><i class="fa-solid fa-align-right"></i></button>
+            </div>
+        </div>
+ 
+        <template id="walkthrough-default-template">
+            <div class="release-layout" data-walkthrough-layout="set18">
+                <section class="release-hero">
+                    <div class="release-kicker">
+                        <i class="fa-solid fa-leaf" aria-hidden="true"></i>
+                        <span>Bản cập nhật</span>
+                        <strong data-walkthrough-version="">v26.8.0</strong>
+                    </div>
+                    <h1>Tập trung hơn vào buổi live.<br><span>Ít bận tâm hơn về giao diện.</span></h1>
+                    <p class="release-lead">Pineapple Studio được làm mới theo chủ đề TFT Set 18 — Khu Rừng Kỳ Bí, đồng thời rút ngắn các thao tác thường dùng và giúp overlay dễ đọc hơn trong môi trường stream.</p>
+                    <div class="release-chip-row" aria-label="Điểm nhấn phiên bản">
+                        <span><i class="fa-solid fa-wand-magic-sparkles"></i> Giao diện Set 18</span>
+                        <span><i class="fa-solid fa-eye"></i> Overlay rõ hơn</span>
+                        <span><i class="fa-solid fa-bolt"></i> Thao tác tức thì</span>
+                    </div>
+                </section>
+ 
+                <section class="release-stats" aria-label="Thay đổi nổi bật">
+                    <article class="release-stat-card release-stat-primary">
+                        <strong class="release-stat-value">2×</strong>
+                        <div>
+                            <h2>Tìm nhạc nhanh hơn</h2>
+                            <p>So với quy trình tìm kiếm của phiên bản trước, kết quả được đưa ra nhanh và dễ chọn hơn.</p>
+                        </div>
+                    </article>
+                    <article class="release-stat-card">
+                        <strong class="release-stat-value">2</strong>
+                        <div>
+                            <h2>Cách xem lịch sử</h2>
+                            <p>Chuyển ngay giữa dạng lưới để xem nhanh và danh sách để đọc đầy đủ.</p>
+                        </div>
+                    </article>
+                    <article class="release-stat-card">
+                        <strong class="release-stat-value">1 chạm</strong>
+                        <div>
+                            <h2>Cập nhật yêu thích</h2>
+                            <p>Bài hát xuất hiện trong danh sách yêu thích ngay khi vừa được đánh dấu.</p>
+                        </div>
+                    </article>
+                    <article class="release-stat-card">
+                        <strong class="release-stat-value">3</strong>
+                        <div>
+                            <h2>Theme được tinh gọn</h2>
+                            <p>Giữ lại Dứa, Set 18 và Hồng; loại bỏ các theme cũ không còn cần thiết.</p>
+                        </div>
+                    </article>
+                </section>
+ 
+                <section class="release-section">
+                    <div class="release-section-heading">
+                        <span>Trải nghiệm mới</span>
+                        <h2>Những thay đổi bạn sẽ thấy ngay</h2>
+                        <p>Từng khu vực được làm gọn theo đúng công việc cần thực hiện, giảm chữ thừa và giữ thông tin quan trọng trong tầm mắt.</p>
+                    </div>
+                    <div class="release-feature-grid">
+                        <article class="release-feature-card">
+                            <div class="release-feature-icon"><i class="fa-solid fa-tree"></i></div>
+                            <div><h3>TFT Set 18 — Khu Rừng Kỳ Bí</h3><p>Light mode mới dùng nền sơn pastel dịu, xanh trầm vừa đủ và bề mặt trung tính để stream ban đêm đỡ mỏi mắt.</p></div>
+                        </article>
+                        <article class="release-feature-card">
+                            <div class="release-feature-icon"><i class="fa-solid fa-compact-disc"></i></div>
+                            <div><h3>Trình phát gọn hơn</h3><p>Ảnh bìa, Dolby, thanh điều khiển và khoảng cách được thu gọn. Dòng donate chỉ còn tên người gửi và số tiền.</p></div>
+                        </article>
+                        <article class="release-feature-card">
+                            <div class="release-feature-icon"><i class="fa-solid fa-clock-rotate-left"></i></div>
+                            <div><h3>Lịch sử donate khoa học</h3><p>Tìm kiếm ngắn gọn, hai kiểu hiển thị lưới hoặc danh sách, thao tác đã đọc và xóa được gom vào một thanh công cụ.</p></div>
+                        </article>
+                        <article class="release-feature-card">
+                            <div class="release-feature-icon"><i class="fa-solid fa-computer-mouse"></i></div>
+                            <div><h3>Menu chuột phải mở rộng</h3><p>Thao tác nhanh ngay tại ngữ cảnh đang làm việc; danh sách yêu thích cũng cho phép xóa bài bằng menu chuột phải.</p></div>
+                        </article>
+                        <article class="release-feature-card">
+                            <div class="release-feature-icon"><i class="fa-solid fa-layer-group"></i></div>
+                            <div><h3>Overlay Set 18 dễ đọc</h3><p>Thẻ Donate mới và Tiếp theo mang chất liệu gỗ bo tròn, font xanh chủ đạo và nền ít chi tiết ở vùng đặt chữ.</p></div>
+                        </article>
+                        <article class="release-feature-card">
+                            <div class="release-feature-icon"><i class="fa-solid fa-tags"></i></div>
+                            <div><h3>Bảng giá đúng thời điểm</h3><p>Hiển thị khi phát bài của chủ kênh hoặc lúc hết nhạc; số tiền dùng ký hiệu K, nội dung được căn giữa và chuyển cảnh mượt hơn.</p></div>
+                        </article>
+                        <article class="release-feature-card">
+                            <div class="release-feature-icon"><i class="fa-solid fa-language"></i></div>
+                            <div><h3>Font tiếng Việt dễ nhìn</h3><p>Be Vietnam Pro được cân lại độ đậm và khoảng cách ký tự, giúp tên bài hát dài và lời nhắn vẫn rõ ràng.</p></div>
+                        </article>
+                        <article class="release-feature-card">
+                            <div class="release-feature-icon"><i class="fa-solid fa-route"></i></div>
+                            <div><h3>Walkthrough theo phiên bản</h3><p>Trang này tự xuất hiện một lần sau mỗi lần nâng cấp, giúp bạn nắm nhanh những thay đổi quan trọng trước khi live.</p></div>
+                        </article>
+                    </div>
+                </section>
+ 
+                <section class="release-section release-tools-section">
+                    <div class="release-section-heading">
+                        <span>Công cụ vận hành</span>
+                        <h2>Những tính năng quen thuộc vẫn luôn sẵn sàng</h2>
+                    </div>
+                    <div class="release-tool-grid">
+                        <article><i class="fa-solid fa-thumbtack"></i><div><h3>Ghim bài hát</h3><p>Giữ một bài ở lượt ưu tiên tiếp theo.</p></div></article>
+                        <article><i class="fa-solid fa-forward-step"></i><div><h3>Vote Skip</h3><p>Cho phép người xem góp lượt bỏ qua.</p></div></article>
+                        <article><i class="fa-solid fa-clock"></i><div><h3>Gia hạn</h3><p>Mở rộng thời lượng phát bằng mã donate.</p></div></article>
+                        <article><i class="fa-solid fa-shuffle"></i><div><h3>Lucky</h3><p>Chọn ngẫu nhiên để hàng đợi thú vị hơn.</p></div></article>
+                        <article><i class="fa-solid fa-bullseye"></i><div><h3>Tập trung</h3><p>Tạm ngưng tự chuyển bài khi cần kiểm soát.</p></div></article>
+                        <article><i class="fa-solid fa-tower-broadcast"></i><div><h3>DirectStream</h3><p>Thêm phương án phát cho nội dung bị hạn chế.</p></div></article>
+                    </div>
+                </section>
+ 
+                <aside class="release-note-card">
+                    <i class="fa-solid fa-broom-ball"></i>
+                    <div>
+                        <h2>Dọn nền tảng để đi nhanh hơn</h2>
+                        <p>Các theme Cổ điển, Spacegods, Flex và Mờ đã được loại bỏ cùng phần mã không còn sử dụng. Cài đặt giờ ít ô hơn, tên gọi rõ hơn và tập trung vào ba giao diện đang được duy trì.</p>
+                    </div>
+                </aside>
+ 
+                <section class="release-finish">
+                    <span data-walkthrough-version="">v26.8.0</span>
+                    <h2>Sẵn sàng cho buổi live tiếp theo.</h2>
+                    <p>Mọi thiết lập hiện tại vẫn được giữ nguyên. Bạn có thể đóng phần giới thiệu và bắt đầu sử dụng Pineapple Studio.</p>
+                    <button type="button" onclick="if (window.parent !== window &amp;&amp; typeof window.parent.closeWalkthroughModal === 'function') window.parent.closeWalkthroughModal();">
+                        Bắt đầu sử dụng <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </section>
+            </div>
+        </template>
+ 
         <!-- Document Paper Canvas -->
         <div class="document-container">
             <div class="document-paper">
-                <div id="editor-canvas" class="article-content" contenteditable="true" placeholder="Bắt đầu viết bài viết của bạn tại đây..."><h1>Xin chào xin chào</h1><div>Hơn 1 tuần nữa đã trôi qua, em lại quay trở lại với vô vàn vô vàn nhiều update mới cho Introvert Player đây. Chúng ta cùng bắt đầu nha.</div><div><br></div><h2>1. Thay đổi về tên, số hiệu phiên bản</h2><p>Hiện tại vì một vài lí do sức khoẻ, em cũng không còn làm một mình app này nữa, lần này may là có sự giúp sức của người bạn của em. Vì vậy app vẫn đang tiếp tục phát triển. Và từ phiên bản này, app sẽ có tên gọi mới là Pineapple Studio để không còn introvert ở trong app nữa.</p><p>Ngoài ra, giờ số hiệu phiên bản sẽ là v26.7.0, tức là phiên bản tháng 7 năm 2026. App sẽ được kiểm thử, hoàn thiện tính năng và đẩy lên update ở cuối tháng 7 này. Và từ phiên bản này trở đi, mỗi tháng sẽ có 1 bản update mới, chứ không còn 1-2 tuần 1 phiên bản như trước. Các bản hotfix vẫn có thể ra mắt để fix các lỗi nghiêm trọng,</p><h2>2. Thiết kế giao diện mới</h2><div>Em thấy giao diện mới ổn hơn bản cũ, nhìn sạch và gọn hơn nhiều. Bố cục dễ nhìn, đỡ rối mắt hơn. Chỉ là em vẫn thấy bản cũ có chất riêng hơn, còn bản mới thì thiên về sự chỉn chu và phổ thông hơn.</div><div><div class="figure-box"><img src="image/home.png"><div class="caption">Giao diện trang chủ mới</div></div><p>Màu được làm với hệ màu mới, giảm độ bắt mắt, nổi khối ở giao diện cũ. Làm cho việc khi stream đỡ phải nhức mắt khi live vào ban đêm.</p><br></div>
-<p><br></p><ul>
-</ul>
-
-<h2>2. Thanh thêm nhanh Titlebar thông minh</h2>
-<p>Để tối ưu hóa không gian, ô nhập link và tìm kiếm nhạc đã được đưa lên trung tâm của Titlebar ứng dụng. Khi nhấp vào, một popover thông minh sẽ xuất hiện để streamer chỉnh sửa tên người gửi, số tiền donate hoặc đánh dấu là chủ kênh thêm nhạc.</p><div class="figure-box"><img src="https://i.ibb.co/KzXR9D1Q/Screenshot-2026-06-22-152138.png"><div class="caption">Thanh search mới</div></div><p></p>
-
-<p>Giờ đây, khi tìm kiếm, kết quả tìm kiếm trở nên to hơn. GIúp việc nhìn dễ dàng trong môi trường streamer mà không cần phải dí sát vào màn hình để thấy kết quả như trước. Ngoài ra với công nghệ mới, tốc độ search đã được tăng x2 lần.</p><p>Và khi tìm kiếm YouTube, khi ra kết quả đầu tiên hợp lí, chỉ cần nhấn&nbsp;<kbd>Enter</kbd> để thêm ngay bài đầu tiên vào hàng đợi.</p><p>Video Demo:<br></p><div class="figure-box" contenteditable="false"><iframe src="https://www.youtube.com/embed/YpFekCDW8MI" style="width:100%; aspect-ratio:16/9; border:none;" allowfullscreen=""></iframe><div class="caption" contenteditable="true">Thêm nhanh</div></div><p><br></p><br><p></p><h2>3. (Đang phát triển) Thêm nhạc trực tiếp từ trình duyệt</h2><div>Khi sử dụng Extension ở trình duyệt, giờ đây Pineapple Studio cho phép thêm video từ trang YouTube của trình duyệt, nhằm nâng cao sự tối ưu về đề xuất của YouTube và khiến mọi thứ tiện lợi hơn đôi chút</div><div><br></div><div>Video demo:</div><div><div class="figure-box" contenteditable="false"><iframe src="https://www.youtube.com/embed/cWRrgVkpLvw" style="width:100%; aspect-ratio:16/9; border:none;" allowfullscreen=""></iframe><div class="caption" contenteditable="true">Thêm nhanh từ trình duyệt</div></div><p><br></p><br></div><h2>4. Ghim bài hát</h2>
-<p>Nếu muốn ưu tiên 1 bài hát thấp tiền hơn để được phát ở lượt tiếp theo, có thể nhấn <b>Ghim bài hát </b>để có thể ưu tiên bài hát dành cho viewer bất kì tiếp theo. Việc ghim bài hát không bị ảnh hưởng từ các donate mới cao tiền hơn. Như ví dụ dưới đây:</p><p></p><div class="figure-box" contenteditable="false"><iframe src="https://www.youtube.com/embed/fTHxP9azuaA" style="width:100%; aspect-ratio:16/9; border:none;" allowfullscreen=""></iframe><div class="caption" contenteditable="true">Ghim bài hát</div></div><p><br></p><br><p></p><p><br></p>
-
-<h2>5. Vote Skip</h2>
-<p>Chức năng cho phép người xem Donate để bỏ qua bài hát đang phát, giúp tăng tương tác cũng như là ... cho streamer.</p><p>Với tính năng này giờ đây các chức năng như <b>Bỏ qua, Xoá, Tua đi, tua lại bài hát </b>chỉ được sử dụng tối đa 8 lần/12 giờ.</p><p>Video Demo:&nbsp;</p><p></p><div class="figure-box" contenteditable="false"><iframe src="https://www.youtube.com/embed/k-HuLDu_YQ8" style="width:100%; aspect-ratio:16/9; border:none;" allowfullscreen=""></iframe><div class="caption" contenteditable="true">Vote Skip</div></div><p><br></p><h2>6. Gia hạn thời gian</h2><div>Với chức năng <b>Gia hạn thời gian</b>, nếu giả sử muốn nghe thêm thời lượng của bài hát hay truyện, người xem có thể donate số tiền kèm mã gia hạn trên app. Với mức giá có thể tự setup trong Cài đặt, mặc định là 50k/6 phút, Sau khi donate, thời gian sẽ được gia hạn và người xem tiếp tục nghe thêm bài hát.</div><div><br></div><div><div class="figure-box" contenteditable="false"><iframe src="https://www.youtube.com/embed/tDY51yPvhMQ" style="width:100%; aspect-ratio:16/9; border:none;" allowfullscreen=""></iframe><div class="caption" contenteditable="true">Gia hạn thời gian</div></div><h2 style="font-family: Quicksand, sans-serif; color: rgb(234, 88, 12); border-bottom: 2px dashed rgba(45, 39, 39, 0.15); text-align: start;">8. Phím tắt điều khiển nhanh chóng</h2></div><p></p><p style="font-size: 16.8px;">Điều khiển trình phát tiện lợi bằng bàn phím tương tự như xem phim trên YouTube:</p><p style="font-size: 16.8px;">Sử dụng phím <kbd style="background-color: rgb(245, 240, 228); border-color: rgb(45, 39, 39); border-style: solid; border-width: 2px; border-image: none 100% / 1 / 0 stretch; box-shadow: rgb(45, 39, 39) 2px 2px 0px 0px; color: rgb(45, 39, 39);">Space</kbd> hoặc <kbd style="background-color: rgb(245, 240, 228); border-color: rgb(45, 39, 39); border-style: solid; border-width: 2px; border-image: none 100% / 1 / 0 stretch; box-shadow: rgb(45, 39, 39) 2px 2px 0px 0px; color: rgb(45, 39, 39);">K</kbd> để Tạm dừng / Phát nhạc.<br>Sử dụng phím <kbd style="background-color: rgb(245, 240, 228); border-color: rgb(45, 39, 39); border-style: solid; border-width: 2px; border-image: none 100% / 1 / 0 stretch; box-shadow: rgb(45, 39, 39) 2px 2px 0px 0px; color: rgb(45, 39, 39);">→</kbd> hoặc <kbd style="background-color: rgb(245, 240, 228); border-color: rgb(45, 39, 39); border-style: solid; border-width: 2px; border-image: none 100% / 1 / 0 stretch; box-shadow: rgb(45, 39, 39) 2px 2px 0px 0px; color: rgb(45, 39, 39);">L</kbd> để Tua nhanh 10 giây.<br>Sử dụng phím <kbd style="background-color: rgb(245, 240, 228); border-color: rgb(45, 39, 39); border-style: solid; border-width: 2px; border-image: none 100% / 1 / 0 stretch; box-shadow: rgb(45, 39, 39) 2px 2px 0px 0px; color: rgb(45, 39, 39);">←</kbd> hoặc <kbd style="background-color: rgb(245, 240, 228); border-color: rgb(45, 39, 39); border-style: solid; border-width: 2px; border-image: none 100% / 1 / 0 stretch; box-shadow: rgb(45, 39, 39) 2px 2px 0px 0px; color: rgb(45, 39, 39);">J</kbd> để Tua lại 10 giây.<br>Sử dụng phím <kbd style="background-color: rgb(245, 240, 228); border-color: rgb(45, 39, 39); border-style: solid; border-width: 2px; border-image: none 100% / 1 / 0 stretch; box-shadow: rgb(45, 39, 39) 2px 2px 0px 0px; color: rgb(45, 39, 39);">M</kbd> để Tắt / Bật tiếng nhanh.</p><div><h2>9. Một số chức năng khác</h2></div><p></p><ol><li>DirectStream cho phép phát nhạc bị chặn bản quyền từ YouTube (VD: Trời giấu trời mang đi của AMEE x VIRUSS không thể phát kể cả bản v3 cũng như bản zypage gốc)</li><li>Thông báo toàn hệ thống, hiển thị donate như 1 thông báo của Windows, luôn hiển thị ở màn hình phụ để dễ nắm bắt thông tin.</li><li>Trang quản lý donate riêng</li><li>Thông báo hiện từ trên title xuống như điện thoại</li><li>Chức năng Lucky cho phép chọn bài hát may mắn không theo thứ tự sắp xếp để phát.</li><li>Giao diện Cài đặt giờ đây cho phép preview theme OBS, ngoài ra sắp xếp phân mục sao cho chuẩn.</li><li>Và một vài sửa lỗi nhỏ tăng chất lượng hệ thống.</li></ol><h2>10. After Credit</h2><div>After Credit được loại bỏ sau bản v3.0.0 để tiết kiệm tài nguyên vì đơn giản chả ai thèm để ý chúng.</div><div><br></div><div>Đó là những gì hiện tại em đang phát triển ở phiên bản 26.7.0 hiện tại, có thể thay đổi nữa trong tương lai. Dù sao một lần nữa cảm ơn chị trong suốt thời gian qua chịu lỗi, test app cho em để cho app trở nên hoàn thiện hơn. Hiện tại chắc chắn là thời gian tới, thời gian vào xem chị cũng sẽ giảm đi, em cũng không thể làm npc khiến cho chị vui mỗi ngày nữa, dù sao thì chị cũng luôn luôn được mọi người ủng hộ và trò chuyện mỗi ngày, như thế đối với em là quá tuyệt rồi.&nbsp;</div><div><br></div><div>Dù sao đi nữa, em cũng chỉ là một viewer, em cũng không thể nào biết chị nghĩ gì. Em không muốn bị trách là vẽ việc cho người khác như có người nói với em. Em xin lỗi rất nhiều khi lại vẽ việc thêm cho chị dù nếu mà không có thì chị vẫn có thể kiếm được nhiều tiền và người khác cũng thấy bình thường về nó.</div><div><br></div><div>Đó là những gì em muốn mang đến cho chị ở thời điểm hiện tai, dù sao, dù game nào đi nữa. Chúc streamer của mọi người luôn được yêu quý, ủng hộ, vui vẻ nhé</div><div><br></div><div>Em xin cảm ơn rất nhiều,</div><div>Đây là một viewer của streamer&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;Introvert</div><div><br></div><p></p></div>
+                <!-- EDITOR_CANVAS_START -->
+                <div id="editor-canvas" class="article-content" contenteditable="true" placeholder="Bắt đầu viết bài viết của bạn tại đây...">
+<h1>Pineapple Feature Drop 8/2026</h1><div>Xin chào xin chào, sau vài tháng thì team đã quay trở lại rồi đây, với nhiều thứ mới mẻ lúc mà chị mở giao điện dã có sự khác biệt ròi đó. Và còn tính năng mới khác sẽ bắt đầu ngay bây giờ thoi</div><div><br></div><div><br></div><div><br></div><h2>1. Tương lai của ứng dụng và kênh chat</h2><div>Sau khi phiên bản này ra mắt, sẽ có những bản hotfix nếu lỗi. Ngoài ra, bản cập nhật tiếp theo sẽ là bản cập nhật tháng 12. Sẽ có các tính năng mới như OBS Overlay Hub, Playlist, Video.... và vô vàn các chức năng khác.&nbsp;</div><div><br></div><div><div class="figure-box figure-align-center" style="width: 30%;"><img src="image/Screenshot_2026-07-27_011707_1785089901638.webp"><div class="caption">OBS Overlay Hub (experimental)</div></div><p><br></p><br></div><div>Với kênh chat, đây sẽ là kênh chat cuối cùng em làm riêng, hiện tại chị cũng có kha khá người có thể làm điều đó và tốt hơn em nhiều,<span style="font-size: 1.05rem;">&nbsp;nhất là cái người mà làm kênh chat cho ai khác ấy. Nên lần này sẽ là thiết kế chung chung, quay trở lại thiết kế dứa từ trước đó và có nhiều thứ thú vị hơn, lời chào đầu cũng đã loại bỏ để tăng cường hiệu năng.</span></div><div><br></div><div>Ok rồi, chúng ta bắt đầu những gì mới trong phiên bản này nào.</div><div><br></div><h2>2. Thay đổi về chất lượng và hiệu năng app</h2><div><ol><li>Loại bỏ theme không sử dụng, chỉ giữ lại 3 theme duy nhất, giúp app tăng khả năng xử lý lên tới 40% so với phiên bản trước</li><li>Loại bỏ phát hiện nội dung nhạy cảm do phức tạp về thuật toán xử lí gây nặng máy.</li><li>Giao diện cài đặt được thiết kế lại để khoa học hơn.</li><li>Hiện có thể chuột phải để copy, paste nếu muốn</li><li>Có thể chuột trái vào tiêu đề bài hát để có thể mở bài hát đó trên trình duyệt.</li><li>Có thể ghim bài hát để ưu tiên phát bài hát ở lượt tiếp theo, không bị ảnh hưởng bởi các donate mới</li></ol><h2>3. Chức năng Vote Skip</h2></div><div>Hiện vote skip có thể thực hiện và hoạt động bình thường, chị có thể thử nếu muốn.</div><h2>4. Gia hạn thời gian</h2><div>Đang lỗi mặc dù có nhưng không sử dụng được. Mặc định tắt.</div><h2>5. Tìm kiếm</h2><div><ul><li>Tốc độ tìm kiếm được tăng lên x2 lần so với phiên bản trước</li><li>Nội dung tìm kiếm to hơn, giúp cho việc nhìn trên màn hình rõ ràng hơn,</li><li>Khi paste link vào ô Tìm kiếm, sẽ có preview hiện ra để chắc chắn đã paste đúng bài hay chưa.</li></ul><div class="figure-box figure-align-center" style="width: 60%;"><img src="image/Screenshot_2026-07-27_010037_1785088855088.webp"><div class="caption">Tìm kiếm</div></div><br><div class="figure-box figure-align-center" style="width: 60%;"><img src="image/Screenshot_2026-07-27_010140_1785088926569.webp"><div class="caption">Paste link Preview</div></div><br><h2>6. Yêu thích&nbsp;</h2></div><div>Hiện tại, nếu chị muốn tiện lợi hơn khi mở những bài yêu thích, chị có thể lưu nó lại bằng cách nhấn nút trái tim, nó sẽ lưu riêng vào 1 list yêu thích để khi nào muốn mở nhanh không cần tìm thủ công nữa.</div><div><div class="figure-box figure-align-center" style="width: 55%;"><img src="image/Screenshot_2026-07-27_010248_1785089209110.webp"><div class="caption">Lưu lại Yêu thích bằng nút Tim có mặt ở search và trình phát bài hát</div></div><div class="figure-box figure-align-center" style="width: 65%;"><img src="image/Screenshot_2026-07-27_010231_1785089233742.webp"><div class="caption">Danh sách yêu thích</div></div><br></div><h2>7. Thay đổi về giao diện hợp với Set 18 TFT Enchanted Wilds</h2><div>Giao diện đã đổi từ màu vàng sang màu xanh của khu rừng, với tone màu tối ưu hoá cho việc hiển thị app vào ban đêm, để người sử dụng đỡ phải mỏi mắt so với giao diện Dứa hiện tại.</div><div><div class="figure-box figure-align-center" style="width: 100%"><img src="image/Screenshot_2026-07-27_011201_1785089528710.webp"><div class="caption">Hình ảnh minh họa</div></div></div><div>Overlay cũng đã thay đổi và thêm theme Set 18 phù hợp. Bố cục của Overlay hiện tại sẽ rõ ràng ai là người order bài hát, bài hát nào đang được chủ kênh phát. Đếm ngược và Donate mới với hiển thị rõ ràng, cho phép hiển thị luôn thời lượng của bài hát.&nbsp;</div><div><br></div><div><ul><li>Tính năng mới: Hiển thị bảng giá, hiển thị mốc tiền ứng với số phút trên overlay, có thể bật hoặc tắt trong cài đặt</li></ul></div><div><div class="figure-box figure-align-center" style="width: 50%;"><img src="image/Screenshot_2026-07-27_011238_1785089571207.webp"><div class="caption">Overlay thường</div></div><p></p><div class="figure-box figure-align-center" style="width: 50%;"><img src="image/Screenshot_2026-07-26_213726_1785089599709.webp"><div class="caption">Overlay chủ kênh</div></div><div class="figure-box figure-align-center" style="width: 50%;"><img src="image/Screenshot_2026-07-27_011413_1785089697768.webp"><div class="caption">Đếm ngược 15s mới</div></div><br><p></p><br></div><div><br></div><h2>8. Lịch sử Donate và thông báo donate ở Taskbar</h2><div>Sau khi cập nhật ứng dụng, sẽ bắt đầu lưu trữ lại Tab Lịch sử, cho phép lưu lại lịch sử donate trên máy, cũng như bài hát họ bật lên. Có thể thêm lại bài hát nếu bị miss mất hoặc một lí do nào khác. Khi nhấn vào donate bất kỳ, sẽ phóng to donate và hiển thị chi tiết donate đó. Có thể tìm kiếm donate theo người, nội dung, số tiền.... super search.</div><div><br></div><div><div class="figure-box figure-align-center" style="width: 70%;"><img src="image/Screenshot_2026-07-27_005853_1785088746879.webp"><div class="caption">Hình ảnh minh họa</div></div><p><br></p><br></div><div>Khi có donate mới, thông báo sẽ được hiển thị tại màn hình phụ, về tên người donate,&nbsp;<span style="font-size: 1.05rem;">video, nội dung donate. Thời gian hiển thị sẽ flex theo nội dung. Tối đa 30s.</span></div><div><span style="font-size: 1.05rem;"><div class="figure-box figure-align-center" style="width: 60%;"><img src="image/Screenshot_2026-07-27_010929_1785089406438.webp"><div class="caption">Hình ảnh minh họa</div></div><p><br></p><br></span></div><h2><span style="font-size: 16.8px;">9.&nbsp; Extension</span></h2><div>Extension cho phép tương tác trên giao diện YouTube của Trình duyệt, Khi nhấn vào dấu + hoặc thêm nhanh, bài hát sẽ được đưa ngay vào Queue.</div><div><div class="figure-box figure-align-center" style="width: 85%;"><img src="image/ssss_1785089430925.webp"><div class="caption">Hình ảnh minh họa</div></div><p>Extension nếu chị muốn thì có thể liên hệ để em cài remote cho chị từ xa.</p><br></div><div><br></div><h2>10. Phát nhạc bị chặn bởi Iframe</h2><div>Với những bài hát bị chặn ở phương thức phát thông thường, Trình phát sẽ chuyển ra phát qua công nghệ DirectStream để tiếp tục phát. Tính năng này cần cài đặt và tải xuống 1 tiện ích YT DLP. Có sẵn ở mục Cài đặt -&gt; Phát lại</div><h2>11. Tổng kết</h2><div>Cuối cùng đó là toàn bộ tính năng mới hiện tại trong app. Một lần nữa, team luôn cảm ơn chị vì đã luôn ủng hộ app và những gì em làm. Trong lúc sử dụng app chắc chắn không thể thoát khỏi các lỗi, vì vậy em mong chị luôn giúp team phát hiện lỗi khi vận hành để cải thiện thêm chất lượng app, ngoài ra team đang muốn có thể nhiều streamer khác có thể sử dụng tới nó. Nếu có cơ hội mong chị giới thiệu thêm nha, mục đích là lúc chị sủi nhiều team vẫn có thể theo dõi cũng như khắc phục các lỗi của app.</div><div><br></div><div>Xong ròi đó, cảm ơn chị đã đọc hết nha, pai pai.</div><div><br></div><div><br></div><div><br></div>
+                </div>
+<!-- EDITOR_CANVAS_END -->
             </div>
         </div>
-
+ 
     </main>
-
+ 
     <!-- Custom Image Insertion Modal -->
     <div class="editor-modal" id="image-modal">
         <div class="modal-content">
-            <h3 class="modal-title"><i class="fa-solid fa-image"></i> Chèn hình ảnh tính năng</h3>
+            <h3 class="modal-title" id="image-modal-title"><i class="fa-solid fa-image"></i> Chèn hình ảnh tính năng</h3>
             <div class="form-group">
                 <label for="input-img-src">Đường dẫn hình ảnh (URL hoặc đường dẫn tương đối):</label>
                 <input type="text" id="input-img-src" class="dua-input" placeholder="Ví dụ: image/home.png">
             </div>
             <div class="form-group" style="margin-top: 1rem;">
+                <label for="input-img-file">Hoặc chọn ảnh từ máy:</label>
+                <input type="file" id="input-img-file" class="dua-file-input" accept="image/png,image/jpeg,image/webp,image/gif">
+                <small>Ảnh được tối ưu và lưu trực tiếp trong walkthrough local, không tải lên máy chủ.</small>
+            </div>
+            <div class="image-upload-preview" id="image-upload-preview" hidden>
+                <img id="image-upload-preview-img" alt="Xem trước ảnh đã chọn">
+                <span id="image-upload-preview-name"></span>
+            </div>
+            <div class="form-group" style="margin-top: 1rem;">
                 <label for="input-img-caption">Chú thích hình ảnh:</label>
                 <input type="text" id="input-img-caption" class="dua-input" placeholder="Ví dụ: Hình 1: Giao diện chính mới">
+            </div>
+            <div class="image-layout-form" style="margin-top: 1rem;">
+                <div class="form-group">
+                    <label for="input-img-width">Độ rộng ảnh:</label>
+                    <div class="range-field">
+                        <input type="range" id="input-img-width" min="25" max="100" step="5" value="100">
+                        <output id="input-img-width-output" for="input-img-width">100%</output>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="input-img-align">Căn ảnh:</label>
+                    <select id="input-img-align" class="dua-input">
+                        <option value="left">Trái</option>
+                        <option value="center" selected>Giữa</option>
+                        <option value="right">Phải</option>
+                    </select>
+                </div>
             </div>
             <div class="modal-actions" style="margin-top: 1.5rem;">
                 <button class="dua-btn btn-close" id="btn-modal-cancel">Hủy bỏ</button>
@@ -136,7 +308,7 @@
             </div>
         </div>
     </div>
-
+ 
     <!-- Custom YouTube Insertion Modal -->
     <div class="editor-modal" id="youtube-modal">
         <div class="modal-content">
@@ -155,17 +327,17 @@
             </div>
         </div>
     </div>
-
+ 
     <!-- Toast Notification -->
     <div class="toast-container" id="toast-container"></div>
-
+ 
     <!-- Floating Edit Action Button -->
     <a href="?edit=true" class="edit-mode-toggle-btn" title="Chuyển sang chế độ chỉnh sửa">
         <i class="fa-solid fa-pen-to-square"></i>
     </a>
-
+ 
     <!-- Script -->
     <script src="walkthrough.js"></script>
-
-
+ 
+ 
 </body></html>

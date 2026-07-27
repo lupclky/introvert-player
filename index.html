@@ -130,7 +130,14 @@
             </div>
         </form>
 
-        <div class="titlebar-right-container" style="display: flex; align-items: center; gap: 1rem;">
+        <div class="titlebar-right-container" style="display: flex; align-items: center; gap: 0.6rem;">
+            <!-- What's New Walkthrough -->
+            <button id="btn-whats-new" class="titlebar-menu-btn" onclick="openWhatsNewWalkthrough(event)"
+                title="Có gì mới?" style="-webkit-app-region: no-drag; display: flex; align-items: center; gap: 0.3rem;">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                <span class="menu-btn-text">Có gì mới?</span>
+            </button>
+
             <!-- Notification Center -->
             <div class="notification-center-wrapper"
                 style="-webkit-app-region: no-drag; position: relative; display: flex; align-items: center;">
@@ -1401,8 +1408,11 @@
             <div class="walkthrough-modal-header">
                 <div class="walkthrough-modal-heading">
                     <i class="fa-solid fa-star"></i>
-                    <span>Có gì mới trong Pineapple Studio</span>
+                    <span style="cursor: pointer;" ondblclick="toggleWalkthroughEditMode()">Có gì mới trong Pineapple Studio</span>
                     <span id="walkthrough-version-label" class="walkthrough-version-label"></span>
+                    <button type="button" id="walkthrough-edit-trigger" class="walkthrough-edit-btn" onclick="toggleWalkthroughEditMode()" title="Chỉnh sửa (Chỉ Dev)">
+                        <i class="fa-solid fa-pencil"></i>
+                    </button>
                 </div>
                 <button type="button" class="walkthrough-modal-close" onclick="closeWalkthroughModal()"
                     title="Đóng giới thiệu" aria-label="Đóng giới thiệu">

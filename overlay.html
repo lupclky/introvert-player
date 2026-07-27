@@ -442,19 +442,39 @@
         }
 
         @keyframes voteSpinnerSpin {
-            0% {
-                transform: rotate(0deg);
-            }
-
             100% {
                 transform: rotate(360deg);
+            }
+        }
+
+        @keyframes voteSpinnerDash {
+            0% {
+                stroke-dasharray: 1, 60;
+                stroke-dashoffset: 0;
+            }
+            50% {
+                stroke-dasharray: 40, 60;
+                stroke-dashoffset: -15px;
+            }
+            100% {
+                stroke-dasharray: 40, 60;
+                stroke-dashoffset: -60px;
             }
         }
 
         .obs-voteskip-spinner-svg {
             width: 100%;
             height: 100%;
-            animation: voteSpinnerSpin 1s linear infinite;
+            animation: voteSpinnerSpin 2s linear infinite;
+            transform-origin: center;
+            will-change: transform;
+        }
+
+        .obs-voteskip-spinner-svg circle {
+            stroke: currentColor;
+            stroke-width: 3.5;
+            stroke-linecap: round;
+            animation: voteSpinnerDash 1.5s ease-in-out infinite;
         }
 
         .obs-voteskip-content {
@@ -3287,10 +3307,8 @@
             <!-- Overlay thông báo vote skip thành công -->
             <div id="obs-voteskip-success-overlay" class="obs-voteskip-success-overlay">
                 <div class="obs-voteskip-spinner">
-                    <svg class="obs-voteskip-spinner-svg" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg"
-                        fill="currentColor">
-                        <path
-                            d="M224 32c0-17.7 14.3-32 32-32C397.4 0 512 114.6 512 256c0 46.6-12.5 90.4-34.3 128c-8.8 15.3-28.4 20.5-43.7 11.7s-20.5-28.4-11.7-43.7c16.8-29.1 25.8-63 25.8-96c0-106-86-192-192-192c-17.7 0-32-14.3-32-32z" />
+                    <svg class="obs-voteskip-spinner-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <circle cx="12" cy="12" r="9.5"></circle>
                     </svg>
                 </div>
                 <div class="obs-voteskip-content">
@@ -4165,7 +4183,7 @@
                         }
                     } catch (e) { }
 
-                    if (!milestones || milestones.length === 0) {
+                    if (!milestones || !Array.isArray(milestones) || milestones.length === 0) {
                         milestones = [
                             { amount: 100000, duration: 5 },
                             { amount: 200000, duration: 15 }
@@ -7563,6 +7581,8 @@
                         alertModernStatus.textContent = 'Đang phát';
                     } else if (pos === 'Tiếp theo') {
                         alertModernStatus.textContent = 'Tiếp theo';
+                    } else if (pos === 'DONATE') {
+                        alertModernStatus.textContent = 'Ủng hộ';
                     } else if (pos) {
                         const posNum = String(pos).replace('#', '');
                         alertModernStatus.textContent = `Hàng đợi số ${posNum}`;
@@ -7574,8 +7594,9 @@
                 // Message if present
                 const alertModernMessage = document.getElementById('alert-modern-message');
                 if (alertModernMessage) {
-                    if (alertData.message && alertData.message.trim() !== '') {
-                        alertModernMessage.textContent = alertData.message.trim();
+                    const cleanMsg = alertData.message ? String(alertData.message).trim() : '';
+                    if (cleanMsg !== '') {
+                        alertModernMessage.textContent = cleanMsg;
                         alertModernMessage.style.display = 'block';
                     } else {
                         alertModernMessage.textContent = '';
@@ -7588,7 +7609,15 @@
 
             const widget = document.getElementById('obs-player-widget');
             if (widget) {
+                widget.style.display = '';
+                widget.classList.add('active');
                 widget.classList.add('alert-active');
+            }
+
+            // Ẩn empty overlay tạm thời nếu có để tránh đè lên alert
+            const emptyOverlay = document.getElementById('obs-empty-overlay');
+            if (emptyOverlay) {
+                emptyOverlay.classList.remove('active');
             }
 
             // Reset hoạt ảnh bằng cách xóa và thêm lại class active

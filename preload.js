@@ -57,5 +57,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     dbAddDonation: (donation) => ipcRenderer.invoke('db-add-donation', donation),
     dbMarkRead: (id) => ipcRenderer.invoke('db-mark-read', id),
     dbMarkAllRead: () => ipcRenderer.invoke('db-mark-all-read'),
-    dbClearHistory: () => ipcRenderer.invoke('db-clear-history')
+    dbClearHistory: () => ipcRenderer.invoke('db-clear-history'),
+
+    // Walkthrough Content System
+    saveWalkthroughHTML: (cleanHTML) => ipcRenderer.invoke('save-walkthrough-html', cleanHTML),
+    saveWalkthroughImage: (fileName, base64Data) => ipcRenderer.invoke('save-walkthrough-image', fileName, base64Data)
 });
