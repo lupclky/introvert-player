@@ -735,7 +735,7 @@
             letter-spacing: -.02em;
             -webkit-text-stroke: 0;
             text-shadow: 0 1px 2px rgba(7, 53, 38, .18);
-            line-height: 1.2 !important;
+            line-height: 1.4 !important;
         }
 
         body.theme-enchanted-wild .obs-channel-name {
@@ -1343,8 +1343,8 @@
             position: relative;
             will-change: transform;
             transform: translate3d(0, 0, 0);
-            padding: 0 !important;
-            margin: 0 !important;
+            padding: 8px 0 !important;
+            margin: -8px 0 !important;
         }
 
         .obs-song-title {
@@ -1353,7 +1353,7 @@
             font-weight: 950;
             color: var(--theme-song-meta-color);
             white-space: nowrap;
-            line-height: 1.22 !important;
+            line-height: 1.4 !important;
             display: inline-block;
             vertical-align: bottom;
             transition: color 0.3s ease;
@@ -3951,6 +3951,7 @@
         let luckyRollCurrentSongId = null;
         let warningSongId = null;
         let alertTimeout = null;
+        let lastRenderedEmptyQueueMessage = null;
         let playbackMonitorInterval = null;
         let livePlayTime = 0;
         let lastLiveTickTimestamp = null;
@@ -5095,6 +5096,9 @@
         }
 
         function playSoundCloudTrack(trackUrl) {
+            if (trackUrl && trackUrl.includes('m.soundcloud.com')) {
+                trackUrl = trackUrl.replace('m.soundcloud.com', 'soundcloud.com');
+            }
             loadSoundCloudSdk(() => {
                 const iframe = document.getElementById('obs-soundcloud-player');
                 if (!iframe) return;
@@ -6946,6 +6950,12 @@
                 skipSegments = data.skipSegments || [];
 
                 const isNewSong = (lastSongId !== data.id);
+                const currentEmptyMsg = localStorage.getItem('dua_empty_queue_message') || 'Order nhạc tự động Zypage 50k';
+                let emptyMsgChanged = false;
+                if (lastRenderedEmptyQueueMessage !== currentEmptyMsg) {
+                    lastRenderedEmptyQueueMessage = currentEmptyMsg;
+                    emptyMsgChanged = true;
+                }
 
                 if (isNewSong) {
                     // Reset thanh tiến trình và thời gian hiển thị về 0 ngay lập tức khi sang bài mới
@@ -7183,6 +7193,8 @@
                     livePlayTime = 0;
                     lastLiveTickTimestamp = null;
                     isLiveStream = false;
+                } else if (data.isOwnerAdd && emptyMsgChanged) {
+                    updateTextContent(data);
                 }
 
                 // Trực tiếp kiểm tra thay đổi theme để re-apply hoặc reset marquee cho tiêu đề bài hát hiện tại
@@ -7526,32 +7538,38 @@
 
         // Hàm kích hoạt popup thông báo donate mới
         function triggerNewDonationAlert(alertData) {
-            const alertBox = document.getElementById('obs-alert-box');
+            try {
+                publishMqtt('overlay_log', { msg: "triggerNewDonationAlert called", data: alertData });
+                const alertBox = document.getElementById('obs-alert-box');
+                if (!alertBox) {
+                    publishMqtt('overlay_error', { message: "alertBox element is null" });
+                    return;
+                }
 
-            // Layout modern elements
-            const alertModernThumb = document.getElementById('alert-modern-thumb');
-            const alertModernSong = document.getElementById('alert-modern-song');
-            const alertModernSongContainer = document.getElementById('alert-modern-song-container');
-            const alertModernDonor = document.getElementById('alert-modern-donor');
-            const alertModernAmount = document.getElementById('alert-modern-amount');
-            const alertModernStatus = document.getElementById('alert-modern-status');
+                // Layout modern elements
+                const alertModernThumb = document.getElementById('alert-modern-thumb');
+                const alertModernSong = document.getElementById('alert-modern-song');
+                const alertModernSongContainer = document.getElementById('alert-modern-song-container');
+                const alertModernDonor = document.getElementById('alert-modern-donor');
+                const alertModernAmount = document.getElementById('alert-modern-amount');
+                const alertModernStatus = document.getElementById('alert-modern-status');
 
-            const nextSongDrawer = document.getElementById('obs-next-song-drawer');
-            if (nextSongDrawer) {
-                nextSongDrawer.classList.remove('show');
-            }
+                const nextSongDrawer = document.getElementById('obs-next-song-drawer');
+                if (nextSongDrawer) {
+                    nextSongDrawer.classList.remove('show');
+                }
 
-            const donorText = alertData.donorName || 'Khách';
-            const amountText = alertData.amount ? alertData.amount.toLocaleString('vi-VN') + ' ₫' : '0 ₫';
-            const songTitle = alertData.title || 'Không rõ';
-            const pos = alertData.position || '';
-            const alertDurationLimit = calculateNextSongLimitDuration(alertData);
+                const donorText = alertData.donorName || 'Khách';
+                const amountText = alertData.amount ? alertData.amount.toLocaleString('vi-VN') + ' ₫' : '0 ₫';
+                const songTitle = alertData.title || 'Không rõ';
+                const pos = alertData.position || '';
+                const alertDurationLimit = calculateNextSongLimitDuration(alertData);
 
-            const targetSrc = alertData.thumbnail || (alertData.type === 'youtube'
-                ? `https://img.youtube.com/vi/${alertData.videoId}/hqdefault.jpg`
-                : 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=200&auto=format&fit=crop');
+                const targetSrc = alertData.thumbnail || (alertData.type === 'youtube'
+                    ? `https://img.youtube.com/vi/${alertData.videoId}/hqdefault.jpg`
+                    : 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=200&auto=format&fit=crop');
 
-            const modernDurEl = document.getElementById('alert-modern-duration');
+                const modernDurEl = document.getElementById('alert-modern-duration');
                 if (modernDurEl) {
                     if (alertDurationLimit > 0) {
                         modernDurEl.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width: 12px; height: 12px; vertical-align: middle; margin-right: 4px; display: inline-block; margin-top: -2px;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>${formatTime(alertDurationLimit)}`;
@@ -7577,13 +7595,14 @@
 
                 // Status text / countdown equivalent
                 if (alertModernStatus) {
-                    if (pos === 'Đang phát') {
+                    const cleanPos = String(pos || '').trim().toUpperCase();
+                    if (cleanPos === 'ĐANG PHÁT' || cleanPos === 'DANG PHAT') {
                         alertModernStatus.textContent = 'Đang phát';
-                    } else if (pos === 'Tiếp theo') {
+                    } else if (cleanPos === 'TIẾP THEO' || cleanPos === 'TIEP THEO') {
                         alertModernStatus.textContent = 'Tiếp theo';
-                    } else if (pos === 'DONATE') {
+                    } else if (cleanPos === 'DONATE' || cleanPos === 'ỦNG HỘ' || cleanPos === 'UNG HO') {
                         alertModernStatus.textContent = 'Ủng hộ';
-                    } else if (pos) {
+                    } else if (cleanPos) {
                         const posNum = String(pos).replace('#', '');
                         alertModernStatus.textContent = `Hàng đợi số ${posNum}`;
                     } else {
@@ -7604,35 +7623,39 @@
                     }
                 }
 
-            // Sync alert action text for the new modern badge as well
-            updateAlertActionTextDisplay();
+                // Sync alert action text for the new modern badge as well
+                updateAlertActionTextDisplay();
 
-            const widget = document.getElementById('obs-player-widget');
-            if (widget) {
-                widget.style.display = '';
-                widget.classList.add('active');
-                widget.classList.add('alert-active');
-            }
-
-            // Ẩn empty overlay tạm thời nếu có để tránh đè lên alert
-            const emptyOverlay = document.getElementById('obs-empty-overlay');
-            if (emptyOverlay) {
-                emptyOverlay.classList.remove('active');
-            }
-
-            // Reset hoạt ảnh bằng cách xóa và thêm lại class active
-            alertBox.classList.remove('active');
-            void alertBox.offsetWidth; // Trigger reflow để reset transition
-            alertBox.classList.add('active');
-
-            // Ẩn thông báo sau 6 giây.
-            if (alertTimeout) clearTimeout(alertTimeout);
-            alertTimeout = setTimeout(() => {
-                alertBox.classList.remove('active');
+                const widget = document.getElementById('obs-player-widget');
                 if (widget) {
-                    widget.classList.remove('alert-active');
+                    widget.style.display = '';
+                    widget.classList.add('active');
+                    widget.classList.add('alert-active');
                 }
-            }, 6000);
+
+                // Ẩn empty overlay tạm thời nếu có để tránh đè lên alert
+                const emptyOverlay = document.getElementById('obs-empty-overlay');
+                if (emptyOverlay) {
+                    emptyOverlay.classList.remove('active');
+                }
+
+                // Reset hoạt ảnh bằng cách xóa và thêm lại class active
+                alertBox.classList.remove('active');
+                void alertBox.offsetWidth; // Trigger reflow để reset transition
+                alertBox.classList.add('active');
+
+                // Ẩn thông báo sau 6 giây.
+                if (alertTimeout) clearTimeout(alertTimeout);
+                alertTimeout = setTimeout(() => {
+                    alertBox.classList.remove('active');
+                    if (widget) {
+                        widget.classList.remove('alert-active');
+                    }
+                }, 6000);
+            } catch (err) {
+                console.error("Error in triggerNewDonationAlert:", err);
+                publishMqtt('overlay_error', { message: err.message, stack: err.stack, alertData: alertData });
+            }
         }
 
         // Kiểm tra thay đổi liên tục bằng vòng lặp hoạt ảnh (200ms một lần là đủ mượt và nhẹ)
@@ -7812,11 +7835,8 @@
                 } else if (payload.type === 'empty_queue_message') {
                     const text = payload.data?.text;
                     if (text !== undefined) {
-                        const oldText = localStorage.getItem('dua_empty_queue_message');
-                        if (oldText !== text) {
-                            localStorage.setItem('dua_empty_queue_message', text);
-                            updateOverlayUI();
-                        }
+                        localStorage.setItem('dua_empty_queue_message', text);
+                        updateOverlayUI();
                     }
                 } else if (payload.type === 'owner_add_alert') {
                     const alertData = payload.data;
@@ -7846,11 +7866,8 @@
                 } else if (payload.type === 'alert_action_text') {
                     const text = payload.data?.text;
                     if (text !== undefined) {
-                        const oldText = localStorage.getItem('dua_alert_action_text');
-                        if (oldText !== text) {
-                            localStorage.setItem('dua_alert_action_text', text);
-                            updateAlertActionTextDisplay();
-                        }
+                        localStorage.setItem('dua_alert_action_text', text);
+                        updateAlertActionTextDisplay();
                     }
                 } else if (payload.type === 'hide_empty_overlay') {
                     const val = payload.data?.value;
@@ -7875,11 +7892,8 @@
                 } else if (payload.type === 'focus_mode_message') {
                     const text = payload.data?.text;
                     if (text !== undefined) {
-                        const oldText = localStorage.getItem('dua_focus_mode_message');
-                        if (oldText !== text) {
-                            localStorage.setItem('dua_focus_mode_message', text);
-                            updateOverlayUI();
-                        }
+                        localStorage.setItem('dua_focus_mode_message', text);
+                        updateOverlayUI();
                     }
                 } else if (payload.type === 'sensitive_videos_url') {
                     const url = payload.data?.url;

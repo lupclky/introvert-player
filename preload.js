@@ -52,6 +52,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     showFavoriteContextMenu: (favorite) => ipcRenderer.send('show-favorite-context-menu', favorite),
     onFavoriteContextAction: (callback) => ipcRenderer.on('favorite-context-action', (event, action) => callback(action)),
 
+    // Native context menu for queue controls
+    showQueueContextMenu: (params) => ipcRenderer.send('show-queue-context-menu', params),
+    onQueueContextAction: (callback) => ipcRenderer.on('queue-context-action', (event, action) => callback(action)),
+
     // SQLite Database for Donations
     dbGetDonations: () => ipcRenderer.invoke('db-get-donations'),
     dbAddDonation: (donation) => ipcRenderer.invoke('db-add-donation', donation),

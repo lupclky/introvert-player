@@ -235,7 +235,7 @@ if (!gotTheLock) {
         res.writeHead(200, getCorsHeaders({
           'Content-Type': 'application/json'
         }));
-        res.end(JSON.stringify({ success: true, app: "pineapple-studio", version: "26.8.0" }));
+        res.end(JSON.stringify({ success: true, app: "pineapple-studio", version: "26.8.1" }));
         return;
       }
 
@@ -493,7 +493,10 @@ if (!gotTheLock) {
       // Xử lý API lấy độ dài thật của SoundCloud video/track (GET /api/soundcloud-duration?url=...)
       if (req.url.startsWith('/api/soundcloud-duration') && req.method === 'GET') {
         const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
-        const trackUrl = parsedUrl.searchParams.get('url');
+        let trackUrl = parsedUrl.searchParams.get('url');
+        if (trackUrl && trackUrl.includes('m.soundcloud.com')) {
+          trackUrl = trackUrl.replace('m.soundcloud.com', 'soundcloud.com');
+        }
         if (!trackUrl) {
           res.writeHead(400, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'Missing url parameter' }));
@@ -920,6 +923,11 @@ if (!gotTheLock) {
             { label: 'Thu nhỏ', role: 'zoomOut' },
             { label: 'Đặt lại 100%', role: 'resetZoom' }
           ]
+        },
+        { type: 'separator' },
+        {
+          label: 'Mở DevTools (F12)',
+          click: () => mainWindow.webContents.openDevTools()
         }
       );
 
@@ -1144,6 +1152,54 @@ ipcMain.on('show-favorite-context-menu', (event, favorite) => {
     { type: 'separator' },
     { label: 'Xóa khỏi yêu thích', click: () => sendAction('delete') }
   );
+
+  Menu.buildFromTemplate(template).popup({ window: ownerWindow });
+});
+
+ipcMain.on('show-queue-context-menu', (event, params) => {
+  const ownerWindow = BrowserWindow.fromWebContents(event.sender);
+  if (!ownerWindow || !params || typeof params !== 'object') return;
+
+  const { testMode, luckyMode, sortConfig } = params;
+
+  const sendAction = (action) => {
+    if (!event.sender.isDestroyed()) {
+      event.sender.send('queue-context-action', { action });
+    }
+  };
+
+  const template = [
+    {
+      label: 'Đồng bộ ZyPage',
+      click: () => sendAction('sync')
+    },
+    { type: 'separator' },
+    {
+      label: 'Giữ hàng đợi (Test Mode)',
+      type: 'checkbox',
+      checked: !!testMode,
+      click: () => sendAction('toggle-test-mode')
+    },
+    {
+      label: 'Chế độ Lucky (Quay ngẫu nhiên)',
+      type: 'checkbox',
+      checked: !!luckyMode,
+      click: () => sendAction('toggle-lucky-mode')
+    },
+    { type: 'separator' },
+    {
+      label: 'Ưu tiên: Thời gian',
+      type: 'radio',
+      checked: sortConfig === 'time',
+      click: () => sendAction('sort-time')
+    },
+    {
+      label: 'Ưu tiên: Số tiền',
+      type: 'radio',
+      checked: sortConfig === 'amount',
+      click: () => sendAction('sort-amount')
+    }
+  ];
 
   Menu.buildFromTemplate(template).popup({ window: ownerWindow });
 });
@@ -2730,27 +2786,41 @@ ipcMain.handle('open-log-file', async () => {
 
 const activeNotifications = [];
 
+const escapeHtml = (text) => {
+  return (text || '')
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+};
+
+
 function repositionNotifications() {
   const { screen } = require('electron');
   try {
     const displays = screen.getAllDisplays();
     const primaryDisplay = screen.getPrimaryDisplay();
     const externalDisplay = displays.find(d => d.id !== primaryDisplay.id);
-    const targetDisplay = externalDisplay || primaryDisplay;
-    const { x, y, width, height } = targetDisplay.workArea;
+    const targetDisplays = externalDisplay ? [externalDisplay] : [primaryDisplay];
+    const notifWidth = 480;
     
-    const notifWidth = 360;
-    
-    let currentOffset = 0;
-    activeNotifications.forEach((notif) => {
-      const h = notif.height || 110;
-      const posX = x + width - notifWidth - 20;
-      const posY = y + height - h - 20 - currentOffset;
+    targetDisplays.forEach((display) => {
+      const { x, y, width, height } = display.workArea;
+      let currentOffset = 0;
       
-      if (notif.window && !notif.window.isDestroyed()) {
-        notif.window.setBounds({ x: posX, y: posY, width: notifWidth, height: h });
-      }
-      currentOffset += h + 10;
+      const displayNotifs = activeNotifications.filter(n => n.displayId === display.id);
+      
+      displayNotifs.forEach((notif) => {
+        const h = notif.height || 110;
+        const posX = x + width - notifWidth - 20;
+        const posY = y + height - h - 20 - currentOffset;
+        
+        if (notif.window && !notif.window.isDestroyed()) {
+          notif.window.setBounds({ x: posX, y: posY, width: notifWidth, height: h });
+        }
+        currentOffset += h + 10;
+      });
     });
   } catch (e) {
     console.error('Lỗi khi reposition notifications:', e);
@@ -2758,16 +2828,29 @@ function repositionNotifications() {
 }
 
 function closeNotificationById(id) {
-  const index = activeNotifications.findIndex(n => n.id === id);
-  if (index !== -1) {
-    const notif = activeNotifications[index];
-    if (notif.timeout) clearTimeout(notif.timeout);
-    activeNotifications.splice(index, 1);
-    if (notif.window && !notif.window.isDestroyed()) {
+  let found = false;
+  for (let i = activeNotifications.length - 1; i >= 0; i--) {
+    const notif = activeNotifications[i];
+    if (notif.id === id) {
+      if (notif.timeout) {
+        clearTimeout(notif.timeout);
+        notif.timeout = null;
+      }
+      activeNotifications.splice(i, 1);
+      if (notif.window && !notif.window.isDestroyed()) {
+        try {
+          notif.window.destroy();
+        } catch (e) {}
+      }
       try {
-        notif.window.destroy();
+        if (notif.tempHtmlPath && fs.existsSync(notif.tempHtmlPath)) {
+          fs.unlinkSync(notif.tempHtmlPath);
+        }
       } catch (e) {}
+      found = true;
     }
+  }
+  if (found) {
     repositionNotifications();
   }
 }
@@ -2777,12 +2860,12 @@ ipcMain.on('close-notification-window', (event, id) => {
 });
 
 ipcMain.on('set-ignore-mouse-events', (event, id, ignore, options) => {
-  const notif = activeNotifications.find(n => n.id === id);
-  if (notif && notif.window && !notif.window.isDestroyed()) {
+  const senderWindow = BrowserWindow.fromWebContents(event.sender);
+  if (senderWindow && !senderWindow.isDestroyed()) {
     if (ignore) {
-      notif.window.setIgnoreMouseEvents(true, { forward: true });
+      senderWindow.setIgnoreMouseEvents(true, { forward: true });
     } else {
-      notif.window.setIgnoreMouseEvents(false);
+      senderWindow.setIgnoreMouseEvents(false);
     }
   }
 });
@@ -2794,9 +2877,7 @@ function showTaskbarNotification(title, message, isDarkMode = false, duration) {
     const displays = screen.getAllDisplays();
     const primaryDisplay = screen.getPrimaryDisplay();
     const externalDisplay = displays.find(d => d.id !== primaryDisplay.id);
-    const targetDisplay = externalDisplay || primaryDisplay;
-    
-    const { x, y, width, height } = targetDisplay.workArea;
+    const targetDisplays = externalDisplay ? [externalDisplay] : [primaryDisplay];
     
     // Tách tiêu đề nhạc và tin nhắn từ message (phân cách bằng \n)
     const rawMsgStr = (message || '').trim();
@@ -2840,44 +2921,6 @@ function showTaskbarNotification(title, message, isDarkMode = false, duration) {
 
     const notifHeight = Math.max(120, Math.min(650, calculatedHeight));
     
-    // Tính toán vị trí Y dựa trên số lượng thông báo hiện có
-    let offset = 0;
-    activeNotifications.forEach(notif => {
-      offset += (notif.height || 110) + 10;
-    });
-    const posX = x + width - notifWidth - 20;
-    const posY = y + height - notifHeight - 20 - offset;
-    
-    const win = new BrowserWindow({
-      width: notifWidth,
-      height: notifHeight,
-      x: posX,
-      y: posY,
-      frame: false,
-      transparent: true,
-      alwaysOnTop: true,
-      skipTaskbar: true,
-      focusable: true, // Cho phép focus để click dấu x
-      show: false,
-      webPreferences: {
-        nodeIntegration: true,
-        contextIsolation: false
-      }
-    });
-
-    // Cho phép click xuyên qua phần trong suốt và tương tác phần đặc
-    win.setIgnoreMouseEvents(true, { forward: true });
-
-    const escapeHtml = (text) => {
-      return (text || '')
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-    };
-
-    // Lấy thông tin màu sắc theo theme của Dashboard
     const bgGradient = isDarkMode 
       ? 'linear-gradient(135deg, #1D1A22 0%, #121016 100%)' 
       : 'linear-gradient(135deg, #FAF6EE 0%, #F5F0E4 100%)';
@@ -2885,154 +2928,8 @@ function showTaskbarNotification(title, message, isDarkMode = false, duration) {
     const titleColor = isDarkMode ? '#FB923C' : '#EA580C';
     const textSongColor = isDarkMode ? '#E2E8F0' : '#2D2727';
     const textMsgColor = isDarkMode ? '#D1D5DB' : '#4B5563';
-    const msgBg = isDarkMode ? '#17151E' : '#FAF6EE';
-    const msgBorder = isDarkMode ? 'rgba(226, 232, 240, 0.06)' : 'rgba(45, 39, 39, 0.12)';
 
-    const notifId = 'notif_' + Date.now() + '_' + Math.floor(Math.random() * 1000000);
-
-    const htmlContent = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <style>
-          @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&family=Quicksand:wght@700;800&display=swap');
-          html, body {
-            margin: 0;
-            padding: 0;
-            height: 100vh;
-            overflow: hidden;
-            background: transparent;
-            font-family: 'Nunito', sans-serif;
-          }
-          .container {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            background: ${isDarkMode ? 'rgba(18, 16, 22, 0.92)' : 'rgba(250, 246, 238, 0.95)'};
-            background-image: ${bgGradient};
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 2px solid ${borderColor};
-            border-radius: 16px;
-            padding: 12px 16px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, ${isDarkMode ? '0.5' : '0.15'});
-            color: ${textSongColor};
-            height: 100%;
-            box-sizing: border-box;
-            position: relative;
-            animation: slide-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-          }
-          @keyframes slide-in {
-            from {
-              transform: translateY(30px);
-              opacity: 0;
-            }
-            to {
-              transform: translateY(0);
-              opacity: 1;
-            }
-          }
-          .content {
-            flex: 1;
-            min-width: 0;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-          }
-          .title {
-            font-family: 'Quicksand', sans-serif;
-            font-size: 1.15rem;
-            font-weight: 800;
-            color: ${titleColor};
-            margin-bottom: 4px;
-            padding-right: 20px;
-            word-break: break-word;
-          }
-          .close-btn {
-            position: absolute;
-            top: 8px;
-            right: 12px;
-            font-size: 1.25rem;
-            font-weight: 800;
-            cursor: pointer;
-            color: ${isDarkMode ? 'rgba(255, 255, 255, 0.4)' : 'rgba(0, 0, 0, 0.3)'};
-            transition: color 0.15s ease;
-            line-height: 1;
-            z-index: 10;
-            -webkit-app-region: no-drag;
-          }
-          .close-btn:hover {
-            color: ${isDarkMode ? '#FB923C' : '#EA580C'};
-          }
-          .song-title {
-            font-family: 'Quicksand', sans-serif;
-            font-size: 1.0rem;
-            font-weight: 700;
-            color: ${textSongColor};
-            line-height: 1.35;
-            word-break: break-word;
-            white-space: normal;
-          }
-          .message {
-            font-size: 1.08rem;
-            font-weight: 600;
-            color: ${textMsgColor};
-            background: transparent;
-            border: none;
-            padding: 4px 0;
-            margin-top: 8px;
-            display: block;
-            word-break: break-word;
-            white-space: pre-wrap;
-            overflow: visible;
-          }
-          .message::-webkit-scrollbar {
-            width: 4px;
-          }
-          .message::-webkit-scrollbar-track {
-            background: transparent;
-          }
-          .message::-webkit-scrollbar-thumb {
-            background: ${isDarkMode ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.15)'};
-            border-radius: 4px;
-          }
-          .message::-webkit-scrollbar-thumb:hover {
-            background: ${isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)'};
-          }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="close-btn" onclick="closeNotification()">&times;</div>
-          <div class="content">
-            <div class="title">${escapeHtml(title)}</div>
-            ${songTitle ? `<div class="song-title"><svg style="width: 16px; height: 16px; fill: #FF0000; vertical-align: -3px; margin-right: 5px; flex-shrink: 0; display: inline-block;" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>${escapeHtml(songTitle)}</div>` : ''}
-            ${cleanMsg ? `<div class="message">${escapeHtml(cleanMsg)}</div>` : ''}
-          </div>
-        </div>
-        <script>
-          const { ipcRenderer } = require('electron');
-          function closeNotification() {
-            ipcRenderer.send('close-notification-window', '${notifId}');
-          }
-          
-          const container = document.querySelector('.container');
-          container.addEventListener('mouseenter', () => {
-            ipcRenderer.send('set-ignore-mouse-events', '${notifId}', false);
-          });
-          container.addEventListener('mouseleave', () => {
-            ipcRenderer.send('set-ignore-mouse-events', '${notifId}', true, { forward: true });
-          });
-        </script>
-      </body>
-      </html>
-    `;
-
-    const tempHtmlPath = path.join(app.getPath('userData'), `${notifId}.html`);
-    fs.writeFileSync(tempHtmlPath, htmlContent, 'utf8');
-
-    win.loadFile(tempHtmlPath);
+    const notifGroupId = 'notif_' + Date.now() + '_' + Math.floor(Math.random() * 1000000);
 
     let timeout = null;
     const isHang = (duration === -1 || duration === 0);
@@ -3046,39 +2943,221 @@ function showTaskbarNotification(title, message, isDarkMode = false, duration) {
         timeoutVal = Math.min(20000, Math.max(5000, 5000 + (charCount / 15) * 1000));
       }
       timeout = setTimeout(() => {
-        closeNotificationById(notifId);
+        closeNotificationById(notifGroupId);
       }, timeoutVal);
     }
 
-    activeNotifications.push({
-      id: notifId,
-      window: win,
-      timeout: timeout,
-      height: notifHeight
-    });
-
-    win.once('ready-to-show', () => {
-      if (win && !win.isDestroyed()) {
-        win.showInactive();
-      }
-    });
-
-    win.on('closed', () => {
-      try {
-        if (fs.existsSync(tempHtmlPath)) {
-          fs.unlinkSync(tempHtmlPath);
+    // Tạo thông báo trên mỗi màn hình được chọn
+    targetDisplays.forEach((display) => {
+      const { x, y, width, height } = display.workArea;
+      
+      // Tính toán vị trí Y dựa trên số lượng thông báo hiện có trên màn hình này
+      let offset = 0;
+      activeNotifications.forEach(notif => {
+        if (notif.displayId === display.id) {
+          offset += (notif.height || 110) + 10;
         }
-      } catch (e) {
-        console.error('Lỗi khi xóa file tạm notification:', e);
-      }
+      });
+      
+      const posX = x + width - notifWidth - 20;
+      const posY = y + height - notifHeight - 20 - offset;
 
-      const idx = activeNotifications.findIndex(n => n.id === notifId);
-      if (idx !== -1) {
-        const notif = activeNotifications[idx];
-        if (notif.timeout) clearTimeout(notif.timeout);
-        activeNotifications.splice(idx, 1);
-        repositionNotifications();
-      }
+      const win = new BrowserWindow({
+        width: notifWidth,
+        height: notifHeight,
+        x: posX,
+        y: posY,
+        frame: false,
+        transparent: true,
+        alwaysOnTop: true,
+        skipTaskbar: true,
+        focusable: true,
+        show: false,
+        webPreferences: {
+          nodeIntegration: true,
+          contextIsolation: false
+        }
+      });
+
+      // Để hiển thị trên game và các màn hình khác tốt hơn
+      win.setAlwaysOnTop(true, 'screen-saver');
+      win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+      win.setIgnoreMouseEvents(true, { forward: true });
+
+      const tempHtmlPath = path.join(app.getPath('userData'), `${notifGroupId}_${display.id}.html`);
+
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&family=Quicksand:wght@700;800&display=swap');
+            html, body {
+              margin: 0;
+              padding: 0;
+              height: 100vh;
+              overflow: hidden;
+              background: transparent;
+              font-family: 'Nunito', sans-serif;
+            }
+            .container {
+              display: flex;
+              align-items: center;
+              gap: 14px;
+              background: ${isDarkMode ? 'rgba(18, 16, 22, 0.92)' : 'rgba(250, 246, 238, 0.95)'};
+              background-image: ${bgGradient};
+              backdrop-filter: blur(16px);
+              -webkit-backdrop-filter: blur(16px);
+              border: 2px solid ${borderColor};
+              border-radius: 16px;
+              padding: 12px 16px;
+              box-shadow: 0 10px 30px rgba(0, 0, 0, ${isDarkMode ? '0.5' : '0.15'});
+              color: ${textSongColor};
+              height: 100%;
+              box-sizing: border-box;
+              position: relative;
+              animation: slide-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            }
+            @keyframes slide-in {
+              from {
+                transform: translateY(30px);
+                opacity: 0;
+              }
+              to {
+                transform: translateY(0);
+                opacity: 1;
+              }
+            }
+            .content {
+              flex: 1;
+              min-width: 0;
+              display: flex;
+              flex-direction: column;
+              justify-content: center;
+            }
+            .title {
+              font-family: 'Quicksand', sans-serif;
+              font-size: 1.15rem;
+              font-weight: 800;
+              color: ${titleColor};
+              margin-bottom: 4px;
+              padding-right: 20px;
+              word-break: break-word;
+            }
+            .close-btn {
+              position: absolute;
+              top: 8px;
+              right: 12px;
+              font-size: 1.25rem;
+              font-weight: 800;
+              cursor: pointer;
+              color: ${isDarkMode ? 'rgba(255, 255, 255, 0.4)' : 'rgba(0, 0, 0, 0.3)'};
+              transition: color 0.15s ease;
+              line-height: 1;
+              z-index: 10;
+              -webkit-app-region: no-drag;
+            }
+            .close-btn:hover {
+              color: ${isDarkMode ? '#FB923C' : '#EA580C'};
+            }
+            .song-title {
+              font-family: 'Quicksand', sans-serif;
+              font-size: 1.0rem;
+              font-weight: 700;
+              color: ${textSongColor};
+              line-height: 1.35;
+              word-break: break-word;
+              white-space: normal;
+            }
+            .message {
+              font-size: 1.08rem;
+              font-weight: 600;
+              color: ${textMsgColor};
+              background: transparent;
+              border: none;
+              padding: 4px 0;
+              margin-top: 8px;
+              display: block;
+              word-break: break-word;
+              white-space: pre-wrap;
+              overflow: visible;
+            }
+            .message::-webkit-scrollbar {
+              width: 4px;
+            }
+            .message::-webkit-scrollbar-track {
+              background: transparent;
+            }
+            .message::-webkit-scrollbar-thumb {
+              background: ${isDarkMode ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.15)'};
+              border-radius: 4px;
+            }
+            .message::-webkit-scrollbar-thumb:hover {
+              background: ${isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)'};
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="close-btn" onclick="closeNotification()">&times;</div>
+            <div class="content">
+              <div class="title">${escapeHtml(title)}</div>
+              ${songTitle ? `<div class="song-title"><svg style="width: 16px; height: 16px; fill: #FF0000; vertical-align: -3px; margin-right: 5px; flex-shrink: 0; display: inline-block;" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>${escapeHtml(songTitle)}</div>` : ''}
+              ${cleanMsg ? `<div class="message">${escapeHtml(cleanMsg)}</div>` : ''}
+            </div>
+          </div>
+          <script>
+            const { ipcRenderer } = require('electron');
+            function closeNotification() {
+              ipcRenderer.send('close-notification-window', '${notifGroupId}');
+            }
+            
+            const container = document.querySelector('.container');
+            container.addEventListener('mouseenter', () => {
+              ipcRenderer.send('set-ignore-mouse-events', '${notifGroupId}', false);
+            });
+            container.addEventListener('mouseleave', () => {
+              ipcRenderer.send('set-ignore-mouse-events', '${notifGroupId}', true, { forward: true });
+            });
+          </script>
+        </body>
+        </html>
+      `;
+
+      fs.writeFileSync(tempHtmlPath, htmlContent, 'utf8');
+      win.loadFile(tempHtmlPath);
+
+      activeNotifications.push({
+        id: notifGroupId,
+        displayId: display.id,
+        window: win,
+        timeout: timeout,
+        height: notifHeight,
+        tempHtmlPath: tempHtmlPath
+      });
+
+      win.once('ready-to-show', () => {
+        if (win && !win.isDestroyed()) {
+          win.showInactive();
+        }
+      });
+
+      win.on('closed', () => {
+        try {
+          if (fs.existsSync(tempHtmlPath)) {
+            fs.unlinkSync(tempHtmlPath);
+          }
+        } catch (e) {
+          console.error('Lỗi khi xóa file tạm notification:', e);
+        }
+
+        const idx = activeNotifications.findIndex(n => n.window === win);
+        if (idx !== -1) {
+          activeNotifications.splice(idx, 1);
+          repositionNotifications();
+        }
+      });
     });
 
   } catch (err) {

@@ -56,6 +56,36 @@ function normalizeTimestamp(t) {
     return (num < 10000000000) ? num * 1000 : num;
 }
 
+// Chuẩn hóa đường dẫn SoundCloud (chuyển m.soundcloud.com sang soundcloud.com và loại bỏ tham số)
+function normalizeSoundcloudUrl(url) {
+    if (!url) return '';
+    let u = String(url).trim();
+    if (u.includes('m.soundcloud.com')) {
+        u = u.replace('m.soundcloud.com', 'soundcloud.com');
+    }
+    return u.split(/[\s?#]/)[0];
+}
+
+// Phân giải link SoundCloud rút gọn nếu là link on.soundcloud.com và sau đó chuẩn hóa
+async function resolveSoundcloudUrlIfNeeded(url) {
+    if (!url) return '';
+    let u = String(url).trim();
+    if (u.includes('on.soundcloud.com')) {
+        try {
+            const resolveRes = await fetch(getApiUrl(`/api/resolve?url=${encodeURIComponent(u)}`));
+            if (resolveRes.ok) {
+                const resolveData = await resolveRes.json();
+                if (resolveData.resolvedUrl) {
+                    u = resolveData.resolvedUrl;
+                }
+            }
+        } catch (e) {
+            console.error("Lỗi phân giải link SoundCloud rút gọn:", e);
+        }
+    }
+    return normalizeSoundcloudUrl(u);
+}
+
 // Mở liên kết ngoài bằng trình duyệt mặc định của hệ thống Windows
 function openExternalLink(event, url) {
     if (event) {
@@ -2407,6 +2437,32 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    // Thiết lập sự kiện Context Menu cho Hàng đợi Nhạc
+    const cardQueue = document.getElementById('card-queue');
+    if (cardQueue) {
+        cardQueue.addEventListener('contextmenu', (e) => {
+            // Không mở context menu hàng đợi khi click chuột phải vào các ô nhập liệu
+            if (e.target.closest('input, textarea, select')) return;
+            showQueueToolsMenu(e);
+        });
+    }
+
+    if (window.electronAPI && typeof window.electronAPI.onQueueContextAction === 'function') {
+        window.electronAPI.onQueueContextAction(({ action } = {}) => {
+            if (action === 'sync') {
+                triggerManualZyPageSync();
+            } else if (action === 'toggle-test-mode') {
+                toggleTestMode();
+            } else if (action === 'toggle-lucky-mode') {
+                toggleLuckyMode(!state.luckyMode);
+            } else if (action === 'sort-time') {
+                onSortConfigChange('time');
+            } else if (action === 'sort-amount') {
+                onSortConfigChange('amount');
+            }
+        });
+    }
+
     // Thiết lập sự kiện tìm kiếm YouTube trên ô thêm nhanh
     const urlInput = document.getElementById('donor-url');
     const searchResultsContainer = document.getElementById('quick-add-search-results');
@@ -3181,28 +3237,14 @@ async function handleQuickAddSubmit(event) {
     let spotifyId = null;
     let soundcloudUrl = null;
 
-    // Phân giải link SoundCloud rút gọn nếu phát hiện on.soundcloud.com
-    if (url.includes('on.soundcloud.com')) {
-        logSystem(`Đang phân giải link SoundCloud di động...`, 'queue');
-        try {
-            const resolveRes = await fetch(getApiUrl(`/api/resolve?url=${encodeURIComponent(url)}`));
-            const resolveData = await resolveRes.json();
-            if (resolveData.resolvedUrl) {
-                url = resolveData.resolvedUrl;
-                logSystem(`Đã phân giải: ${url}`, 'queue');
-            }
-        } catch (e) {
-            console.error("Lỗi phân giải link SoundCloud rút gọn:", e);
-        }
-    }
-
-    // Xác định nguồn bài hát
-    if (url.includes('spotify.com') || url.startsWith('spotify:')) {
-        alert("Ứng dụng đã ngừng hỗ trợ phát nhạc từ Spotify. Vui lòng sử dụng link YouTube hoặc SoundCloud!");
-        return;
-    } else if (url.includes('soundcloud.com')) {
+    // Phân giải và chuẩn hóa link SoundCloud nếu cần
+    if (url.includes('soundcloud.com')) {
+        url = await resolveSoundcloudUrlIfNeeded(url);
         soundcloudUrl = url;
         type = 'soundcloud';
+    } else if (url.includes('spotify.com') || url.startsWith('spotify:')) {
+        alert("Ứng dụng đã ngừng hỗ trợ phát nhạc từ Spotify. Vui lòng sử dụng link YouTube hoặc SoundCloud!");
+        return;
     } else {
         videoId = parseYoutubeId(url);
         if (!videoId) {
@@ -3378,25 +3420,8 @@ async function broadcastNewDonationAlert(song) {
                 3000
             );
         }
-    } else {
-        // Đây là nhạc order từ donate (ZyPage hoặc Test)
-        if (window.electronAPI && typeof window.electronAPI.showTaskbarNotification === 'function') {
-            const title = `${song.donorName || 'Khách'} - ${(song.amount || 0).toLocaleString('vi-VN')} ₫`;
-            
-            // Lấy lời nhắn của người donate (nếu tin nhắn có chứa URL, giữ lại phần nội dung lời nhắn)
-            let cleanMsg = '';
-            if (song.message) {
-                const urlRegex = /https?:\/\/[^\s<>"']+/gi;
-                const stripped = song.message.replace(urlRegex, '').trim();
-                cleanMsg = stripped || song.message.trim();
-            }
-            
-            const songTitleText = song.title ? `[MUSIC] ${song.title}` : '[MUSIC] Bài hát không rõ tên';
-            const msgText = cleanMsg ? `${songTitleText}\n${cleanMsg}` : songTitleText;
-            
-            sendDeduplicatedTaskbarNotif(title, msgText);
-        }
     }
+    // Thông báo taskbar cho nhạc order từ donate đã được xử lý trong handleNewDonation để tránh lặp
     
     // Tìm vị trí của bài hát trong hàng đợi sau khi sắp xếp để gửi đi chính xác
     let tempQueue = [...state.queue];
@@ -3474,6 +3499,7 @@ async function broadcastNewDonationAlert(song) {
     showDashboardNewDonationAlert(alertPayload);
     
     // MQTT broadcast
+    logSystem(`📡 <strong>[Alert → Overlay]</strong> Đang gửi new_donation_alert: <strong>${alertPayload.donorName}</strong> | ${alertPayload.title} | pos=${alertPayload.position}`, 'system');
     publishMqtt('new_donation_alert', alertPayload);
 }
 
@@ -4319,6 +4345,21 @@ function skipSong(isManual = true) {
         attemptGlobalAction('skip', skipAction);
     } else {
         skipAction();
+    }
+}
+
+// --- HIỂN THỊ MENU CHUỘT PHẢI / CÔNG CỤ HÀNG ĐỢI ---
+function showQueueToolsMenu(event) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+    if (window.electronAPI && typeof window.electronAPI.showQueueContextMenu === 'function') {
+        window.electronAPI.showQueueContextMenu({
+            testMode: !!state.testMode,
+            luckyMode: !!state.luckyMode,
+            sortConfig: state.sortConfig || 'time'
+        });
     }
 }
 
@@ -5898,7 +5939,7 @@ async function handleNewDonation(donation, shouldAlert = true) {
         // Xác định loại hình donate để ghi nhãn thông báo phù hợp
         const minAmount = state.zypageMinMessageAmount !== undefined ? state.zypageMinMessageAmount : 49000;
         const hasLink = hasSongLink(donation.message);
-        const isSong = (donation.isMusicOrder || (hasLink && donation.amount >= minAmount));
+        const isSong = (donation.isMusicOrder || (hasLink && (donation.amount === 0 || donation.amount >= minAmount)));
         
         if (isSong) {
             let songTitleText = donation.songTitle || donation.title || '';
@@ -5952,37 +5993,17 @@ async function handleNewDonation(donation, shouldAlert = true) {
     if (shouldAlert && (isVeryRecent || isTestDonate)) {
         const minAmount = state.zypageMinMessageAmount !== undefined ? state.zypageMinMessageAmount : 49000;
         const hasLink = hasSongLink(donation.message);
-        const willBeSong = (donation.isMusicOrder || (hasLink && donation.amount >= minAmount));
+        const willBeSong = (donation.isMusicOrder || (hasLink && (donation.amount === 0 || donation.amount >= minAmount)));
         
         if (!willBeSong) {
-            const textAlert = {
+            showDashboardNewDonationAlert({
                 id: donation.id,
                 donorName: String(donation.name || 'Khách').trim(),
                 amount: Number(donation.amount) || 0,
                 title: String(donation.message || '(Không có lời nhắn)').trim(),
                 position: 'DONATE',
                 timestamp: donation.timestamp
-            };
-            showDashboardNewDonationAlert(textAlert);
-
-            // Đồng thời gửi MQTT để overlay OBS hiển thị thông báo
-            const alertPayload = {
-                id: textAlert.id,
-                donorName: textAlert.donorName,
-                amount: textAlert.amount,
-                title: 'Ủng hộ kênh',
-                message: textAlert.title,
-                position: 'DONATE',
-                thumbnail: '',
-                type: 'donate',
-                videoId: '',
-                duration: 0,
-                start: 0,
-                end: null,
-                timestamp: Date.now() + Math.random()
-            };
-            localStorage.setItem('dua_new_donation_alert', JSON.stringify(alertPayload));
-            publishMqtt('new_donation_alert', alertPayload);
+            });
         }
     }
     renderDonationHistory();
@@ -6706,7 +6727,7 @@ function startFirebaseListener(shopId, token) {
         state.firebaseRef = dbRef.child("Page/Donate/" + token);
 
         let isInitialLoad = true;
-        state.firebaseRef.on('value', (snap) => {
+        state.firebaseRef.on('value', async (snap) => {
             const val = snap.val();
             if (!val) return;
             
@@ -6722,6 +6743,15 @@ function startFirebaseListener(shopId, token) {
                 
                 // Trích xuất trực tiếp từ Firebase Event Data nếu là sự kiện 'add'
                 if (val.type === 'add' && val.data) {
+                    const debugKeys = [];
+                    if (val.data.id) debugKeys.push(`id: ${val.data.id}`);
+                    if (val.data.key) debugKeys.push(`key: ${val.data.key}`);
+                    if (val.data.music && val.data.music.key) debugKeys.push(`music.key: ${val.data.music.key}`);
+                    if (val.data.order) {
+                        if (val.data.order.id) debugKeys.push(`order.id: ${val.data.order.id}`);
+                        if (val.data.order.key) debugKeys.push(`order.key: ${val.data.order.key}`);
+                    }
+                    logSystem(`🔍 [Live Debug] Khoá giao dịch nhận được từ Firebase: ${debugKeys.join(' | ') || 'Trống'}`, 'system');
                     let isExtended = false;
                     let isVoteSkipped = false;
                     try {
@@ -6744,7 +6774,7 @@ function startFirebaseListener(shopId, token) {
                             name: val.data.name || 'Khách',
                             amount: donateAmount,
                             message: message,
-                            timestamp: normalizeTimestamp(val.data.time || val.data.timestamp || Date.now()),
+                            timestamp: Date.now(),
                             isMusicOrder: isOfficial,
                             songLink: firebaseSongLink
                         };
@@ -6766,14 +6796,108 @@ function startFirebaseListener(shopId, token) {
 
                     try {
                         const isOfficial = !!(val.data.music || val.data.type === 'music');
-                        if (isOfficial) {
-                            logSystem(`[Realtime Firebase] Lượt donate từ <strong>${val.data.name || 'Khách'}</strong> là order nhạc chính thức. Bỏ qua bóc tách tin nhắn.`, 'system');
-                        }
                         const amountStr = String(val.data.amount || '0').replace(/[^0-9]/g, '');
                         const donateAmount = Number(amountStr) || 0;
                         const minAmount = state.zypageMinMessageAmount !== undefined ? state.zypageMinMessageAmount : 49000;
+
+                        if (isOfficial) {
+                            const music = val.data.music;
+                            let musicIdStr = null;
+                            let musicTitle = null;
+                            let musicThumbnail = null;
+                            let musicAuthor = null;
+                            let musicStart = 0;
+                            let musicKey = null;
+
+                            // music có thể là string (URL), object (có id/url/title), hoặc undefined
+                            if (typeof music === 'string') {
+                                musicIdStr = music.trim();
+                            } else if (typeof music === 'object' && music) {
+                                musicIdStr = String(music.id || music.url || '').trim();
+                                musicTitle = music.title || null;
+                                musicThumbnail = music.thumbnail || null;
+                                musicAuthor = music.author || music.channelTitle || music.artist || null;
+                                musicStart = Number(music.start) || 0;
+                                musicKey = music.key || null;
+                            }
+
+                            if (musicIdStr) {
+                                let type = 'youtube';
+                                let videoId = null;
+                                let soundcloudUrl = null;
+
+                                if (musicIdStr.includes('soundcloud.com')) {
+                                    soundcloudUrl = await resolveSoundcloudUrlIfNeeded(musicIdStr);
+                                    type = 'soundcloud';
+                                } else if (!musicIdStr.includes('spotify.com') && !musicIdStr.startsWith('spotify:')) {
+                                    videoId = parseYoutubeId(musicIdStr);
+                                    if (videoId) type = 'youtube';
+                                }
+
+                                if (videoId || soundcloudUrl) {
+                                    const donationKey = val.data.id || val.data.key || (val.data.order && (val.data.order.id || val.data.order.key));
+                                    const eventVal = val.data.time || val.data.timestamp || (val.data.order && (val.data.order.time || val.data.order.timestamp)) || val.value || Date.now();
+                                    const songTimestamp = Date.now();
+                                    const uniqueKey = musicKey || donationKey || eventVal;
+
+                                    const isEnded = state.endedKeys.some(e => e.key === String(uniqueKey) || (donationKey && e.key === String(donationKey)));
+                                    const isExist = state.queue.some(q => 
+                                        q.id === uniqueKey || 
+                                        q.musicKey === uniqueKey ||
+                                        (donationKey && (q.id === donationKey || q.musicKey === donationKey)) ||
+                                        (q.type === type && (
+                                            (type === 'youtube' && q.videoId === videoId) ||
+                                            (type === 'soundcloud' && q.soundcloudUrl === soundcloudUrl)
+                                        ) && (
+                                            q.timestamp === songTimestamp || 
+                                            (Math.abs(q.timestamp - songTimestamp) < 120000 && q.donorName === (val.data.name || 'Khách ZyPage') && q.amount === donateAmount)
+                                        ))
+                                    );
+
+                                    if (!isEnded && !isExist) {
+                                        let title = musicTitle || `Nhạc ${type.toUpperCase()}`;
+                                        let author = musicAuthor || '';
+                                        
+                                        const localItem = {
+                                            id: uniqueKey,
+                                            musicKey: uniqueKey,
+                                            isZyPage: true,
+                                            type: type,
+                                            videoId: videoId,
+                                            spotifyId: null,
+                                            soundcloudUrl: soundcloudUrl,
+                                            title: title,
+                                            thumbnail: musicThumbnail || (type === 'youtube' 
+                                                ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` 
+                                                : "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=200&auto=format&fit=crop"),
+                                            author: author,
+                                            donorName: val.data.name || 'Khách ZyPage',
+                                            amount: donateAmount,
+                                            message: String(val.data.text || val.data.message || '').trim(),
+                                            start: musicStart,
+                                            end: null,
+                                            timestamp: songTimestamp,
+                                            localAddedAt: Date.now()
+                                        };
+
+                                        localItem._alertSent = true;
+                                        insertSongSmartly(localItem);
+                                        broadcastNewDonationAlert(localItem);
+                                        logSystem(`[Realtime Firebase] Nhận order nhạc chính thức từ <strong>${localItem.donorName}</strong>: ${localItem.title}`, 'queue');
+
+                                        sortAndRefreshQueue();
+                                        if (!state.currentSong && !state.focusMode) {
+                                            playNextInQueue();
+                                        }
+                                    }
+                                }
+                            }
+                            // Nếu isOfficial nhưng không trích xuất được link nhạc từ music field,
+                            // vẫn tiếp tục kiểm tra tin nhắn message bên dưới
+                        }
                         
-                        if (!isOfficial && donateAmount >= minAmount) {
+                        // Xử lý cả donate thường VÀ trường hợp isOfficial nhưng music field không hợp lệ
+                        if (donateAmount === 0 || donateAmount >= minAmount) {
                             const message = String(val.data.text || val.data.message || '').trim();
                             if (message) {
                                 // Tìm link nhạc trong message
@@ -6785,7 +6909,7 @@ function startFirebaseListener(shopId, token) {
 
                                 for (const url of urlMatches) {
                                     if (url.includes('soundcloud.com')) {
-                                        soundcloudUrl = url.split(/[\s?#]/)[0];
+                                        soundcloudUrl = await resolveSoundcloudUrlIfNeeded(url);
                                         type = 'soundcloud';
                                         break;
                                     }
@@ -6798,18 +6922,23 @@ function startFirebaseListener(shopId, token) {
                                 }
 
                                 if (type) {
-                                    const eventVal = val.value || val.data.time || Date.now();
-                                    const songTimestamp = normalizeTimestamp(eventVal);
-                                    const musicKey = `msg_live_${eventVal}_${songTimestamp}`;
+                                    const donationKey = val.data.id || val.data.key || (val.data.order && (val.data.order.id || val.data.order.key));
+                                    const eventVal = val.data.time || val.data.timestamp || (val.data.order && (val.data.order.time || val.data.order.timestamp)) || val.value || Date.now();
+                                    const songTimestamp = Date.now();
+                                    const musicKey = donationKey ? `msg_${donationKey}` : `msg_live_${eventVal}_${songTimestamp}`;
                                     
                                     // Bỏ qua nếu đã phát trước đó hoặc đã tồn tại trong queue
-                                    const isEnded = state.endedKeys.some(e => e.key === musicKey);
+                                    const isEnded = state.endedKeys.some(e => e.key === musicKey || (donationKey && e.key === `msg_${donationKey}`));
                                     const isExist = state.queue.some(q => 
                                         q.id === musicKey || 
+                                        (donationKey && (q.id === `msg_${donationKey}` || q.musicKey === `msg_${donationKey}`)) ||
                                         (q.type === type && (
                                             (type === 'youtube' && q.videoId === videoId) ||
                                             (type === 'soundcloud' && q.soundcloudUrl === soundcloudUrl)
-                                        ) && q.timestamp === songTimestamp)
+                                        ) && (
+                                            q.timestamp === songTimestamp ||
+                                            (Math.abs(q.timestamp - songTimestamp) < 120000 && q.donorName === (val.data.name || 'Khách ZyPage') && q.amount === donateAmount)
+                                        ))
                                     );
 
                                     if (!isEnded && !isExist) {
@@ -6998,13 +7127,19 @@ async function syncQueueFromZyPageApi(shopId, isManual = false) {
         const musicList = donateObj?.music?.list || {};
         const plainDonateList = donateObj?.list || {};
 
+        const apiKeys = Object.keys(musicList);
+        const plainKeys = Object.keys(plainDonateList);
+        logSystem(`🔍 [API Debug] Danh sách ID hàng đợi trên server ZyPage: musicList=[${apiKeys.join(', ') || 'Trống'}] | plainList=[${plainKeys.join(', ') || 'Trống'}]`, 'system');
+
+        // Lặp qua các bài hát để đồng bộ hóa hàng đợi
+
         let addedCount = 0;
         let maxTimestamp = state.lastSyncedDonateTime;
 
         for (const [key, item] of Object.entries(musicList)) {
             if (!item.music || !item.music.id) continue;
 
-            const songTimestamp = normalizeTimestamp(item.order?.time || item.music?.key || key);
+            const realTimestamp = normalizeTimestamp(item.order?.time || item.music?.key || key);
 
             // Ghi nhận donate nhạc vào Lịch sử & Thông báo
             let isExtended = false;
@@ -7016,7 +7151,7 @@ async function syncQueueFromZyPageApi(shopId, isManual = false) {
                         name: item.order?.name || item.name || 'Khách ZyPage',
                         amount: Number(amountStr) || 0,
                         message: item.order?.message || item.order?.text || item.order?.note || item.order?.content || item.order?.donate_message || item.order?.donateMessage || item.order?.comment || item.message || item.text || item.note || item.content || item.donate_message || item.donateMessage || item.comment || '',
-                        timestamp: songTimestamp,
+                        timestamp: Date.now(),
                         isMusicOrder: true,
                         songLink: item.music.id
                     };
@@ -7038,20 +7173,22 @@ async function syncQueueFromZyPageApi(shopId, isManual = false) {
 
             if (!isManual) {
                 // Chỉ lấy bài hát mới được donate trong khoảng thời gian ngắn, bỏ qua các bài đã đồng bộ trước đó
-                if (songTimestamp <= state.lastSyncedDonateTime) {
+                if (realTimestamp <= state.lastSyncedDonateTime) {
                     continue;
                 }
 
                 // Bỏ qua các bài hát có thời gian donate quá 7 ngày trước để tránh nhận nhầm lệnh cũ
                 const now = Date.now();
-                if (now - songTimestamp > 7 * 24 * 60 * 60 * 1000) {
+                if (now - realTimestamp > 7 * 24 * 60 * 60 * 1000) {
                     continue;
                 }
             }
 
-            if (songTimestamp > maxTimestamp) {
-                maxTimestamp = songTimestamp;
+            if (realTimestamp > maxTimestamp) {
+                maxTimestamp = realTimestamp;
             }
+
+            const songTimestamp = Date.now();
 
             const musicIdStr = String(item.music.id).trim();
             let type = 'youtube';
@@ -7063,7 +7200,7 @@ async function syncQueueFromZyPageApi(shopId, isManual = false) {
                 logSystem(`Bỏ qua bài hát từ Spotify (đã dừng hỗ trợ): <strong>${item.music.title || musicIdStr}</strong>`, 'system');
                 continue;
             } else if (musicIdStr.includes('soundcloud.com')) {
-                soundcloudUrl = musicIdStr;
+                soundcloudUrl = await resolveSoundcloudUrlIfNeeded(musicIdStr);
                 type = 'soundcloud';
             } else {
                 videoId = parseYoutubeId(musicIdStr);
@@ -7079,13 +7216,23 @@ async function syncQueueFromZyPageApi(shopId, isManual = false) {
             }
 
             const uniqueKey = musicKey || item.order?.time || (videoId || spotifyId || soundcloudUrl);
-            const isExist = state.queue.some(q => q.id === uniqueKey || 
+            const donorName = item.order?.name || item.name || 'Khách ZyPage';
+            const amount = Number(String(item.order?.amount || item.amount || '0').replace(/[^0-9]/g, '')) || 0;
+
+            const existingQueueItem = state.queue.find(q => 
+                q.id === uniqueKey || 
+                q.musicKey === uniqueKey ||
+                (musicKey && (q.id === musicKey || q.musicKey === musicKey)) ||
                 (q.type === type && (
                     (type === 'youtube' && q.videoId === videoId) ||
                     (type === 'spotify' && q.spotifyId === spotifyId) ||
                     (type === 'soundcloud' && q.soundcloudUrl === soundcloudUrl)
-                ) && q.timestamp === songTimestamp)
+                ) && (
+                    q.timestamp === songTimestamp ||
+                    (Math.abs(q.timestamp - songTimestamp) < 120000 && q.donorName === donorName && q.amount === amount)
+                ))
             );
+            const isExist = !!existingQueueItem;
 
             if (!isExist) {
                 let title = item.music.title || `Nhạc ${type.toUpperCase()}`;
@@ -7134,6 +7281,11 @@ async function syncQueueFromZyPageApi(shopId, isManual = false) {
                 insertSongSmartly(localItem);
                 broadcastNewDonationAlert(localItem);
                 addedCount++;
+            } else if (existingQueueItem && !existingQueueItem._alertSent) {
+                // Bài hát đã được thêm (ví dụ từ Firebase realtime handler) nhưng chưa được phát alert overlay
+                // Đảm bảo alert OBS luôn được gửi
+                existingQueueItem._alertSent = true;
+                broadcastNewDonationAlert(existingQueueItem);
             }
         }
 
@@ -7144,7 +7296,7 @@ async function syncQueueFromZyPageApi(shopId, isManual = false) {
 
             const rawMsg = item.text || item.message || '';
             const message = String(rawMsg).trim();
-            const songTimestamp = normalizeTimestamp(item.time);
+            const realTimestamp = normalizeTimestamp(item.time);
 
             // Ghi nhận tất cả donate thường vào Lịch sử & Thông báo
             let isExtended = false;
@@ -7155,7 +7307,7 @@ async function syncQueueFromZyPageApi(shopId, isManual = false) {
                     name: item.name || 'Khách ZyPage',
                     amount: Number(String(item.amount || '0').replace(/[^0-9]/g, '')) || 0,
                     message: message,
-                    timestamp: songTimestamp
+                    timestamp: Date.now()
                 };
                 if (checkAndApplyVoteSkip(donation)) {
                     isVoteSkipped = true;
@@ -7177,7 +7329,7 @@ async function syncQueueFromZyPageApi(shopId, isManual = false) {
             // Chỉ xử lý donate từ số tiền tối thiểu cấu hình trở lên mới được parse link nhạc
             const minAmount = state.zypageMinMessageAmount !== undefined ? state.zypageMinMessageAmount : 49000;
             const donateAmount = Number(String(item.amount || '0').replace(/[^0-9]/g, '')) || 0;
-            if (donateAmount < minAmount) return;
+            if (donateAmount < minAmount && donateAmount !== 0) return;
 
             // Nếu đây là lượt donate order nhạc chính thức (có trường music hoặc type là music),
             // ta bỏ qua việc trích xuất link từ tin nhắn để tránh thêm 2 bài hát cho 1 lượt donate
@@ -7186,20 +7338,22 @@ async function syncQueueFromZyPageApi(shopId, isManual = false) {
             // Kiểm tra chéo với danh sách musicList để chắc chắn lượt donate này không chứa order nhạc chính thức
             const hasOrderedMusic = Object.values(musicList).some(m => {
                 const mTime = normalizeTimestamp(m.order?.time || m.music?.key);
-                return mTime === songTimestamp;
+                return mTime === realTimestamp;
             });
             if (hasOrderedMusic) return;
 
             if (!isManual) {
-                if (songTimestamp <= state.lastSyncedDonateTime) return;
+                if (realTimestamp <= state.lastSyncedDonateTime) return;
 
                 const now = Date.now();
-                if (now - songTimestamp > 7 * 24 * 60 * 60 * 1000) return;
+                if (now - realTimestamp > 7 * 24 * 60 * 60 * 1000) return;
             }
 
-            if (songTimestamp > maxTimestamp) {
-                maxTimestamp = songTimestamp;
+            if (realTimestamp > maxTimestamp) {
+                maxTimestamp = realTimestamp;
             }
+
+            const songTimestamp = Date.now();
 
             // Trích xuất link URL đầu tiên trong message (YouTube hoặc SoundCloud)
             const urlRegex = /https?:\/\/[^\s<>"']+/gi;
@@ -7211,7 +7365,7 @@ async function syncQueueFromZyPageApi(shopId, isManual = false) {
 
             for (const url of urlMatches) {
                 if (url.includes('soundcloud.com')) {
-                    soundcloudUrl = url.split(/[\s?#]/)[0]; // Loại bỏ query params và hash
+                    soundcloudUrl = await resolveSoundcloudUrlIfNeeded(url);
                     type = 'soundcloud';
                     break;
                 }
@@ -7225,19 +7379,26 @@ async function syncQueueFromZyPageApi(shopId, isManual = false) {
 
             if (!type) return; // Message không có link nhạc hợp lệ
 
-            // Sử dụng key + timestamp làm musicKey duy nhất (vì không có music.key)
-            const musicKey = `msg_${key}_${songTimestamp}`;
+            // Sử dụng key làm musicKey duy nhất (vì không có music.key và key đã là duy nhất của lượt donate)
+            const musicKey = `msg_${key}`;
 
             // Bỏ qua nếu không phải đồng bộ thủ công và bài hát đã phát xong hoặc bị xóa trước đó
-            if (!isManual && state.endedKeys.some(e => e.key === musicKey)) return;
+            if (!isManual && state.endedKeys.some(e => e.key === musicKey || e.key === `msg_${key}_${songTimestamp}`)) return;
 
             const uniqueKey = musicKey;
+            const donorName = item.name || 'Khách ZyPage';
+            const amount = Number(String(item.amount || '0').replace(/[^0-9]/g, '')) || 0;
+
             const isExist = state.queue.some(q => 
                 q.id === uniqueKey || 
+                q.musicKey === uniqueKey ||
                 (q.type === type && (
                     (type === 'youtube' && q.videoId === videoId) ||
                     (type === 'soundcloud' && q.soundcloudUrl === soundcloudUrl)
-                ) && q.timestamp === songTimestamp)
+                ) && (
+                    q.timestamp === songTimestamp ||
+                    (Math.abs(q.timestamp - songTimestamp) < 120000 && q.donorName === donorName && q.amount === amount)
+                ))
             );
 
             if (!isExist) {
@@ -8075,6 +8236,12 @@ function handleMqttMessage(topic, messageStrOrObj) {
             } else if (event && event.type === 'player_error') {
                 handlePlayerError(event.code, event.title);
             }
+        } else if (payload.type === 'overlay_log') {
+            const d = payload.data;
+            logSystem(`🔍 <strong>[Overlay Log]</strong> ${d && d.msg ? d.msg : ''} ${d && d.data ? JSON.stringify(d.data).slice(0, 300) : ''}`, 'system');
+        } else if (payload.type === 'overlay_error') {
+            const d = payload.data;
+            logSystem(`🚨 <strong>[Overlay Error]</strong> ${d && d.message ? d.message : JSON.stringify(d).slice(0, 300)}`, 'system');
         }
     } catch (e) {
         console.error("Error parsing MQTT message:", e);
@@ -8085,6 +8252,7 @@ function handleMqttMessage(topic, messageStrOrObj) {
 // --- ĐỌC VÀ GHI CẤU HÌNH ZYPAGE VÀO APPDATA ---
 async function saveConfigToAppData(url, shopId) {
     try {
+        const notifMonitor = localStorage.getItem('dua_notif_monitor') || 'auto';
         await fetch(getApiUrl('/api/config'), {
             method: 'POST',
             headers: {
@@ -8093,7 +8261,8 @@ async function saveConfigToAppData(url, shopId) {
             body: JSON.stringify({ 
                 zypageUrl: url, 
                 zypageShopId: shopId,
-                zypageMinMessageAmount: state.zypageMinMessageAmount !== undefined ? state.zypageMinMessageAmount : 49000
+                zypageMinMessageAmount: state.zypageMinMessageAmount !== undefined ? state.zypageMinMessageAmount : 49000,
+                notifMonitor: notifMonitor
             })
         });
         console.log("Đã lưu cấu hình ZyPage vào AppData thành công.");
@@ -8878,7 +9047,7 @@ async function openWhatsNewWalkthrough(event) {
         event.preventDefault();
         event.stopPropagation();
     }
-    let ver = '26.8.0';
+    let ver = '26.8.2';
     if (window.electronAPI && typeof window.electronAPI.getAppVersion === 'function') {
         try {
             ver = await window.electronAPI.getAppVersion();
@@ -9088,7 +9257,7 @@ if (window.electronAPI && typeof window.electronAPI.onTestDonate === 'function')
             let soundcloudUrl = null;
 
             if (songLink.includes('soundcloud.com')) {
-                soundcloudUrl = songLink.split(/[\s?#]/)[0];
+                soundcloudUrl = await resolveSoundcloudUrlIfNeeded(songLink);
                 type = 'soundcloud';
             } else {
                 videoId = parseYoutubeId(songLink);

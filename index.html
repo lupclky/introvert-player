@@ -342,11 +342,14 @@
 
                         <!-- Card 3: Danh sách hàng đợi phát nhạc (Queue) inside Player Widget -->
                         <div id="card-queue" style="display: flex; flex-direction: column; gap: 0.8rem;">
-                            <div class="queue-header-actions" style="margin-top: 0.2rem;">
+                            <div class="queue-header-actions" style="margin-top: 0.2rem; display: flex; justify-content: space-between; align-items: center; width: 100%;">
                                 <span class="dua-card-title"
                                     style="border-bottom: none; padding-bottom: 0; white-space: nowrap;">
                                     <i class="fa-solid fa-list-ol"></i> Hàng đợi Nhạc (<span id="queue-count">0</span>)
                                 </span>
+                                <button id="btn-queue-tools" class="dua-btn btn-icon" onclick="showQueueToolsMenu(event)" title="Công cụ hàng đợi (Click hoặc Click chuột phải vào đây)" style="padding: 4px 8px; font-size: 0.95rem; background: transparent; border: none; color: var(--pineapple-text); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; transition: background-color 0.2s ease;">
+                                    <i class="fa-solid fa-ellipsis-vertical"></i>
+                                </button>
                             </div>
 
                             <!-- Thanh điều khiển hàng đợi gọn gàng, đồng bộ -->
