@@ -11,14 +11,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getAppVersion: () => ipcRenderer.invoke('get-app-version'),
     searchYouTube: (query) => ipcRenderer.invoke('search-youtube', query),
     getYoutubeMetadata: (videoId) => ipcRenderer.invoke('get-youtube-metadata', videoId),
+    resolveExternalUrl: (url) => ipcRenderer.invoke('resolve-external-url', url),
     checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
     startUpdate: (url) => ipcRenderer.send('start-update', url),
     onUpdateProgress: (callback) => ipcRenderer.on('update-progress', (event, progress) => callback(progress)),
     onUpdateDownloaded: (callback) => ipcRenderer.on('update-downloaded', () => callback()),
     onUpdateError: (callback) => ipcRenderer.on('update-error', (event, error) => callback(error)),
-    sendWsMessage: (message) => ipcRenderer.send('send-to-overlay', message),
-    onWsMessage: (callback) => ipcRenderer.on('from-overlay', (event, message) => callback(message)),
-    
     // YouTube Account Sync
     ytLogin: () => ipcRenderer.invoke('youtube-login'),
     ytCheckAuth: () => ipcRenderer.invoke('youtube-check-auth'),
@@ -26,6 +24,24 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ytGetPlaylists: () => ipcRenderer.invoke('youtube-get-playlists'),
     ytGetPlaylistVideos: (playlistId) => ipcRenderer.invoke('youtube-get-playlist-videos', playlistId),
     ytGetRecommendations: () => ipcRenderer.invoke('youtube-get-recommendations'),
+
+    // Donate mở YouTube Playlist
+    processPlaylistDonation: (donation, settings, blacklistVideoIds) => ipcRenderer.invoke('playlist-process-donation', donation, settings, blacklistVideoIds),
+    addManualPlaylist: (sourceUrl, context, settings, blacklistVideoIds) => ipcRenderer.invoke('playlist-add-manual', sourceUrl, context, settings, blacklistVideoIds),
+    getPendingPlaylists: () => ipcRenderer.invoke('playlist-list-pending'),
+    getActivePlaylists: () => ipcRenderer.invoke('playlist-list-active'),
+    acceptPlaylist: (requestId, settings, blacklistVideoIds, overrideUrl) => ipcRenderer.invoke('playlist-accept', requestId, settings, blacklistVideoIds, overrideUrl),
+    rejectPlaylist: (requestId) => ipcRenderer.invoke('playlist-reject', requestId),
+    convertPlaylistToSingle: (requestId, settings) => ipcRenderer.invoke('playlist-convert-single', requestId, settings),
+    markPlaylistQueued: (requestId) => ipcRenderer.invoke('playlist-mark-queued', requestId),
+    markPlaylistTrackStarted: (trackId) => ipcRenderer.invoke('playlist-track-started', trackId),
+    markPlaylistTrackFinished: (trackId, status, reason) => ipcRenderer.invoke('playlist-track-finished', trackId, status, reason),
+    pausePlaylist: (requestId) => ipcRenderer.invoke('playlist-pause', requestId),
+    resumePlaylist: (requestId) => ipcRenderer.invoke('playlist-resume', requestId),
+    skipPlaylist: (requestId) => ipcRenderer.invoke('playlist-skip', requestId),
+    sendZyPageSongEnd: (config) => ipcRenderer.invoke('zypage-song-end', config),
+    resolveZyPageShopId: (config) => ipcRenderer.invoke('zypage-resolve-shop-id', config),
+    onPlaylistEvent: (callback) => ipcRenderer.on('playlist-event', (event, payload) => callback(payload)),
     
     // External Log File
     saveLogEntry: (text) => ipcRenderer.send('save-log-entry', text),
@@ -41,6 +57,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     
     // External Add Song (from browser extension)
     onAddSongExternal: (callback) => ipcRenderer.on('add-song-external', (event, data) => callback(data)),
+    onBrowserMediaState: (callback) => ipcRenderer.on('browser-media-state', (event, data) => callback(data)),
 
     // Custom Taskbar Notification
     showTaskbarNotification: (title, message, isDarkMode, duration) => ipcRenderer.send('show-taskbar-notification', { title, message, isDarkMode, duration }),

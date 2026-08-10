@@ -1,13 +1,15 @@
 {
   "manifest_version": 3,
   "name": "Pineapple Studio Remote",
-  "version": "1.0.0",
-  "description": "Chuyển hướng phát nhạc YouTube trực tiếp sang ứng dụng Pineapple Studio.",
+  "version": "1.1.0",
+  "description": "Đồng bộ media đang phát và gửi nhạc từ trình duyệt sang Pineapple Studio.",
   "permissions": [
     "storage"
   ],
   "host_permissions": [
     "https://www.youtube.com/*",
+    "https://music.youtube.com/*",
+    "https://soundcloud.com/*",
     "http://127.0.0.1/*"
   ],
   "background": {
@@ -15,7 +17,11 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://www.youtube.com/*"],
+      "matches": [
+        "https://www.youtube.com/*",
+        "https://music.youtube.com/*",
+        "https://soundcloud.com/*"
+      ],
       "js": ["content.js"],
       "run_at": "document_end"
     }

@@ -5,17 +5,41 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const { spawn } = require('child_process');
+const { spawn, exec } = require('child_process');
 const WebSocket = require('ws');
 const sqlite = require('node:sqlite');
+const { PlaylistRepository } = require('./services/playlist-repository');
+const { YouTubePlaylistProvider } = require('./services/youtube-playlist-provider');
+const { PlaylistService } = require('./services/playlist-service');
+const { RealtimeEventService } = require('./services/realtime-event-service');
+const { LocalRealtimeDatabaseService } = require('./services/local-realtime-database-service');
+const { DonationRepository } = require('./services/donation-repository');
+const { registerDonationIpcService } = require('./services/donation-ipc-service');
+const { registerMainContextMenuService } = require('./services/main-context-menu-service');
+const { registerActivityLogService } = require('./services/activity-log-service');
+const { registerPlaylistIpcService } = require('./services/playlist-ipc-service');
+const { registerExternalUrlIpcService } = require('./services/external-url-service');
+const { startPubgMonitorService } = require('./services/pubg-monitor-service');
+const { registerZyPageSongEndIpcService } = require('./services/zypage-song-end-ipc-service');
+const { registerZyPageShopIdIpcService } = require('./services/zypage-shop-id-ipc-service');
+const { YouTubeDurationService } = require('./services/youtube-duration-service');
+const { BrowserMediaStateService } = require('./services/browser-media-state-service');
 
 let db = null;
+let playlistRepository = null;
+let playlistProvider = null;
+let playlistService = null;
+let localRealtimeDatabaseService = null;
+let donationRepository = null;
+
 function initDatabase() {
   try {
     const dbPath = path.join(app.getPath('userData'), 'donations.db');
     console.log('Initializing SQLite database at:', dbPath);
     db = new sqlite.DatabaseSync(dbPath);
     db.exec(`
+      PRAGMA foreign_keys = ON;
+      PRAGMA journal_mode = WAL;
       CREATE TABLE IF NOT EXISTS donations (
         id TEXT PRIMARY KEY,
         name TEXT,
@@ -28,6 +52,30 @@ function initDatabase() {
       );
       CREATE INDEX IF NOT EXISTS idx_donations_timestamp ON donations(timestamp DESC);
     `);
+    donationRepository = new DonationRepository(db);
+    playlistRepository = new PlaylistRepository(db);
+    playlistRepository.migrate();
+    localRealtimeDatabaseService = new LocalRealtimeDatabaseService({
+      database: db,
+      clients: activeWsClients,
+      getOpenState: () => WebSocket.OPEN
+    });
+    localRealtimeDatabaseService.migrate();
+    playlistProvider = new YouTubePlaylistProvider({
+      fetchPlaylistData: playlistId => fetchYoutubePageData(`https://www.youtube.com/playlist?list=${encodeURIComponent(playlistId)}`),
+      fetchVideoStats: fetchYoutubeVideoStats
+    });
+    playlistService = new PlaylistService({
+      repository: playlistRepository,
+      provider: playlistProvider,
+      emit: (type, data) => {
+        console.info(`[Playlist event] ${type}`, data);
+        const eventPayload = realtimeEventService.envelope(type, data);
+        if (eventPayload && mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('playlist-event', eventPayload);
+        }
+      }
+    });
     console.log('SQLite database initialized successfully.');
   } catch (e) {
     console.error('Failed to initialize SQLite database:', e);
@@ -41,6 +89,36 @@ let tray = null;
 app.isQuitting = false;
 let wss = null;
 const activeWsClients = new Set();
+let activeDashboardRealtimeChannelId = null;
+let pubgMonitorService = null;
+const realtimeEventService = new RealtimeEventService({
+  clients: activeWsClients,
+  getOpenState: () => WebSocket.OPEN
+});
+const youtubeDurationService = new YouTubeDurationService({
+  getYtDlpPath: () => path.join(app.getPath('userData'), 'yt-dlp.exe'),
+  // play-dl can leak an internal rejected promise when YouTube returns 429.
+  // yt-dlp/Data API are isolated and Overlay supplies the authoritative runtime duration.
+  enablePlayDl: process.env.ENABLE_PLAY_DL_DURATION === '1'
+});
+const browserMediaStateService = new BrowserMediaStateService();
+
+function broadcastBrowserMediaState(state) {
+  const message = JSON.stringify({
+    type: 'browser_media_state',
+    data: state,
+    timestamp: Date.now(),
+    source: 'browser-extension'
+  });
+  activeWsClients.forEach(client => {
+    if (client.isRealtimeOverlayClient && client.readyState === WebSocket.OPEN) {
+      try { client.send(message); } catch (_) { }
+    }
+  });
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('browser-media-state', state);
+  }
+}
 
 // Tắt sandbox để tránh crash khi chạy từ thư mục AppData (giữ GPU bật để tránh bug input focus)
 app.commandLine.appendSwitch('no-sandbox');
@@ -235,7 +313,28 @@ if (!gotTheLock) {
         res.writeHead(200, getCorsHeaders({
           'Content-Type': 'application/json'
         }));
-        res.end(JSON.stringify({ success: true, app: "pineapple-studio", version: "26.8.1" }));
+        res.end(JSON.stringify({ success: true, app: "pineapple-studio", version: app.getVersion() }));
+        return;
+      }
+
+      // Nhận trạng thái media từ Extension để Overlay dùng khi queue trống.
+      if (req.url === '/api/browser-media-state' && req.method === 'POST') {
+        let body = '';
+        req.setEncoding('utf8');
+        req.on('data', chunk => {
+          if (body.length < 65536) body += chunk;
+        });
+        req.on('end', () => {
+          try {
+            const state = browserMediaStateService.update(JSON.parse(body || '{}'));
+            broadcastBrowserMediaState(state);
+            res.writeHead(200, getCorsHeaders({ 'Content-Type': 'application/json' }));
+            res.end(JSON.stringify({ success: true, active: state.active }));
+          } catch (err) {
+            res.writeHead(400, getCorsHeaders({ 'Content-Type': 'application/json' }));
+            res.end(JSON.stringify({ success: false, error: err.message }));
+          }
+        });
         return;
       }
 
@@ -326,68 +425,23 @@ if (!gotTheLock) {
           return;
         }
 
-        const https = require('https');
-        const postData = JSON.stringify({
-          videoId: videoId,
-          context: {
-            client: {
-              clientName: 'WEB',
-              clientVersion: '2.20210621.02.00'
-            }
-          }
-        });
-
-        try {
-          const reqOpts = {
-            hostname: 'www.youtube.com',
-            port: 443,
-            path: '/youtubei/v1/player',
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Content-Length': Buffer.byteLength(postData),
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-            }
-          };
-
-          const ytReq = https.request(reqOpts, (ytRes) => {
-            let data = '';
-            ytRes.setEncoding('utf8');
-            ytRes.on('data', chunk => data += chunk);
-            ytRes.on('end', () => {
-              let duration = 0;
-              let views = '';
-              try {
-                const json = JSON.parse(data);
-                if (json && json.videoDetails) {
-                  duration = parseInt(json.videoDetails.lengthSeconds || 0, 10);
-                  views = json.videoDetails.viewCount || '';
-                }
-              } catch (e) {
-                console.error("Error parsing YouTube player JSON:", e);
-              }
-              res.writeHead(200, getCorsHeaders({
-                'Content-Type': 'application/json'
-              }));
-              res.end(JSON.stringify({ duration: duration, views: views }));
-            });
-          });
-
-          ytReq.on('error', (err) => {
-            res.writeHead(200, getCorsHeaders({
-              'Content-Type': 'application/json'
-            }));
-            res.end(JSON.stringify({ duration: 0, views: '', error: err.message }));
-          });
-
-          ytReq.write(postData);
-          ytReq.end();
-        } catch (e) {
-          res.writeHead(200, getCorsHeaders({
-            'Content-Type': 'application/json'
-          }));
-          res.end(JSON.stringify({ duration: 0, views: '', error: e.message }));
+        if (!YouTubeDurationService.isValidVideoId(videoId)) {
+          res.writeHead(400, getCorsHeaders({ 'Content-Type': 'application/json' }));
+          res.end(JSON.stringify({ duration: 0, views: '', error: 'Invalid YouTube video ID' }));
+          return;
         }
+
+        youtubeDurationService.resolve(videoId)
+          .then(result => {
+            if (res.writableEnded || res.destroyed) return;
+            res.writeHead(200, getCorsHeaders({ 'Content-Type': 'application/json' }));
+            res.end(JSON.stringify(result));
+          })
+          .catch(error => {
+            if (res.writableEnded || res.destroyed) return;
+            res.writeHead(500, getCorsHeaders({ 'Content-Type': 'application/json' }));
+            res.end(JSON.stringify({ duration: 0, views: '', source: 'error', error: error.message }));
+          });
         return;
       }
 
@@ -686,8 +740,17 @@ if (!gotTheLock) {
         const { spawn } = require('child_process');
         const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
         
-        // Chạy yt-dlp.exe -g -f ba [url]
-        const proc = spawn(ytDlpPath, ['-g', '-f', 'ba', videoUrl]);
+        // Chỉ giải quyết đúng video hiện tại, không để Mix/radio tự sinh kéo theo playlist.
+        // Dùng một format progressive (có cả audio + video) tối đa 360p. Không dùng
+        // `ba`: audio-only không có độ phân giải nên không thể áp dụng giới hạn 360p.
+        // Audio element ở overlay vẫn phát được audio track của format này.
+        const proc = spawn(ytDlpPath, [
+          '--no-playlist',
+          '--no-warnings',
+          '-g',
+          '-f', 'b[height<=360]',
+          videoUrl
+        ]);
         let stdout = '';
         let stderr = '';
 
@@ -705,8 +768,13 @@ if (!gotTheLock) {
           }
         });
         
-        req.on('close', () => {
-          try { proc.kill(); } catch (e) {}
+        // IncomingMessage có thể phát sự kiện close sau khi đã nhận xong request,
+        // không đồng nghĩa client đã huỷ. Chỉ dừng yt-dlp nếu response thực sự bị
+        // đóng trước khi gửi kết quả.
+        res.on('close', () => {
+          if (!res.writableEnded) {
+            try { proc.kill(); } catch (e) {}
+          }
         });
         return;
       }
@@ -770,11 +838,13 @@ if (!gotTheLock) {
       activeWsClients.add(ws);
       console.log(`[WebSocket] OBS Overlay đã kết nối. Tổng số client: ${activeWsClients.size}`);
 
+      // Snapshot được gửi sau khi Overlay đăng ký đúng channel realtime.
+
       // Gửi trạng thái PUBG hiện tại cho client mới kết nối
       try {
         ws.send(JSON.stringify({
           type: 'pubg_state',
-          data: { running: isPubgRunning }
+          data: { running: pubgMonitorService?.getRunning() || false }
         }));
       } catch (e) {
         console.error('[WebSocket] Lỗi gửi trạng thái PUBG ban đầu:', e);
@@ -783,9 +853,51 @@ if (!gotTheLock) {
       ws.on('message', (message) => {
         try {
           const msgStr = message.toString();
-          // Chuyển tiếp tin nhắn từ Overlay sang Dashboard (Renderer)
-          if (mainWindow) {
-            mainWindow.webContents.send('from-overlay', JSON.parse(msgStr));
+          const parsed = JSON.parse(msgStr);
+          if (parsed?.type === 'realtime.subscribe') {
+            const role = parsed.role === 'dashboard' ? 'dashboard' : 'overlay';
+            ws.realtimeRole = role;
+            ws.isRealtimeOverlayClient = role === 'overlay';
+            ws.requestedRealtimeChannelId = String(parsed.channelId || '');
+
+            if (role === 'dashboard') {
+              activeDashboardRealtimeChannelId = ws.requestedRealtimeChannelId;
+              localRealtimeDatabaseService?.subscribe(ws, activeDashboardRealtimeChannelId, { role, sendSnapshot: false });
+              activeWsClients.forEach(client => {
+                if (client !== ws && client.isRealtimeOverlayClient && client.readyState === WebSocket.OPEN) {
+                  // Chỉ đổi channel; Dashboard sẽ gửi snapshot mới ngay sau khi subscribe.
+                  // Không phát snapshot SQLite cũ vì có thể làm Overlay nạp lại bài trước.
+                  localRealtimeDatabaseService?.subscribe(client, activeDashboardRealtimeChannelId, {
+                    role: 'overlay',
+                    sendSnapshot: false
+                  });
+                }
+              });
+              console.log(`[Local Realtime DB] Dashboard đang listening channel: ${activeDashboardRealtimeChannelId}`);
+            } else {
+              const effectiveChannelId = activeDashboardRealtimeChannelId || parsed.channelId;
+              localRealtimeDatabaseService?.subscribe(ws, effectiveChannelId, { role: 'overlay' });
+              const browserMediaSnapshot = browserMediaStateService.getSnapshot();
+              if (browserMediaSnapshot) {
+                try {
+                  ws.send(JSON.stringify({
+                    type: 'browser_media_state',
+                    data: browserMediaSnapshot,
+                    timestamp: Date.now(),
+                    source: 'browser-extension'
+                  }));
+                } catch (_) { }
+              }
+              if (activeDashboardRealtimeChannelId && ws.requestedRealtimeChannelId !== activeDashboardRealtimeChannelId) {
+                console.warn(`[WebSocket] Overlay dùng channel cũ ${ws.requestedRealtimeChannelId}; đã ghép vào ${activeDashboardRealtimeChannelId}.`);
+              }
+            }
+            return;
+          }
+          const channelId = ws.realtimeChannelId || parsed?.channelId;
+          const direction = ws.realtimeRole === 'dashboard' ? 'to_overlay' : 'from_overlay';
+          if (channelId && localRealtimeDatabaseService) {
+            localRealtimeDatabaseService.publish(channelId, direction, parsed);
           }
         } catch (err) {
           console.error('[WebSocket] Lỗi xử lý tin nhắn từ overlay:', err);
@@ -855,6 +967,18 @@ if (!gotTheLock) {
     });
 
     // Menu chuột phải native cho Dashboard.
+    // The application menu is hidden, so register DevTools shortcuts directly
+    // on this window rather than using a process-wide global shortcut.
+    mainWindow.webContents.on('before-input-event', (event, input) => {
+      const isDevToolsShortcut = input.type === 'keyDown' && (
+        input.key === 'F12' ||
+        ((input.control || input.meta) && input.shift && String(input.key).toLowerCase() === 'i')
+      );
+      if (!isDevToolsShortcut) return;
+      mainWindow.webContents.toggleDevTools();
+      event.preventDefault();
+    });
+
     mainWindow.webContents.on('context-menu', (event, params) => {
       const template = [];
       const editFlags = params.editFlags || {};
@@ -1093,116 +1217,11 @@ if (!gotTheLock) {
   });
 }
 
-// Chuyển tiếp tin nhắn từ Dashboard tới tất cả các client WebSocket (OBS Overlay)
-ipcMain.on('send-to-overlay', (event, message) => {
-  const msgStr = JSON.stringify(message);
-  activeWsClients.forEach((client) => {
-    if (client.readyState === WebSocket.OPEN) {
-      try {
-        client.send(msgStr);
-      } catch (err) {
-        console.error('[WebSocket] Lỗi gửi tin nhắn sang overlay:', err);
-      }
-    }
-  });
-});
-
 let lastIsDarkMode = false;
 
-// Lắng nghe yêu cầu mở liên kết bằng trình duyệt mặc định của hệ thống
-ipcMain.on('open-external-url', (event, url) => {
-  if (url && /^https?:\/\//i.test(url)) {
-    shell.openExternal(url);
-  }
-});
-
-ipcMain.on('show-favorite-context-menu', (event, favorite) => {
-  const ownerWindow = BrowserWindow.fromWebContents(event.sender);
-  if (!ownerWindow || !favorite || typeof favorite !== 'object') return;
-
-  const key = String(favorite.key || '').slice(0, 512);
-  const title = String(favorite.title || 'Bài hát yêu thích').slice(0, 300);
-  const displayTitle = title.length > 72 ? `${title.slice(0, 69)}...` : title;
-  const url = typeof favorite.url === 'string' && /^https?:\/\//i.test(favorite.url)
-    ? favorite.url
-    : '';
-  if (!key) return;
-
-  const sendAction = (action) => {
-    if (!event.sender.isDestroyed()) {
-      event.sender.send('favorite-context-action', { action, key });
-    }
-  };
-
-  const template = [
-    { label: displayTitle, enabled: false },
-    { type: 'separator' },
-    { label: 'Thêm vào hàng đợi', click: () => sendAction('queue') }
-  ];
-
-  if (url) {
-    template.push(
-      { label: 'Mở bài hát trong trình duyệt', click: () => shell.openExternal(url) },
-      { label: 'Sao chép liên kết', click: () => clipboard.writeText(url) }
-    );
-  }
-
-  template.push(
-    { label: 'Sao chép tên bài hát', click: () => clipboard.writeText(title) },
-    { type: 'separator' },
-    { label: 'Xóa khỏi yêu thích', click: () => sendAction('delete') }
-  );
-
-  Menu.buildFromTemplate(template).popup({ window: ownerWindow });
-});
-
-ipcMain.on('show-queue-context-menu', (event, params) => {
-  const ownerWindow = BrowserWindow.fromWebContents(event.sender);
-  if (!ownerWindow || !params || typeof params !== 'object') return;
-
-  const { testMode, luckyMode, sortConfig } = params;
-
-  const sendAction = (action) => {
-    if (!event.sender.isDestroyed()) {
-      event.sender.send('queue-context-action', { action });
-    }
-  };
-
-  const template = [
-    {
-      label: 'Đồng bộ ZyPage',
-      click: () => sendAction('sync')
-    },
-    { type: 'separator' },
-    {
-      label: 'Giữ hàng đợi (Test Mode)',
-      type: 'checkbox',
-      checked: !!testMode,
-      click: () => sendAction('toggle-test-mode')
-    },
-    {
-      label: 'Chế độ Lucky (Quay ngẫu nhiên)',
-      type: 'checkbox',
-      checked: !!luckyMode,
-      click: () => sendAction('toggle-lucky-mode')
-    },
-    { type: 'separator' },
-    {
-      label: 'Ưu tiên: Thời gian',
-      type: 'radio',
-      checked: sortConfig === 'time',
-      click: () => sendAction('sort-time')
-    },
-    {
-      label: 'Ưu tiên: Số tiền',
-      type: 'radio',
-      checked: sortConfig === 'amount',
-      click: () => sendAction('sort-amount')
-    }
-  ];
-
-  Menu.buildFromTemplate(template).popup({ window: ownerWindow });
-});
+registerMainContextMenuService({ ipcMain, Menu, BrowserWindow, shell, clipboard });
+registerZyPageSongEndIpcService({ ipcMain });
+registerZyPageShopIdIpcService({ ipcMain });
 
 // Lắng nghe yêu cầu hiển thị thông báo taskbar từ Dashboard (Renderer)
 ipcMain.on('show-taskbar-notification', (event, data) => {
@@ -1576,6 +1595,29 @@ ipcMain.handle('get-youtube-metadata', async (event, videoId) => {
         .replace(/&mdash;/g, '-');
     }
 
+    function decodeJsonString(str) {
+      if (!str) return '';
+      try {
+        return JSON.parse(`"${str}"`);
+      } catch (e) {
+        return str.replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+      }
+    }
+
+    function extractAuthorFromWatchHtml(html) {
+      const authorMetaTag = html.match(/<meta[^>]+itemprop=["']author["'][^>]*>/i)?.[0] || '';
+      const authorMetaTagReversed = html.match(/<meta[^>]+content=["'][^"']+["'][^>]+itemprop=["']author["'][^>]*>/i)?.[0] || '';
+      const metaAuthorTag = authorMetaTag || authorMetaTagReversed;
+      const metaAuthor = metaAuthorTag.match(/content=["']([^"']*)["']/i)?.[1] || '';
+      if (metaAuthor) return decodeHtmlEntities(metaAuthor).trim();
+
+      const ownerChannelName = html.match(/"ownerChannelName"\s*:\s*"((?:\\.|[^"\\])*)"/i)?.[1] || '';
+      if (ownerChannelName) return decodeHtmlEntities(decodeJsonString(ownerChannelName)).trim();
+
+      const authorName = html.match(/"author"\s*:\s*"((?:\\.|[^"\\])*)"/i)?.[1] || '';
+      return authorName ? decodeHtmlEntities(decodeJsonString(authorName)).trim() : '';
+    }
+
     https.get(oembedUrl, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
@@ -1590,7 +1632,8 @@ ipcMain.handle('get-youtube-metadata', async (event, videoId) => {
           if (json && json.title) {
             return resolve({
               title: decodeHtmlEntities(json.title),
-              thumbnail: json.thumbnail_url || `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
+              thumbnail: json.thumbnail_url || `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+              author: decodeHtmlEntities(json.author_name || '')
             });
           }
         } catch (e) {}
@@ -1618,15 +1661,18 @@ ipcMain.handle('get-youtube-metadata', async (event, videoId) => {
             title = title.substring(0, title.length - 10);
           }
           title = title.trim();
+          const author = extractAuthorFromWatchHtml(data);
           if (title && title !== 'YouTube') {
             resolve({
               title: decodeHtmlEntities(title),
-              thumbnail: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
+              thumbnail: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+              author
             });
           } else {
             resolve({
               title: `Nhạc YouTube (${videoId})`,
-              thumbnail: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
+              thumbnail: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+              author
             });
           }
         });
@@ -2482,107 +2528,18 @@ ipcMain.handle('save-walkthrough-image', async (event, fileName, base64Data) => 
   }
 });
 
-// SQLite operations
-ipcMain.handle('db-get-donations', () => {
-  if (!db) return [];
-  try {
-    const stmt = db.prepare('SELECT * FROM donations ORDER BY timestamp DESC');
-    const rows = stmt.all();
-    return rows.map(row => ({
-      id: row.id,
-      name: row.name,
-      amount: Number(row.amount),
-      message: row.message || '',
-      timestamp: Number(row.timestamp),
-      isNew: row.isNew === 1,
-      songLink: row.songLink || '',
-      isMusicOrder: row.isMusicOrder === 1
-    }));
-  } catch (err) {
-    console.error('db-get-donations error:', err);
-    return [];
-  }
+registerExternalUrlIpcService(ipcMain);
+
+// ==========================================
+// DONATE MỞ YOUTUBE PLAYLIST
+// ==========================================
+
+registerPlaylistIpcService(ipcMain, {
+  getService: () => playlistService,
+  getRepository: () => playlistRepository
 });
 
-ipcMain.handle('db-add-donation', (event, donation) => {
-  if (!db) return { success: false };
-  try {
-    const id = donation.id || `manual_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-    const name = donation.name || '';
-    const amount = Number(donation.amount) || 0;
-    const message = donation.message || '';
-    const timestamp = Number(donation.timestamp) || Date.now();
-    const isNew = donation.isNew !== undefined ? donation.isNew : true;
-    const songLink = donation.songLink || '';
-    const isMusicOrder = donation.isMusicOrder ? 1 : 0;
-
-    // Check if donation already exists
-    let existing = null;
-    if (donation.id) {
-      const stmt = db.prepare('SELECT * FROM donations WHERE id = ?');
-      existing = stmt.get(donation.id);
-    }
-    if (!existing) {
-      const stmt = db.prepare('SELECT * FROM donations WHERE name = ? AND amount = ? AND abs(timestamp - ?) < 5000 LIMIT 1');
-      existing = stmt.get(name, amount, timestamp);
-    }
-
-    if (existing) {
-      if (songLink && !existing.songLink) {
-        const stmt = db.prepare('UPDATE donations SET songLink = ?, isMusicOrder = 1 WHERE id = ?');
-        stmt.run(songLink, existing.id);
-        return { success: true, updated: true, id: existing.id };
-      }
-      return { success: true, updated: false, id: existing.id };
-    }
-
-    const stmt = db.prepare(`
-      INSERT INTO donations (id, name, amount, message, timestamp, isNew, songLink, isMusicOrder)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-    stmt.run(id, name, amount, message, timestamp, isNew ? 1 : 0, songLink, isMusicOrder);
-    return { success: true, inserted: true, id };
-  } catch (err) {
-    console.error('db-add-donation error:', err);
-    return { success: false, error: err.message };
-  }
-});
-
-ipcMain.handle('db-mark-read', (event, id) => {
-  if (!db) return false;
-  try {
-    const stmt = db.prepare('UPDATE donations SET isNew = 0 WHERE id = ?');
-    const res = stmt.run(id);
-    return res.changes > 0;
-  } catch (err) {
-    console.error('db-mark-read error:', err);
-    return false;
-  }
-});
-
-ipcMain.handle('db-mark-all-read', () => {
-  if (!db) return false;
-  try {
-    const stmt = db.prepare('UPDATE donations SET isNew = 0 WHERE isNew = 1');
-    const res = stmt.run();
-    return res.changes > 0;
-  } catch (err) {
-    console.error('db-mark-all-read error:', err);
-    return false;
-  }
-});
-
-ipcMain.handle('db-clear-history', () => {
-  if (!db) return false;
-  try {
-    const stmt = db.prepare('DELETE FROM donations');
-    const res = stmt.run();
-    return true;
-  } catch (err) {
-    console.error('db-clear-history error:', err);
-    return false;
-  }
-});
+registerDonationIpcService(ipcMain, () => donationRepository);
 
 // Cấu hình cập nhật tự động từ GitHub Release
 const GITHUB_REPO = 'lupclky/dua-corner-player';
@@ -2743,48 +2700,72 @@ function downloadFileWithProgress(url, destPath, onProgress, onSuccess, onError)
 // ĐIỀU KHIỂN & LƯU TRỮ NHẬT KÝ HOẠT ĐỘNG
 // ==========================================
 
-ipcMain.on('save-log-entry', (event, text) => {
-  try {
-    const logPath = path.join(app.getPath('userData'), 'activity_logs.txt');
-    const timestamp = new Date().toLocaleString('vi-VN');
-    const logLine = `[${timestamp}] ${text}\n`;
-    fs.appendFileSync(logPath, logLine, 'utf8');
-
-    // Giới hạn kích thước file log dưới 2MB
-    try {
-      const stats = fs.statSync(logPath);
-      if (stats.size > 2 * 1024 * 1024) {
-        const data = fs.readFileSync(logPath, 'utf8');
-        const lines = data.split('\n');
-        if (lines.length > 1000) {
-          const truncated = lines.slice(-1000).join('\n');
-          fs.writeFileSync(logPath, truncated, 'utf8');
-        }
-      }
-    } catch (e) {
-      // Bỏ qua lỗi khi kiểm tra kích thước file
-    }
-  } catch (err) {
-    console.error('Failed to save log entry:', err);
-  }
-});
-
-ipcMain.handle('open-log-file', async () => {
-  try {
-    const logPath = path.join(app.getPath('userData'), 'activity_logs.txt');
-    if (!fs.existsSync(logPath)) {
-      const timestamp = new Date().toLocaleString('vi-VN');
-      fs.writeFileSync(logPath, `[${timestamp}] [System] Khởi tạo file log hoạt động thành công.\n`, 'utf8');
-    }
-    await shell.openPath(logPath);
-    return { success: true };
-  } catch (err) {
-    console.error('Failed to open log file:', err);
-    return { success: false, error: err.message };
-  }
-});
+registerActivityLogService({ ipcMain, app, shell, fs, path });
 
 const activeNotifications = [];
+
+function getPreferredNotificationDisplay(screen) {
+  const displays = screen.getAllDisplays();
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const secondaryDisplays = displays.filter(display => display.id !== primaryDisplay.id);
+
+  if (secondaryDisplays.length === 0) return primaryDisplay;
+
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    try {
+      const dashboardDisplay = screen.getDisplayMatching(mainWindow.getBounds());
+      const matchingSecondary = secondaryDisplays.find(display => display.id === dashboardDisplay.id);
+      if (matchingSecondary) return matchingSecondary;
+    } catch (e) {}
+  }
+
+  return secondaryDisplays.reduce((largest, display) => {
+    const largestArea = largest.workArea.width * largest.workArea.height;
+    const displayArea = display.workArea.width * display.workArea.height;
+    return displayArea > largestArea ? display : largest;
+  }, secondaryDisplays[0]);
+}
+
+function fetchYoutubeVideoStats(videoId) {
+  return new Promise((resolve, reject) => {
+    const postData = JSON.stringify({
+      videoId: String(videoId || ''),
+      context: { client: { clientName: 'WEB', clientVersion: '2.20210621.02.00' } }
+    });
+    const request = https.request({
+      hostname: 'www.youtube.com',
+      port: 443,
+      path: '/youtubei/v1/player',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(postData),
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36'
+      },
+      timeout: 8000
+    }, response => {
+      let body = '';
+      response.setEncoding('utf8');
+      response.on('data', chunk => { body += chunk; });
+      response.on('end', () => {
+        try {
+          const data = JSON.parse(body);
+          const details = data?.videoDetails || {};
+          resolve({
+            viewCount: details.viewCount === undefined ? null : Number(details.viewCount),
+            durationSec: Number(details.lengthSeconds) || 0
+          });
+        } catch (error) {
+          reject(error);
+        }
+      });
+    });
+    request.on('timeout', () => request.destroy(new Error('youtube_stats_timeout')));
+    request.on('error', reject);
+    request.write(postData);
+    request.end();
+  });
+}
 
 const escapeHtml = (text) => {
   return (text || '')
@@ -2799,10 +2780,7 @@ const escapeHtml = (text) => {
 function repositionNotifications() {
   const { screen } = require('electron');
   try {
-    const displays = screen.getAllDisplays();
-    const primaryDisplay = screen.getPrimaryDisplay();
-    const externalDisplay = displays.find(d => d.id !== primaryDisplay.id);
-    const targetDisplays = externalDisplay ? [externalDisplay] : [primaryDisplay];
+    const targetDisplays = [getPreferredNotificationDisplay(screen)];
     const notifWidth = 480;
     
     targetDisplays.forEach((display) => {
@@ -2835,6 +2813,10 @@ function closeNotificationById(id) {
       if (notif.timeout) {
         clearTimeout(notif.timeout);
         notif.timeout = null;
+      }
+      if (notif.revealFallback) {
+        clearTimeout(notif.revealFallback);
+        notif.revealFallback = null;
       }
       activeNotifications.splice(i, 1);
       if (notif.window && !notif.window.isDestroyed()) {
@@ -2874,24 +2856,27 @@ function showTaskbarNotification(title, message, isDarkMode = false, duration) {
   const { screen, BrowserWindow } = require('electron');
   
   try {
-    const displays = screen.getAllDisplays();
-    const primaryDisplay = screen.getPrimaryDisplay();
-    const externalDisplay = displays.find(d => d.id !== primaryDisplay.id);
-    const targetDisplays = externalDisplay ? [externalDisplay] : [primaryDisplay];
+    const targetDisplays = [getPreferredNotificationDisplay(screen)];
     
     // Tách tiêu đề nhạc và tin nhắn từ message (phân cách bằng \n)
     const rawMsgStr = (message || '').trim();
     const lines = rawMsgStr.split('\n');
+    const notificationKind = /^\[PLAYLIST\]/i.test(lines[0] || '')
+      ? 'playlist'
+      : (/^\[MUSIC\]/i.test(lines[0] || '') ? 'music' : 'donation');
+    const notificationKindLabel = notificationKind === 'playlist'
+      ? 'PLAYLIST'
+      : (notificationKind === 'music' ? 'NHẠC ORDER' : 'DONATE MỚI');
     let songTitle = '';
     let cleanMsg = '';
     
     if (lines.length > 1) {
-        songTitle = (lines[0] || '').replace(/^(\[MUSIC\]|🎵|▶)\s*/u, '').replace(/[\uD800-\uDFFF]/g, '').trim();
+        songTitle = (lines[0] || '').replace(/^(\[PLAYLIST\]|\[MUSIC\]|🎵|▶)\s*/u, '').replace(/[\uD800-\uDFFF]/g, '').trim();
         cleanMsg = lines.slice(1).join('\n').trim();
     } else if (lines.length === 1 && rawMsgStr) {
         const singleLine = lines[0].trim();
-        if (singleLine.startsWith('[MUSIC]') || singleLine.startsWith('🎵') || singleLine.startsWith('▶') || singleLine.toLowerCase().includes('youtube') || singleLine.toLowerCase().includes('http://') || singleLine.toLowerCase().includes('https://')) {
-            songTitle = singleLine.replace(/^(\[MUSIC\]|🎵|▶)\s*/u, '').replace(/[\uD800-\uDFFF]/g, '').trim();
+        if (singleLine.startsWith('[PLAYLIST]') || singleLine.startsWith('[MUSIC]') || singleLine.startsWith('🎵') || singleLine.startsWith('▶') || singleLine.toLowerCase().includes('youtube') || singleLine.toLowerCase().includes('http://') || singleLine.toLowerCase().includes('https://')) {
+            songTitle = singleLine.replace(/^(\[PLAYLIST\]|\[MUSIC\]|🎵|▶)\s*/u, '').replace(/[\uD800-\uDFFF]/g, '').trim();
             cleanMsg = '';
         } else {
             songTitle = '';
@@ -2904,7 +2889,8 @@ function showTaskbarNotification(title, message, isDarkMode = false, duration) {
     
     // Tính toán độ cao linh hoạt 100% theo nội dung thực tế (không dùng ellipsis ...)
     const titleLines = Math.max(1, Math.ceil((title || '').length / 36));
-    let calculatedHeight = 55 + (titleLines * 24);
+    // Chừa một hàng cho nhãn DONATE MỚI / NHẠC ORDER / PLAYLIST.
+    let calculatedHeight = 84 + (titleLines * 24);
 
     if (songTitle) {
         const songLines = Math.max(1, Math.ceil((songTitle || '').length / 36));
@@ -2921,30 +2907,27 @@ function showTaskbarNotification(title, message, isDarkMode = false, duration) {
 
     const notifHeight = Math.max(120, Math.min(650, calculatedHeight));
     
-    const bgGradient = isDarkMode 
-      ? 'linear-gradient(135deg, #1D1A22 0%, #121016 100%)' 
-      : 'linear-gradient(135deg, #FAF6EE 0%, #F5F0E4 100%)';
-    const borderColor = isDarkMode ? 'rgba(226, 232, 240, 0.08)' : 'rgba(45, 39, 39, 0.15)';
-    const titleColor = isDarkMode ? '#FB923C' : '#EA580C';
-    const textSongColor = isDarkMode ? '#E2E8F0' : '#2D2727';
-    const textMsgColor = isDarkMode ? '#D1D5DB' : '#4B5563';
+    const bgGradient = isDarkMode
+      ? 'linear-gradient(145deg, rgba(22, 42, 34, 0.98) 0%, rgba(14, 29, 25, 0.98) 100%)'
+      : 'linear-gradient(145deg, rgba(244, 244, 231, 0.98) 0%, rgba(226, 235, 218, 0.98) 100%)';
+    const borderColor = isDarkMode ? 'rgba(132, 170, 132, 0.52)' : 'rgba(67, 124, 94, 0.42)';
+    const titleColor = isDarkMode ? '#D9E8C7' : '#285E49';
+    const textSongColor = isDarkMode ? '#EDF2E5' : '#233D33';
+    const textMsgColor = isDarkMode ? '#C5D2C1' : '#516158';
 
     const notifGroupId = 'notif_' + Date.now() + '_' + Math.floor(Math.random() * 1000000);
 
-    let timeout = null;
+    let timeoutDuration = null;
     const isHang = (duration === -1 || duration === 0);
     if (!isHang) {
-      let timeoutVal = 10000;
+      timeoutDuration = 10000;
       if (duration !== undefined && duration !== null && duration > 0) {
-        timeoutVal = duration;
+        timeoutDuration = duration;
       } else {
         const contentText = (title || '') + ' ' + (message || '');
         const charCount = contentText.length;
-        timeoutVal = Math.min(20000, Math.max(5000, 5000 + (charCount / 15) * 1000));
+        timeoutDuration = Math.min(20000, Math.max(5000, 5000 + (charCount / 15) * 1000));
       }
-      timeout = setTimeout(() => {
-        closeNotificationById(notifGroupId);
-      }, timeoutVal);
     }
 
     // Tạo thông báo trên mỗi màn hình được chọn
@@ -2971,16 +2954,18 @@ function showTaskbarNotification(title, message, isDarkMode = false, duration) {
         transparent: true,
         alwaysOnTop: true,
         skipTaskbar: true,
-        focusable: true,
+        focusable: false,
         show: false,
         webPreferences: {
           nodeIntegration: true,
-          contextIsolation: false
+          contextIsolation: false,
+          backgroundThrottling: false
         }
       });
 
       // Để hiển thị trên game và các màn hình khác tốt hơn
       win.setAlwaysOnTop(true, 'screen-saver');
+      win.setFocusable(false);
       win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
       win.setIgnoreMouseEvents(true, { forward: true });
 
@@ -2992,14 +2977,13 @@ function showTaskbarNotification(title, message, isDarkMode = false, duration) {
         <head>
           <meta charset="utf-8">
           <style>
-            @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&family=Quicksand:wght@700;800&display=swap');
             html, body {
               margin: 0;
               padding: 0;
               height: 100vh;
               overflow: hidden;
               background: transparent;
-              font-family: 'Nunito', sans-serif;
+              font-family: 'Aptos', 'Segoe UI', sans-serif;
             }
             .container {
               display: flex;
@@ -3037,13 +3021,30 @@ function showTaskbarNotification(title, message, isDarkMode = false, duration) {
               justify-content: center;
             }
             .title {
-              font-family: 'Quicksand', sans-serif;
+              font-family: 'Aptos Display', 'Aptos', 'Segoe UI', sans-serif;
               font-size: 1.15rem;
               font-weight: 800;
               color: ${titleColor};
               margin-bottom: 4px;
               padding-right: 20px;
               word-break: break-word;
+            }
+            .kind-badge {
+              display: inline-flex;
+              align-items: center;
+              width: fit-content;
+              min-height: 22px;
+              box-sizing: border-box;
+              margin-bottom: 7px;
+              padding: 3px 8px;
+              border: 1px solid ${notificationKind === 'playlist' ? (isDarkMode ? '#789B66' : '#6F9872') : borderColor};
+              border-radius: 7px;
+              background: ${notificationKind === 'playlist' ? (isDarkMode ? '#315C46' : '#DDEBD2') : (isDarkMode ? 'rgba(96, 127, 103, .22)' : 'rgba(255, 255, 255, .52)')};
+              color: ${notificationKind === 'playlist' ? (isDarkMode ? '#EAF6C9' : '#246A4E') : titleColor};
+              font-size: .68rem;
+              font-weight: 700;
+              line-height: 1;
+              letter-spacing: .04em;
             }
             .close-btn {
               position: absolute;
@@ -3062,7 +3063,7 @@ function showTaskbarNotification(title, message, isDarkMode = false, duration) {
               color: ${isDarkMode ? '#FB923C' : '#EA580C'};
             }
             .song-title {
-              font-family: 'Quicksand', sans-serif;
+              font-family: 'Aptos Display', 'Aptos', 'Segoe UI', sans-serif;
               font-size: 1.0rem;
               font-weight: 700;
               color: ${textSongColor};
@@ -3102,6 +3103,7 @@ function showTaskbarNotification(title, message, isDarkMode = false, duration) {
           <div class="container">
             <div class="close-btn" onclick="closeNotification()">&times;</div>
             <div class="content">
+              <div class="kind-badge">${notificationKindLabel}</div>
               <div class="title">${escapeHtml(title)}</div>
               ${songTitle ? `<div class="song-title"><svg style="width: 16px; height: 16px; fill: #FF0000; vertical-align: -3px; margin-right: 5px; flex-shrink: 0; display: inline-block;" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>${escapeHtml(songTitle)}</div>` : ''}
               ${cleanMsg ? `<div class="message">${escapeHtml(cleanMsg)}</div>` : ''}
@@ -3126,24 +3128,63 @@ function showTaskbarNotification(title, message, isDarkMode = false, duration) {
       `;
 
       fs.writeFileSync(tempHtmlPath, htmlContent, 'utf8');
-      win.loadFile(tempHtmlPath);
-
-      activeNotifications.push({
+      const notificationEntry = {
         id: notifGroupId,
         displayId: display.id,
         window: win,
-        timeout: timeout,
+        timeout: null,
+        revealFallback: null,
         height: notifHeight,
         tempHtmlPath: tempHtmlPath
+      };
+      activeNotifications.push(notificationEntry);
+
+      let hasBeenShown = false;
+      const revealNotification = () => {
+        if (hasBeenShown || !win || win.isDestroyed()) return;
+        hasBeenShown = true;
+        if (notificationEntry.revealFallback) {
+          clearTimeout(notificationEntry.revealFallback);
+          notificationEntry.revealFallback = null;
+        }
+
+        win.showInactive();
+        win.setFocusable(false);
+        win.setAlwaysOnTop(true, 'screen-saver');
+        win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+        win.moveTop();
+
+        if (timeoutDuration !== null) {
+          notificationEntry.timeout = setTimeout(() => {
+            closeNotificationById(notifGroupId);
+          }, timeoutDuration);
+        }
+      };
+
+      // Đăng ký listener trước loadFile để không bỏ lỡ ready-to-show khi máy phản hồi nhanh.
+      win.once('ready-to-show', revealNotification);
+      win.webContents.once('did-finish-load', revealNotification);
+      notificationEntry.revealFallback = setTimeout(revealNotification, 2000);
+
+      win.loadFile(tempHtmlPath).catch((error) => {
+        console.error('Lỗi khi tải giao diện notification:', error);
+        revealNotification();
       });
 
-      win.once('ready-to-show', () => {
+      win.once('show', () => {
         if (win && !win.isDestroyed()) {
-          win.showInactive();
+          win.setFocusable(false);
+          win.setAlwaysOnTop(true, 'screen-saver');
+          win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+          win.moveTop();
         }
       });
 
       win.on('closed', () => {
+        if (notificationEntry.revealFallback) {
+          clearTimeout(notificationEntry.revealFallback);
+          notificationEntry.revealFallback = null;
+        }
         try {
           if (fs.existsSync(tempHtmlPath)) {
             fs.unlinkSync(tempHtmlPath);
@@ -3165,47 +3206,16 @@ function showTaskbarNotification(title, message, isDarkMode = false, duration) {
   }
 }
 
-// --- THEO DÕI TIẾN TRÌNH PUBG ĐỂ TỰ ĐỘNG ẨN OVERLAY ---
-const { exec } = require('child_process');
-let isPubgRunning = false;
-
-function checkPubgProcess() {
-  if (process.platform !== 'win32') return;
-
-  exec('tasklist /FI "IMAGENAME eq TslGame.exe" /NH', (err, stdout, stderr) => {
-    if (err) return;
-    
-    // Kiểm tra xem PUBG (TslGame.exe) có đang chạy không
-    const running = stdout.toLowerCase().includes('tslgame.exe');
-    
-    if (running !== isPubgRunning) {
-      isPubgRunning = running;
-      console.log(`[PUBG Detector] Trạng thái chạy thay đổi: ${isPubgRunning ? 'Đang chạy (Ẩn overlay)' : 'Đã tắt (Hiện overlay)'}`);
-      
-      // Gửi tin nhắn qua WebSocket tới OBS Overlay
-      const alertPayload = {
-        type: 'pubg_state',
-        data: {
-          running: isPubgRunning
-        }
-      };
-      
-      const msgStr = JSON.stringify(alertPayload);
-      activeWsClients.forEach((client) => {
-        if (client.readyState === WebSocket.OPEN) {
-          try {
-            client.send(msgStr);
-          } catch (e) {
-            console.error('[WebSocket] Lỗi gửi trạng thái PUBG tới overlay:', e);
-          }
-        }
-      });
-    }
-  });
-}
-
-// Chạy kiểm tra mỗi 4 giây
-setInterval(checkPubgProcess, 4000);
+// Theo dõi game chạy ở service riêng; timer được unref để không giữ tiến trình Electron khi thoát.
+pubgMonitorService = startPubgMonitorService({
+  exec,
+  broadcast: payload => {
+    const message = JSON.stringify(payload);
+    activeWsClients.forEach(client => {
+      if (client.readyState === WebSocket.OPEN) client.send(message);
+    });
+  }
+});
 
 
 

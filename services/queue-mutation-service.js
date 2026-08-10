@@ -1,0 +1,5 @@
+(function attachQueueMutationService(g){'use strict';class QueueMutationService{
+ move(queue,id,direction,{hasCurrent=false}={}){const out=[...(queue||[])],i=out.findIndex(x=>String(x.id)===String(id)),min=hasCurrent?1:0,j=i+direction;if(i<min||j<min||j<0||j>=out.length)return{changed:false,queue:out};const a=out[i],b=out[j];if(a.isPinned||b.isPinned)return{changed:false,queue:out};[out[i],out[j]]=[out[j],out[i]];return{changed:true,queue:out,item:a,index:j};}
+ togglePin(queue,id){const out=[...(queue||[])],i=out.findIndex(x=>String(x.id)===String(id));if(i<0)return{changed:false,queue:out};out[i]={...out[i],isPinned:!out[i].isPinned};return{changed:true,queue:out,item:out[i]};}
+ remove(queue,id){const item=(queue||[]).find(x=>String(x.id)===String(id))||null;return{changed:Boolean(item),item,queue:(queue||[]).filter(x=>String(x.id)!==String(id))};}
+}g.QueueMutationService=QueueMutationService;if(typeof module!=='undefined'&&module.exports)module.exports=QueueMutationService;})(typeof window!=='undefined'?window:globalThis);

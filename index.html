@@ -133,7 +133,8 @@
         <div class="titlebar-right-container" style="display: flex; align-items: center; gap: 0.6rem;">
             <!-- What's New Walkthrough -->
             <button id="btn-whats-new" class="titlebar-menu-btn" onclick="openWhatsNewWalkthrough(event)"
-                title="Có gì mới?" style="-webkit-app-region: no-drag; display: flex; align-items: center; gap: 0.3rem;">
+                title="Có gì mới?"
+                style="-webkit-app-region: no-drag; display: flex; align-items: center; gap: 0.3rem;">
                 <i class="fa-solid fa-wand-magic-sparkles"></i>
                 <span class="menu-btn-text">Có gì mới?</span>
             </button>
@@ -181,6 +182,21 @@
             <!-- Tab 1: Bàn điều khiển (Dashboard) -->
             <div id="tab-player" class="tab-content active">
                 <div class="left-column">
+                    <section id="browser-media-monitor" class="browser-media-monitor" hidden
+                        aria-label="Media đang phát trên trình duyệt">
+                        <div class="browser-media-monitor-header">
+                            <i class="fa-solid fa-window-maximize"></i>
+                            <span>Từ trình duyệt</span>
+                        </div>
+                        <div class="browser-media-monitor-body">
+                            <img id="browser-media-monitor-thumb" class="browser-media-monitor-thumb" src="" alt="">
+                            <div class="browser-media-monitor-copy">
+                                <div id="browser-media-monitor-title" class="browser-media-monitor-title"></div>
+                                <div id="browser-media-monitor-channel" class="browser-media-monitor-channel"></div>
+                            </div>
+                        </div>
+                    </section>
+
                     <!-- Card 2: Trình phát hiện tại (Now Playing Widget) -->
                     <div class="player-widget">
                         <div class="player-header">
@@ -188,8 +204,18 @@
                                 <i class="fa-solid fa-compact-disc"></i> Đang Phát
                             </span>
                             <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <div id="dashboard-video-loading" class="dashboard-video-loading" hidden
+                                    role="status" aria-live="polite">
+                                    <svg class="m3-spinner" viewBox="0 0 24 24" aria-hidden="true">
+                                        <circle cx="12" cy="12" r="9.5" fill="none"></circle>
+                                    </svg>
+                                    <span>Đang tải video...</span>
+                                </div>
                                 <!-- Dolby Atmos Badge -->
-                                <div id="dolby-atmos-badge" class="dolby-atmos-badge active" onclick="toggleDolbyAtmosSpatialAudio()" title="Âm thanh vòm Dolby Atmos Spatial Audio (Click để Bật/Tắt)" style="cursor: pointer;">
+                                <div id="dolby-atmos-badge" class="dolby-atmos-badge active"
+                                    onclick="toggleDolbyAtmosSpatialAudio()"
+                                    title="Âm thanh vòm Dolby Atmos Spatial Audio (Click để Bật/Tắt)"
+                                    style="cursor: pointer;">
                                     <img src="asset/Dolby_Atmos.png" class="dolby-atmos-img" alt="Dolby Atmos">
                                 </div>
                                 <div id="direct-stream-badge" class="direct-stream-badge" style="display: none;">
@@ -208,11 +234,15 @@
                             </div>
                             <div class="song-details">
                                 <div style="display: flex; align-items: center; gap: 0.5rem; width: 100%;">
-                                    <h2 id="current-song-title" class="song-title" style="margin-right: 0.25rem;">Chưa có bài hát nào</h2>
-                                    <button id="btn-player-favorite" class="player-favorite-btn" title="Yêu thích bài hát này" style="display: none; background: none; border: none; cursor: pointer; padding: 0.25rem; font-size: 1.15rem; color: var(--pineapple-text); transition: color 0.15s; outline: none;">
+                                    <h2 id="current-song-title" class="song-title" style="margin-right: 0.25rem;">Chưa
+                                        có bài hát nào</h2>
+                                    <button id="btn-player-favorite" class="player-favorite-btn"
+                                        title="Yêu thích bài hát này"
+                                        style="display: none; background: none; border: none; cursor: pointer; padding: 0.25rem; font-size: 1.15rem; color: var(--pineapple-text); transition: color 0.15s; outline: none;">
                                         <i class="fa-regular fa-heart"></i>
                                     </button>
                                 </div>
+                                <div id="current-song-channel" class="song-channel-name" style="display: none;"></div>
                                 <div id="current-song-donor" class="song-donor" style="display: none;">
                                     <span id="current-donor-name">Khách</span>
                                     <span id="current-donor-amount">0 VNĐ</span>
@@ -223,7 +253,8 @@
                                 <div id="current-song-extension-info" class="song-extension-info"
                                     style="display: none;">
                                 </div>
-                                <div id="player-adaptive-volume-row" class="player-adaptive-volume-row" style="display: none;">
+                                <div id="player-adaptive-volume-row" class="player-adaptive-volume-row"
+                                    style="display: none;">
                                     <span class="adaptive-badge-pill">
                                         <i class="fa-solid fa-wand-magic-sparkles"></i>
                                         <span>Thích ứng: </span>
@@ -238,7 +269,10 @@
                             <div class="progress-container">
                                 <span id="current-time-display" class="progress-time">0:00</span>
                                 <input id="progress-slider" class="progress-bar-slider" type="range" min="0" max="100"
-                                    value="0" oninput="onSeekSliderChange(this.value)">
+                                    value="0" onpointerdown="onSeekSliderStart()"
+                                    oninput="onSeekSliderChange(this.value)"
+                                    onchange="onSeekSliderCommit(this.value)"
+                                    onpointercancel="onSeekSliderCancel()">
                                 <span id="total-time-display" class="progress-time">0:00</span>
                             </div>
 
@@ -269,8 +303,8 @@
                                         <input id="volume-slider" class="volume-slider" type="range" min="0" max="100"
                                             value="80" oninput="onVolumeChange(this.value)">
                                         <span id="volume-val-display" style="min-width: 30px;">80%</span>
-                                        <span id="adaptive-volume-badge" class="adaptive-volume-badge" style="display: none;"
-                                            title="Âm lượng thích ứng đang hoạt động">
+                                        <span id="adaptive-volume-badge" class="adaptive-volume-badge"
+                                            style="display: none;" title="Âm lượng thích ứng đang hoạt động">
                                             <i class="fa-solid fa-wand-magic-sparkles"></i>
                                             <span id="adaptive-volume-info"></span>
                                         </span>
@@ -310,6 +344,11 @@
                                         style="display: none;">
                                         Mở Vote skip
                                     </button>
+                                    <button id="btn-vote-skip-playlist" class="dua-btn dua-btn-secondary"
+                                        onclick="togglePlaylistVoteSkip()" title="Góp tiền để rút ngắn 50% playlist còn lại"
+                                        style="display: none;">
+                                        Vote skip Playlist 50% <span class="feature-beta-badge">Beta</span>
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -342,12 +381,16 @@
 
                         <!-- Card 3: Danh sách hàng đợi phát nhạc (Queue) inside Player Widget -->
                         <div id="card-queue" style="display: flex; flex-direction: column; gap: 0.8rem;">
-                            <div class="queue-header-actions" style="margin-top: 0.2rem; display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                            <div class="queue-header-actions"
+                                style="margin-top: 0.2rem; display: flex; justify-content: space-between; align-items: center; width: 100%;">
                                 <span class="dua-card-title"
                                     style="border-bottom: none; padding-bottom: 0; white-space: nowrap;">
-                                    <i class="fa-solid fa-list-ol"></i> Hàng đợi Nhạc (<span id="queue-count">0</span>)
+                                    <i class="fa-solid fa-list-ol"></i> Hàng đợi (<span id="queue-count">0</span>)
                                 </span>
-                                <button id="btn-queue-tools" class="dua-btn btn-icon" onclick="showQueueToolsMenu(event)" title="Công cụ hàng đợi (Click hoặc Click chuột phải vào đây)" style="padding: 4px 8px; font-size: 0.95rem; background: transparent; border: none; color: var(--pineapple-text); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; transition: background-color 0.2s ease;">
+                                <button id="btn-queue-tools" class="dua-btn btn-icon"
+                                    onclick="showQueueToolsMenu(event)"
+                                    title="Công cụ hàng đợi (Click hoặc Click chuột phải vào đây)"
+                                    style="padding: 4px 8px; font-size: 0.95rem; background: transparent; border: none; color: var(--pineapple-text); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; transition: background-color 0.2s ease;">
                                     <i class="fa-solid fa-ellipsis-vertical"></i>
                                 </button>
                             </div>
@@ -359,10 +402,6 @@
                                         title="Đồng bộ thủ công từ ZyPage">
                                         <i class="fa-solid fa-arrows-rotate"></i>
                                         <span>Đồng bộ ZyPage</span>
-                                    </button>
-                                    <button id="btn-test-mode" class="dua-btn" onclick="toggleTestMode()"
-                                        title="Giữ hàng đợi: TẮT">
-                                        <i class="fa-solid fa-lock-open"></i>
                                     </button>
                                 </div>
 
@@ -392,7 +431,9 @@
                                 </div>
                             </div>
 
-                            <div id="queue-list-container" class="queue-list">
+                            <div id="playlist-processing-status" class="playlist-processing-status" hidden></div>
+                            <div id="playlist-review-panel" class="playlist-review-panel" hidden></div>
+                            <div id="queue-list-container" class="queue-list queue-list-v2">
                                 <!-- Danh sách các bài hát trong hàng đợi sẽ được tạo bằng Javascript -->
                                 <div class="empty-queue-notice">Hàng đợi đang trống. Hãy dán link YouTube bài hát đầu
                                     tiên!
@@ -474,9 +515,12 @@
                         <div class="qa-tab-content" id="qa-content-favorites"
                             style="display: none; max-height: 480px; overflow-y: auto;">
                             <div id="qa-favorites-list" aria-live="polite">
-                                <div style="grid-column: 1 / -1; padding: 30px 10px; text-align: center; color: #6B7280; font-weight: 700;">
-                                    <i class="fa-solid fa-heart" style="font-size: 1.8rem; color: #E5E7EB; margin-bottom: 0.5rem; display: block;"></i>
-                                    Chưa có bài hát yêu thích nào.<br/>Hãy bấm icon Trái tim ở kết quả tìm kiếm hoặc trình phát để lưu bài!
+                                <div
+                                    style="grid-column: 1 / -1; padding: 30px 10px; text-align: center; color: #6B7280; font-weight: 700;">
+                                    <i class="fa-solid fa-heart"
+                                        style="font-size: 1.8rem; color: #E5E7EB; margin-bottom: 0.5rem; display: block;"></i>
+                                    Chưa có bài hát yêu thích nào.<br />Hãy bấm icon Trái tim ở kết quả tìm kiếm hoặc
+                                    trình phát để lưu bài!
                                 </div>
                             </div>
                         </div>
@@ -555,23 +599,31 @@
                     <div class="settings-sidebar">
                         <div class="settings-nav-group">
                             <div class="settings-nav-label">Kết nối</div>
-                            <button class="settings-tab-btn active" onclick="switchSettingsSection('sync')">ZyPage</button>
+                            <button class="settings-tab-btn active"
+                                onclick="switchSettingsSection('sync')">ZyPage</button>
                             <button class="settings-tab-btn" onclick="switchSettingsSection('youtube')">YouTube</button>
                         </div>
                         <div class="settings-nav-group">
                             <div class="settings-nav-label">Phát và kiểm soát</div>
-                            <button class="settings-tab-btn" onclick="switchSettingsSection('playback')">Phát lại</button>
-                            <button class="settings-tab-btn" onclick="switchSettingsSection('limits')">Giới hạn thời gian</button>
-                            <button class="settings-tab-btn" onclick="switchSettingsSection('filters')">SponsorBlock</button>
+                            <button class="settings-tab-btn" onclick="switchSettingsSection('playback')">Phát
+                                lại</button>
+                            <button class="settings-tab-btn" onclick="switchSettingsSection('playlist')">YouTube Playlist <span class="feature-beta-badge">Beta</span></button>
+                            <button class="settings-tab-btn" onclick="switchSettingsSection('limits')">Giới hạn thời
+                                gian</button>
+                            <button class="settings-tab-btn"
+                                onclick="switchSettingsSection('filters')">SponsorBlock</button>
                         </div>
                         <div class="settings-nav-group">
                             <div class="settings-nav-label">Hiển thị</div>
-                            <button class="settings-tab-btn" onclick="switchSettingsSection('overlay')">Giao diện và OBS</button>
+                            <button class="settings-tab-btn" onclick="switchSettingsSection('overlay')">Giao diện và
+                                OBS</button>
                         </div>
                         <div class="settings-nav-group">
                             <div class="settings-nav-label">Hệ thống</div>
-                            <button class="settings-tab-btn" onclick="switchSettingsSection('logs')">Trạng thái và nhật ký</button>
-                            <button class="settings-tab-btn" onclick="switchSettingsSection('about')">Giới thiệu</button>
+                            <button class="settings-tab-btn" onclick="switchSettingsSection('logs')">Trạng thái và nhật
+                                ký</button>
+                            <button class="settings-tab-btn" onclick="switchSettingsSection('about')">Giới
+                                thiệu</button>
                         </div>
                     </div>
 
@@ -728,7 +780,8 @@
                                             Âm lượng thích ứng (Adaptive Volume)</div>
                                         <div
                                             style="font-size: 0.78rem; font-weight: 600; color: #6B7280; margin-top: 0.15rem; line-height: 1.35;">
-                                            Tự động điều chỉnh âm lượng dựa trên độ lớn (dB) của từng video YouTube để tránh bài quá to hoặc quá nhỏ so với mức âm lượng hiện tại.</div>
+                                            Tự động điều chỉnh âm lượng dựa trên độ lớn (dB) của từng video YouTube để
+                                            tránh bài quá to hoặc quá nhỏ so với mức âm lượng hiện tại.</div>
                                     </div>
                                     <div class="theme-switch-wrapper" style="-webkit-app-region: no-drag;">
                                         <label class="theme-switch">
@@ -814,7 +867,8 @@
                                                 style="width: 100%; padding: 0.35rem 0.5rem; font-size: 0.8rem; border-radius: 8px; box-shadow: none;"
                                                 onchange="onThemeChange(this.value)">
                                                 <option value="pineapple">Dứa mặc định</option>
-                                                <option value="enchanted-wild" selected>TFT Set 18 Enchanted Wild</option>
+                                                <option value="enchanted-wild" selected>TFT Set 18 Enchanted Wild
+                                                </option>
                                                 <option value="cutepink">Hồng dễ thương</option>
                                             </select>
                                         </div>
@@ -1145,6 +1199,42 @@
                             </div>
                         </div>
 
+                        <!-- Section: playlist -->
+                        <div id="settings-sec-playlist" class="settings-section playlist-settings-section"
+                            style="display: none; flex-direction: column; gap: 1rem; width: 100%;">
+                            <div class="dua-card playlist-settings-card">
+                                <div class="playlist-settings-heading">
+                                    <h3>YouTube Playlist <span class="feature-beta-badge">Beta</span></h3>
+                                </div>
+                                <div class="playlist-settings-grid">
+                                    <label>Mốc kích hoạt playlist
+                                        <span class="settings-input-unit"><input id="playlist-minimum-input" class="dua-input" type="number" min="0" step="10000"><b>VNĐ</b></span>
+                                    </label>
+                                    <label>Thời gian tối đa phát playlist
+                                        <span class="settings-input-unit"><input id="playlist-duration-input" class="dua-input" type="number" min="1" max="1440" step="1"><b>phút</b></span>
+                                    </label>
+                                    <label>Lượt xem tối thiểu
+                                        <span class="settings-input-unit"><input id="minimum-view-count-input" class="dua-input" type="number" min="0" max="1000000000000" step="1000"><b>view</b></span>
+                                    </label>
+                                </div>
+                                <button class="dua-btn dua-btn-primary playlist-settings-save" onclick="savePlaylistSettings()">Lưu</button>
+                            </div>
+                        </div>
+
+                        <div id="dash-playlist-vote-skip-bar" class="vote-skip-bar">
+                            <div class="vote-skip-bar-label">
+                                <i class="fa-solid fa-layer-group"></i>
+                                <span>Vote skip Playlist 50% <span class="feature-beta-badge">Beta</span>:</span>
+                                <span id="dash-playlist-vote-skip-progress-text">0 / 20.000 VNĐ</span>
+                            </div>
+                            <div class="vote-skip-bar-track">
+                                <div id="dash-playlist-vote-skip-fill" class="vote-skip-bar-fill" style="width: 0%;"></div>
+                            </div>
+                            <div id="dash-playlist-vote-skip-contributors" class="vote-skip-contributors" style="display: none;">
+                                <strong>Người góp phần:</strong> <span id="dash-playlist-vote-skip-contributors-list"></span>
+                            </div>
+                        </div>
+
                         <!-- Section: logs -->
                         <div id="settings-sec-logs" class="settings-section"
                             style="display: none; flex-direction: column; gap: 1rem; width: 100%;">
@@ -1333,7 +1423,7 @@
     <div id="fullscreen-donation-alert" class="fullscreen-donation-overlay" style="display: none;"
         onclick="closeFullscreenDonationAlert()">
         <div class="donation-alert-container">
-            <div class="donation-alert-header">🎉 BẠN NHẬN ĐƯỢC DONATE MỚI! 🎉</div>
+            <div id="fs-alert-header" class="donation-alert-header">DONATE MỚI</div>
             <div class="donation-alert-amount-box">
                 <span id="fs-alert-amount">0</span> <span style="font-size: 1.5rem;">VNĐ</span>
             </div>
@@ -1411,9 +1501,11 @@
             <div class="walkthrough-modal-header">
                 <div class="walkthrough-modal-heading">
                     <i class="fa-solid fa-star"></i>
-                    <span style="cursor: pointer;" ondblclick="toggleWalkthroughEditMode()">Có gì mới trong Pineapple Studio</span>
+                    <span style="cursor: pointer;" ondblclick="toggleWalkthroughEditMode()">Có gì mới trong Pineapple
+                        Studio</span>
                     <span id="walkthrough-version-label" class="walkthrough-version-label"></span>
-                    <button type="button" id="walkthrough-edit-trigger" class="walkthrough-edit-btn" onclick="toggleWalkthroughEditMode()" title="Chỉnh sửa (Chỉ Dev)">
+                    <button type="button" id="walkthrough-edit-trigger" class="walkthrough-edit-btn"
+                        onclick="toggleWalkthroughEditMode()" title="Chỉnh sửa (Chỉ Dev)">
                         <i class="fa-solid fa-pencil"></i>
                     </button>
                 </div>
@@ -1439,12 +1531,16 @@
             </button>
 
             <!-- Info: Donor Name, Amount & Timestamp -->
-            <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.5rem; margin-bottom: 1.5rem; border-bottom: 1px dashed var(--pineapple-border-color); padding-bottom: 1rem;">
-                <strong id="donation-detail-donor" style="font-size: 1.35rem; color: var(--pineapple-text); font-weight: 800;"></strong>
+            <div
+                style="display: flex; align-items: center; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.5rem; margin-bottom: 1.5rem; border-bottom: 1px dashed var(--pineapple-border-color); padding-bottom: 1rem;">
+                <strong id="donation-detail-donor"
+                    style="font-size: 1.35rem; color: var(--pineapple-text); font-weight: 800;"></strong>
                 <span style="color: var(--pineapple-text); opacity: 0.4; font-weight: 400; margin: 0 0.1rem;">•</span>
-                <span id="donation-detail-amount" style="font-size: 1.35rem; color: var(--pineapple-orange-dark); font-weight: 900;"></span>
+                <span id="donation-detail-amount"
+                    style="font-size: 1.35rem; color: var(--pineapple-orange-dark); font-weight: 900;"></span>
                 <span style="color: var(--pineapple-text); opacity: 0.4; font-weight: 400; margin: 0 0.1rem;">•</span>
-                <span id="donation-detail-time" style="font-size: 0.95rem; color: var(--pineapple-text); opacity: 0.6; font-weight: 600;"></span>
+                <span id="donation-detail-time"
+                    style="font-size: 0.95rem; color: var(--pineapple-text); opacity: 0.6; font-weight: 600;"></span>
             </div>
 
             <!-- Message Block (Larger font, wrapped, without box) -->
@@ -1474,6 +1570,47 @@
     <!-- 4. LOGIC JAVASCRIPT -->
     <script src="https://www.gstatic.com/firebasejs/8.8.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.8.1/firebase-database.js"></script>
+    <script src="services/playlist-queue-service.js"></script>
+    <script src="services/dashboard-queue-service.js"></script>
+    <script src="services/dashboard-realtime-service.js"></script>
+    <script src="services/zypage-connection-service.js"></script>
+    <script src="services/zypage-firebase-listener-service.js"></script>
+    <script src="services/zypage-donation-event-processor.js"></script>
+    <script src="services/view-count-policy.js"></script>
+    <script src="services/zypage-queue-ingestion-service.js"></script>
+    <script src="services/zypage-api-snapshot-service.js"></script>
+    <script src="services/zypage-sync-coordinator.js"></script>
+    <script src="services/zypage-api-item-processor.js"></script>
+    <script src="services/vote-skip-service.js"></script>
+    <script src="services/playlist-vote-skip-service.js"></script>
+    <script src="services/zypage-donation-command-service.js"></script>
+    <script src="services/zypage-sync-orchestrator.js"></script>
+    <script src="services/zypage-firebase-event-controller.js"></script>
+    <script src="services/sponsorblock-service.js"></script>
+    <script src="services/dashboard-donation-history-service.js"></script>
+    <script src="services/favorites-service.js"></script>
+    <script src="services/dashboard-settings-service.js"></script>
+    <script src="services/dashboard-notification-service.js"></script>
+    <script src="services/dolby-spatial-audio-service.js"></script>
+    <script src="services/sensitive-video-config-service.js"></script>
+    <script src="services/action-code-service.js"></script>
+    <script src="services/song-metadata-service.js"></script>
+    <script src="services/duration-retry-service.js"></script>
+    <script src="services/zypage-song-end-service.js"></script>
+    <script src="services/taskbar-notification-service.js"></script>
+    <script src="services/media-parser-service.js"></script>
+    <script src="services/donation-message-link-service.js"></script>
+    <script src="services/queue-new-badge-service.js"></script>
+    <script src="services/dashboard-search-service.js"></script>
+    <script src="services/quick-add-service.js"></script>
+    <script src="services/queue-mutation-service.js"></script>
+    <script src="services/playback-controller.js"></script>
+    <script src="services/quick-add-ui-controller.js"></script>
+    <script src="services/dashboard-settings-ui-controller.js"></script>
+    <script src="services/dashboard-playback-ui-controller.js"></script>
+    <script src="services/dashboard-bootstrap-controller.js"></script>
+    <script src="services/overlay-event-service.js"></script>
+    <script src="services/overlay-song-payload-service.js"></script>
     <script src="app.js"></script>
 </body>
 

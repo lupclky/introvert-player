@@ -1,52 +1,98 @@
-// Lắng nghe tin nhắn từ Content Script
+let cachedPort = null;
+const mediaByTab = new Map();
+
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'send-to-pineapple') {
     handleSendToPineapple(request.url, request.title || '', request.playNow)
-      .then(res => sendResponse(res))
+      .then(sendResponse)
       .catch(err => sendResponse({ success: false, error: err.message }));
-    return true; // Giữ kết nối để trả lời bất đồng bộ
+    return true;
+  }
+
+  if (request.action === 'browser-media-state') {
+    const tabId = sender.tab?.id;
+    if (Number.isInteger(tabId)) {
+      const now = Date.now();
+      const previous = mediaByTab.get(tabId);
+      mediaByTab.set(tabId, {
+        ...request.data,
+        tabId,
+        receivedAt: now,
+        lastPlayingAt: request.data?.playing ? now : previous?.lastPlayingAt || 0
+      });
+    }
+    publishSelectedMedia().then(sendResponse).catch(err => {
+      sendResponse({ success: false, error: err.message });
+    });
+    return true;
   }
 });
 
-// Hàm quét tìm cổng hoạt động và gửi yêu cầu thêm nhạc
-async function handleSendToPineapple(videoUrl, videoTitle, playNow) {
-  const startPort = 3000;
-  const endPort = 3005;
-  let activePort = null;
+chrome.tabs.onRemoved.addListener(tabId => {
+  if (!mediaByTab.delete(tabId)) return;
+  publishSelectedMedia().catch(() => {});
+});
 
-  // 1. Quét tìm cổng hoạt động của Pineapple Studio
-  for (let port = startPort; port <= endPort; port++) {
+function selectActiveMedia() {
+  const now = Date.now();
+  const selected = [...mediaByTab.values()]
+    .filter(item => now - item.receivedAt < 10000
+      && (item.playing || now - Number(item.lastPlayingAt || 0) < 3000))
+    .sort((a, b) => Number(b.playing) - Number(a.playing) || b.receivedAt - a.receivedAt)[0];
+
+  return selected ? {
+    ...selected,
+    // YouTube thường phát pause/play ngắn trong lúc đổi buffer/chất lượng.
+    // Giữ trạng thái qua khoảng rung này để Overlay không tắt-bật liên tục.
+    playing: true
+  } : {
+      playing: false,
+      provider: null,
+      url: '',
+      updatedAt: now
+  };
+}
+
+async function findAppPort() {
+  if (cachedPort) {
+    try {
+      const response = await fetch(`http://127.0.0.1:${cachedPort}/api/ping`);
+      if (response.ok) return cachedPort;
+    } catch (_) { }
+    cachedPort = null;
+  }
+
+  for (let port = 3000; port <= 3005; port += 1) {
     try {
       const controller = new AbortController();
-      const id = setTimeout(() => controller.abort(), 600); // Timeout nhanh 600ms
-      
-      const pingUrl = `http://127.0.0.1:${port}/api/ping`;
-      const response = await fetch(pingUrl, { signal: controller.signal });
-      clearTimeout(id);
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data.app === 'pineapple-studio') {
-          activePort = port;
-          break;
-        }
+      const timeoutId = setTimeout(() => controller.abort(), 600);
+      const response = await fetch(`http://127.0.0.1:${port}/api/ping`, { signal: controller.signal });
+      clearTimeout(timeoutId);
+      if (response.ok && (await response.json()).app === 'pineapple-studio') {
+        cachedPort = port;
+        return port;
       }
-    } catch (e) {
-      // Tiếp tục quét cổng tiếp theo nếu lỗi kết nối
-    }
+    } catch (_) { }
   }
+  throw new Error('Không tìm thấy Pineapple Studio đang chạy ở cổng 3000-3005.');
+}
 
-  if (!activePort) {
-    throw new Error('Không tìm thấy ứng dụng Pineapple Studio đang chạy (cổng 3000-3005). Hãy bật ứng dụng trước.');
-  }
-
-  // 2. Gửi request thêm nhạc tới cổng hoạt động
-  const addSongUrl = `http://127.0.0.1:${activePort}/api/add-song`;
-  const response = await fetch(addSongUrl, {
+async function publishSelectedMedia() {
+  const port = await findAppPort();
+  const response = await fetch(`http://127.0.0.1:${port}/api/browser-media-state`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(selectActiveMedia())
+  });
+  if (!response.ok) throw new Error('Ứng dụng từ chối trạng thái media trình duyệt.');
+  return { success: true, port };
+}
+
+async function handleSendToPineapple(videoUrl, videoTitle, playNow) {
+  const activePort = await findAppPort();
+  const response = await fetch(`http://127.0.0.1:${activePort}/api/add-song`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       url: videoUrl,
       title: videoTitle,
@@ -60,9 +106,6 @@ async function handleSendToPineapple(videoUrl, videoTitle, playNow) {
   }
 
   const result = await response.json();
-  if (result.success) {
-    return { success: true, port: activePort };
-  } else {
-    throw new Error(result.error || 'Lỗi không xác định khi thêm nhạc.');
-  }
+  if (!result.success) throw new Error(result.error || 'Không thể thêm nhạc.');
+  return { success: true, port: activePort };
 }

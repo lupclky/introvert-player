@@ -166,6 +166,89 @@ function showToast(message, isError) {
   }, 4000);
 }
 
+// Đồng bộ media thực sự đang phát để Overlay có thể dùng làm nội dung thay thế
+// khi hàng đợi donate trống. Extension chỉ gửi metadata, không nhân đôi âm thanh.
+let lastBrowserMediaSignature = '';
+
+function readText(selectors) {
+  for (const selector of selectors) {
+    const text = document.querySelector(selector)?.textContent?.trim();
+    if (text) return text;
+  }
+  return '';
+}
+
+function readBrowserMediaState() {
+  const hostname = location.hostname.toLowerCase();
+  const media = document.querySelector('video, audio');
+  const playing = Boolean(media && !media.paused && !media.ended && media.readyState >= 2);
+  const sessionMetadata = navigator.mediaSession?.metadata;
+  let provider = null;
+  let title = sessionMetadata?.title || '';
+  let artist = sessionMetadata?.artist || '';
+  let thumbnail = sessionMetadata?.artwork?.at(-1)?.src || '';
+
+  if (hostname === 'music.youtube.com') {
+    provider = 'youtube-music';
+    title = readText(['ytmusic-player-bar .title', 'ytmusic-player-bar [class*="title"]']) || title;
+    artist = readText(['ytmusic-player-bar .byline', 'ytmusic-player-bar [class*="byline"]']) || artist;
+    thumbnail = document.querySelector('ytmusic-player-bar img')?.src || thumbnail;
+  } else if (hostname.endsWith('youtube.com')) {
+    provider = 'youtube';
+    title = readText(['ytd-watch-metadata h1', 'h1.title']) || title || document.title.replace(/\s+-\s+YouTube$/, '');
+    artist = readText(['ytd-watch-metadata ytd-channel-name a', '#owner-name a']) || artist;
+    const videoId = new URL(location.href).searchParams.get('v');
+    if (!thumbnail && videoId) thumbnail = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+  } else if (hostname.endsWith('soundcloud.com')) {
+    provider = 'soundcloud';
+    title = readText(['.playbackSoundBadge__titleLink', '.soundTitle__title']) || title;
+    artist = readText(['.playbackSoundBadge__lightLink', '.soundTitle__username']) || artist;
+    thumbnail = document.querySelector('.playbackSoundBadge__avatar span[style*="background-image"]')?.style.backgroundImage
+      ?.replace(/^url\(["']?/, '').replace(/["']?\)$/, '') || thumbnail;
+  }
+
+  return {
+    provider,
+    playing,
+    url: location.href,
+    title: title || 'Media trên trình duyệt',
+    artist,
+    thumbnail,
+    currentTime: Number(media?.currentTime) || 0,
+    duration: Number.isFinite(media?.duration) ? media.duration : 0
+  };
+}
+
+function publishBrowserMediaState(force = false) {
+  const state = readBrowserMediaState();
+  if (!state.provider) return;
+  const signature = [
+    state.provider,
+    state.playing,
+    state.url,
+    state.title,
+    Math.floor(state.currentTime / 2),
+    Math.floor(state.duration)
+  ].join('|');
+  if (!force && signature === lastBrowserMediaSignature) return;
+  lastBrowserMediaSignature = signature;
+  try {
+    chrome.runtime.sendMessage({ action: 'browser-media-state', data: state }, () => {
+      void chrome.runtime.lastError;
+    });
+  } catch (_) { }
+}
+
+document.addEventListener('play', () => publishBrowserMediaState(true), true);
+document.addEventListener('pause', () => publishBrowserMediaState(true), true);
+document.addEventListener('ended', () => publishBrowserMediaState(true), true);
+window.addEventListener('pagehide', () => {
+  const state = readBrowserMediaState();
+  state.playing = false;
+  try { chrome.runtime.sendMessage({ action: 'browser-media-state', data: state }); } catch (_) { }
+});
+setInterval(publishBrowserMediaState, 1000);
+
 // Kiểm tra định kỳ trang video YouTube
 function checkRoute() {
   const isVideoPage = window.location.pathname === '/watch';
@@ -578,4 +661,3 @@ function sendVideoFromSearch(videoUrl, videoTitle, btn) {
     }
   });
 }
-
