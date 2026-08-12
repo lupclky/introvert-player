@@ -31,18 +31,7 @@
         return Number.isFinite(parsed) ? Math.max(0, Math.floor(parsed * multiplier)) : null;
     }
 
-    function evaluateViewCount(value, minimum = 10000) {
-        const count = parseViewCount(value);
-        const threshold = Math.max(0, Math.floor(Number(minimum) || 0));
-        return {
-            accepted: threshold === 0 || (count !== null && count >= threshold),
-            count,
-            minimum: threshold,
-            reason: count === null ? 'unknown_view_count' : (count < threshold ? 'below_minimum_views' : '')
-        };
-    }
-
-    const api = { parseViewCount, evaluateViewCount };
+    const api = { parseViewCount };
     globalScope.ViewCountPolicy = api;
     if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

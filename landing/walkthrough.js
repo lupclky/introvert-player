@@ -712,7 +712,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function applyWalkthroughVersion(version) {
-        const normalizedVersion = String(version || "26.8.0").replace(/^v/i, "");
+        const normalizedVersion = String(version || "26.8.11").replace(/^v/i, "");
         document.querySelectorAll("[data-walkthrough-version]").forEach(element => {
             element.textContent = `v${normalizedVersion}`;
         });
@@ -724,7 +724,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const urlParams = new URLSearchParams(window.location.search);
         const isEmbedded = urlParams.get('embedded') === 'true';
         const isEditMode = urlParams.get('edit') === 'true' && !isEmbedded;
-        const version = urlParams.get('version') || '26.8.0';
+        const version = urlParams.get('version') || '26.8.11';
 
         document.body.classList.toggle("embedded-view", isEmbedded);
 
@@ -777,7 +777,7 @@ document.addEventListener("DOMContentLoaded", () => {
             localStorage.removeItem("walkthrough_html_content");
             editorCanvas.innerHTML = defaultHTML;
             clearEditorSelection();
-            applyWalkthroughVersion(new URLSearchParams(window.location.search).get('version') || '26.8.0');
+            applyWalkthroughVersion(new URLSearchParams(window.location.search).get('version') || '26.8.11');
             refreshEditableComponents();
             setUnsaved(true);
             showToast("Đã khôi phục về mặc định gốc!", "info");

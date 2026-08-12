@@ -1210,13 +1210,17 @@
                                     <label>Mốc kích hoạt playlist
                                         <span class="settings-input-unit"><input id="playlist-minimum-input" class="dua-input" type="number" min="0" step="10000"><b>VNĐ</b></span>
                                     </label>
-                                    <label>Thời gian tối đa phát playlist
-                                        <span class="settings-input-unit"><input id="playlist-duration-input" class="dua-input" type="number" min="1" max="1440" step="1"><b>phút</b></span>
+                                    <label>Thời gian tại mốc tối thiểu
+                                        <span class="settings-input-unit"><input id="playlist-duration-input" class="dua-input" type="number" min="1" max="525600" step="1"><b>phút</b></span>
                                     </label>
-                                    <label>Lượt xem tối thiểu
-                                        <span class="settings-input-unit"><input id="minimum-view-count-input" class="dua-input" type="number" min="0" max="1000000000000" step="1000"><b>view</b></span>
+                                    <label>Bước tiền cộng thêm
+                                        <span class="settings-input-unit"><input id="playlist-extra-amount-input" class="dua-input" type="number" min="1" step="10000"><b>VNĐ</b></span>
+                                    </label>
+                                    <label>Thời gian thêm mỗi bước
+                                        <span class="settings-input-unit"><input id="playlist-extra-duration-input" class="dua-input" type="number" min="1" max="525600" step="1"><b>phút</b></span>
                                     </label>
                                 </div>
+                                <p id="playlist-pricing-note" class="playlist-pricing-note">Từ 500.000 VNĐ được phát 30 phút; mỗi 50.000 VNĐ dư thêm 5 phút.</p>
                                 <button class="dua-btn dua-btn-primary playlist-settings-save" onclick="savePlaylistSettings()">Lưu</button>
                             </div>
                         </div>
@@ -1358,7 +1362,7 @@
                                             <div>
                                                 <span id="app-version-display"
                                                     style="color: var(--pineapple-orange); font-weight: 800; cursor: pointer;"
-                                                    title="Nhấp 5 lần để kích hoạt bí mật">v26.8.0</span>
+                                                    title="Nhấp 5 lần để kích hoạt bí mật">v26.8.11</span>
                                             </div>
                                         </div>
                                     </div>
@@ -1576,7 +1580,6 @@
     <script src="services/zypage-connection-service.js"></script>
     <script src="services/zypage-firebase-listener-service.js"></script>
     <script src="services/zypage-donation-event-processor.js"></script>
-    <script src="services/view-count-policy.js"></script>
     <script src="services/zypage-queue-ingestion-service.js"></script>
     <script src="services/zypage-api-snapshot-service.js"></script>
     <script src="services/zypage-sync-coordinator.js"></script>

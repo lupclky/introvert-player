@@ -1,13 +1,22 @@
 'use strict';
 
-const { evaluateViewCount } = require('./view-count-policy');
+const PLAYLIST_PRICING = Object.freeze({
+  minimumDonationVnd: 500000,
+  baseDurationSec: 30 * 60,
+  extraDonationStepVnd: 50000,
+  extraDurationStepSec: 5 * 60
+});
 
 const DEFAULT_PLAYLIST_SETTINGS = Object.freeze({
   playlistEnabled: true,
-  playlistMinimumDonationVnd: 1500000,
-  playlistMaximumDurationSec: 4200,
+  playlistMinimumDonationVnd: PLAYLIST_PRICING.minimumDonationVnd,
+  playlistBaseDurationSec: PLAYLIST_PRICING.baseDurationSec,
+  playlistExtraDonationStepVnd: PLAYLIST_PRICING.extraDonationStepVnd,
+  playlistExtraDurationStepSec: PLAYLIST_PRICING.extraDurationStepSec,
+  // Giá trị tương thích cho các luồng playlist thêm thủ công. Với donation,
+  // PlaylistService sẽ tính lại giới hạn theo đúng số tiền của request.
+  playlistMaximumDurationSec: PLAYLIST_PRICING.baseDurationSec,
   playlistMaximumItemsToResolve: 50,
-  minimumViewCount: 0,
   playlistAutoAccept: true,
   playlistContinuousPlayback: true,
   playlistDeduplicateTracks: true
@@ -29,14 +38,26 @@ function normalizeBoolean(value, fallback) {
 function normalizePlaylistSettings(input = {}) {
   return {
     playlistEnabled: normalizeBoolean(input.playlistEnabled, DEFAULT_PLAYLIST_SETTINGS.playlistEnabled),
-    playlistMinimumDonationVnd: clampInteger(input.playlistMinimumDonationVnd, 1500000, 0, 1000000000),
-    playlistMaximumDurationSec: clampInteger(input.playlistMaximumDurationSec, 4200, 60, 86400),
+    playlistMinimumDonationVnd: clampInteger(input.playlistMinimumDonationVnd, PLAYLIST_PRICING.minimumDonationVnd, 0, 1000000000),
+    playlistBaseDurationSec: clampInteger(input.playlistBaseDurationSec, PLAYLIST_PRICING.baseDurationSec, 60, Number.MAX_SAFE_INTEGER),
+    playlistExtraDonationStepVnd: clampInteger(input.playlistExtraDonationStepVnd, PLAYLIST_PRICING.extraDonationStepVnd, 1, 1000000000),
+    playlistExtraDurationStepSec: clampInteger(input.playlistExtraDurationStepSec, PLAYLIST_PRICING.extraDurationStepSec, 1, Number.MAX_SAFE_INTEGER),
+    playlistMaximumDurationSec: clampInteger(input.playlistMaximumDurationSec, PLAYLIST_PRICING.baseDurationSec, 60, Number.MAX_SAFE_INTEGER),
     playlistMaximumItemsToResolve: clampInteger(input.playlistMaximumItemsToResolve, 50, 1, 100),
-    minimumViewCount: clampInteger(input.minimumViewCount, 0, 0, 1000000000000),
     playlistAutoAccept: normalizeBoolean(input.playlistAutoAccept, DEFAULT_PLAYLIST_SETTINGS.playlistAutoAccept),
     playlistContinuousPlayback: normalizeBoolean(input.playlistContinuousPlayback, DEFAULT_PLAYLIST_SETTINGS.playlistContinuousPlayback),
     playlistDeduplicateTracks: normalizeBoolean(input.playlistDeduplicateTracks, DEFAULT_PLAYLIST_SETTINGS.playlistDeduplicateTracks)
   };
+}
+
+function calculatePlaylistDurationLimitSec(amount, settings = DEFAULT_PLAYLIST_SETTINGS) {
+  const normalized = normalizePlaylistSettings(settings);
+  const donationAmount = Math.max(0, Number(amount) || 0);
+  if (donationAmount < normalized.playlistMinimumDonationVnd) return 0;
+
+  const extraAmount = donationAmount - normalized.playlistMinimumDonationVnd;
+  const extraSteps = Math.floor(extraAmount / normalized.playlistExtraDonationStepVnd);
+  return normalized.playlistBaseDurationSec + (extraSteps * normalized.playlistExtraDurationStepSec);
 }
 
 function validatePlaylistAmount(amount, settings = DEFAULT_PLAYLIST_SETTINGS) {
@@ -82,19 +103,6 @@ function selectTracksWithinDuration(tracks, settings = DEFAULT_PLAYLIST_SETTINGS
       skipped.push({ ...track, skipReason: 'blacklisted', skipReasonText: 'Video nằm trong danh sách chặn.' });
       continue;
     }
-    const viewPolicy = evaluateViewCount(track.viewCount ?? track.views, normalized.minimumViewCount);
-    if (!viewPolicy.accepted) {
-      const unknown = viewPolicy.reason === 'unknown_view_count';
-      skipped.push({
-        ...track,
-        viewCount: viewPolicy.count,
-        skipReason: viewPolicy.reason,
-        skipReasonText: unknown
-          ? 'Không xác định được lượt xem của video.'
-          : `Video có ${viewPolicy.count.toLocaleString('vi-VN')} lượt xem, dưới mốc ${viewPolicy.minimum.toLocaleString('vi-VN')}.`
-      });
-      continue;
-    }
     if (normalized.playlistDeduplicateTracks && seen.has(videoId)) {
       skipped.push({ ...track, skipReason: 'duplicate', skipReasonText: 'Video bị trùng trong playlist.' });
       continue;
@@ -128,8 +136,10 @@ function selectTracksWithinDuration(tracks, settings = DEFAULT_PLAYLIST_SETTINGS
 }
 
 module.exports = {
+  PLAYLIST_PRICING,
   DEFAULT_PLAYLIST_SETTINGS,
   normalizePlaylistSettings,
+  calculatePlaylistDurationLimitSec,
   validatePlaylistAmount,
   selectTracksWithinDuration
 };

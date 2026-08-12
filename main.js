@@ -23,6 +23,7 @@ const { startPubgMonitorService } = require('./services/pubg-monitor-service');
 const { registerZyPageSongEndIpcService } = require('./services/zypage-song-end-ipc-service');
 const { registerZyPageShopIdIpcService } = require('./services/zypage-shop-id-ipc-service');
 const { YouTubeDurationService } = require('./services/youtube-duration-service');
+const { YouTubeStreamService } = require('./services/youtube-stream-service');
 const { BrowserMediaStateService } = require('./services/browser-media-state-service');
 
 let db = null;
@@ -63,7 +64,14 @@ function initDatabase() {
     localRealtimeDatabaseService.migrate();
     playlistProvider = new YouTubePlaylistProvider({
       fetchPlaylistData: playlistId => fetchYoutubePageData(`https://www.youtube.com/playlist?list=${encodeURIComponent(playlistId)}`),
-      fetchVideoStats: fetchYoutubeVideoStats
+      fetchVideoMetadata: async videoId => {
+        const metadata = await youtubeDurationService.resolve(videoId);
+        return {
+          durationSec: metadata.duration,
+          viewCount: metadata.views,
+          source: metadata.source
+        };
+      }
     });
     playlistService = new PlaylistService({
       repository: playlistRepository,
@@ -100,6 +108,10 @@ const youtubeDurationService = new YouTubeDurationService({
   // play-dl can leak an internal rejected promise when YouTube returns 429.
   // yt-dlp/Data API are isolated and Overlay supplies the authoritative runtime duration.
   enablePlayDl: process.env.ENABLE_PLAY_DL_DURATION === '1'
+});
+const youtubeStreamService = new YouTubeStreamService({
+  getYtDlpPath: () => path.join(app.getPath('userData'), 'yt-dlp.exe'),
+  timeoutMs: 12000
 });
 const browserMediaStateService = new BrowserMediaStateService();
 
@@ -730,52 +742,47 @@ if (!gotTheLock) {
           return;
         }
 
-        const ytDlpPath = path.join(app.getPath('userData'), 'yt-dlp.exe');
-        if (!fs.existsSync(ytDlpPath)) {
-          res.writeHead(503, getCorsHeaders({ 'Content-Type': 'application/json' }));
-          res.end(JSON.stringify({ error: 'yt-dlp.exe is not ready' }));
-          return;
-        }
-
-        const { spawn } = require('child_process');
-        const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
-        
-        // Chỉ giải quyết đúng video hiện tại, không để Mix/radio tự sinh kéo theo playlist.
-        // Dùng một format progressive (có cả audio + video) tối đa 360p. Không dùng
-        // `ba`: audio-only không có độ phân giải nên không thể áp dụng giới hạn 360p.
-        // Audio element ở overlay vẫn phát được audio track của format này.
-        const proc = spawn(ytDlpPath, [
-          '--no-playlist',
-          '--no-warnings',
-          '-g',
-          '-f', 'b[height<=360]',
-          videoUrl
-        ]);
-        let stdout = '';
-        let stderr = '';
-
-        proc.stdout.on('data', data => stdout += data.toString());
-        proc.stderr.on('data', data => stderr += data.toString());
-
-        proc.on('close', code => {
-          if (code === 0) {
-            res.writeHead(200, getCorsHeaders({ 'Content-Type': 'application/json' }));
-            res.end(JSON.stringify({ success: true, url: stdout.trim() }));
-          } else {
-            console.error(`yt-dlp stream resolution failed for ${videoId}:`, stderr);
-            res.writeHead(500, getCorsHeaders({ 'Content-Type': 'application/json' }));
-            res.end(JSON.stringify({ error: `yt-dlp failed: ${stderr.trim()}` }));
-          }
-        });
-        
-        // IncomingMessage có thể phát sự kiện close sau khi đã nhận xong request,
-        // không đồng nghĩa client đã huỷ. Chỉ dừng yt-dlp nếu response thực sự bị
-        // đóng trước khi gửi kết quả.
+        const abortController = new AbortController();
         res.on('close', () => {
-          if (!res.writableEnded) {
-            try { proc.kill(); } catch (e) {}
-          }
+          if (!res.writableEnded) abortController.abort();
         });
+
+        let ytDlpCookieFilePath = '';
+        // Dùng cookie của phiên đăng nhập YouTube trong app thay vì đọc trực tiếp
+        // database Chromium đang bị khóa. File Netscape chỉ tồn tại trong đúng
+        // thời gian yt-dlp phân giải URL và luôn được xóa ở finally.
+        createYtDlpCookieFile()
+          .then(cookieFilePath => {
+            ytDlpCookieFilePath = cookieFilePath;
+            return youtubeStreamService.resolve(videoId, {
+              signal: abortController.signal,
+              cookiesFilePath: cookieFilePath
+            });
+          })
+          .then(result => {
+            if (res.destroyed || res.writableEnded) return;
+            res.writeHead(200, getCorsHeaders({ 'Content-Type': 'application/json' }));
+            res.end(JSON.stringify(result));
+          })
+          .catch(error => {
+            if (res.destroyed || res.writableEnded) return;
+            const statusCode = Number(error?.statusCode) || 502;
+            const errorCode = error?.code || 'yt_dlp_failed';
+            console.error(`yt-dlp stream resolution failed for ${videoId} (${errorCode}):`, error?.message || error);
+            if (Array.isArray(error?.details)) {
+              console.error('yt-dlp resolver details:', error.details.map(item => ({
+                resolver: item.resolver,
+                code: item.code
+              })));
+            }
+            res.writeHead(statusCode, getCorsHeaders({ 'Content-Type': 'application/json' }));
+            res.end(JSON.stringify({
+              success: false,
+              code: errorCode,
+              error: error?.message || 'yt-dlp failed'
+            }));
+          })
+          .finally(() => removeYtDlpCookieFile(ytDlpCookieFilePath));
         return;
       }
 
@@ -1794,6 +1801,53 @@ async function getYoutubeCookieHeader() {
   return cookies.map(c => `${c.name}=${c.value}`).join('; ');
 }
 
+async function createYtDlpCookieFile() {
+  try {
+    const cookies = await session.defaultSession.cookies.get({});
+    const youtubeCookies = cookies.filter(cookie => {
+      const domain = String(cookie?.domain || '').replace(/^\./, '').toLowerCase();
+      return domain === 'youtube.com'
+        || domain.endsWith('.youtube.com')
+        || domain === 'google.com'
+        || domain.endsWith('.google.com');
+    });
+    const contents = YouTubeStreamService.serializeNetscapeCookies(youtubeCookies);
+    if (!contents) return '';
+
+    const cookieFilePath = path.join(
+      app.getPath('userData'),
+      `.yt-dlp-cookies-${process.pid}-${crypto.randomUUID()}.txt`
+    );
+    await fs.promises.writeFile(cookieFilePath, contents, {
+      encoding: 'utf8',
+      mode: 0o600,
+      flag: 'wx'
+    });
+    return cookieFilePath;
+  } catch (error) {
+    console.warn('Không thể chuẩn bị cookie YouTube cho DirectStream:', error?.message || error);
+    return '';
+  }
+}
+
+async function removeYtDlpCookieFile(cookieFilePath) {
+  if (!cookieFilePath) return;
+  const retryDelaysMs = [0, 150, 500];
+  for (const delayMs of retryDelaysMs) {
+    if (delayMs > 0) await new Promise(resolve => setTimeout(resolve, delayMs));
+    try {
+      await fs.promises.unlink(cookieFilePath);
+      return;
+    } catch (error) {
+      if (error?.code === 'ENOENT') return;
+      if (!['EBUSY', 'EPERM'].includes(error?.code) || delayMs === retryDelaysMs.at(-1)) {
+        console.warn('Không thể xóa file cookie tạm của DirectStream:', error?.message || error);
+        return;
+      }
+    }
+  }
+}
+
 async function getSapisidHash() {
   const cookies = await session.defaultSession.cookies.get({ url: 'https://www.youtube.com' });
   const sapisidCookie = cookies.find(c => c.name === 'SAPISID' || c.name === '__Secure-3PAPISID');
@@ -2726,47 +2780,6 @@ function getPreferredNotificationDisplay(screen) {
   }, secondaryDisplays[0]);
 }
 
-function fetchYoutubeVideoStats(videoId) {
-  return new Promise((resolve, reject) => {
-    const postData = JSON.stringify({
-      videoId: String(videoId || ''),
-      context: { client: { clientName: 'WEB', clientVersion: '2.20210621.02.00' } }
-    });
-    const request = https.request({
-      hostname: 'www.youtube.com',
-      port: 443,
-      path: '/youtubei/v1/player',
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(postData),
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36'
-      },
-      timeout: 8000
-    }, response => {
-      let body = '';
-      response.setEncoding('utf8');
-      response.on('data', chunk => { body += chunk; });
-      response.on('end', () => {
-        try {
-          const data = JSON.parse(body);
-          const details = data?.videoDetails || {};
-          resolve({
-            viewCount: details.viewCount === undefined ? null : Number(details.viewCount),
-            durationSec: Number(details.lengthSeconds) || 0
-          });
-        } catch (error) {
-          reject(error);
-        }
-      });
-    });
-    request.on('timeout', () => request.destroy(new Error('youtube_stats_timeout')));
-    request.on('error', reject);
-    request.write(postData);
-    request.end();
-  });
-}
-
 const escapeHtml = (text) => {
   return (text || '')
     .replace(/&/g, "&amp;")
@@ -2866,7 +2879,7 @@ function showTaskbarNotification(title, message, isDarkMode = false, duration) {
       : (/^\[MUSIC\]/i.test(lines[0] || '') ? 'music' : 'donation');
     const notificationKindLabel = notificationKind === 'playlist'
       ? 'PLAYLIST'
-      : (notificationKind === 'music' ? 'NHẠC ORDER' : 'DONATE MỚI');
+      : 'DONATE MỚI';
     let songTitle = '';
     let cleanMsg = '';
     
@@ -2889,7 +2902,7 @@ function showTaskbarNotification(title, message, isDarkMode = false, duration) {
     
     // Tính toán độ cao linh hoạt 100% theo nội dung thực tế (không dùng ellipsis ...)
     const titleLines = Math.max(1, Math.ceil((title || '').length / 36));
-    // Chừa một hàng cho nhãn DONATE MỚI / NHẠC ORDER / PLAYLIST.
+    // Chừa một hàng cho nhãn DONATE MỚI / PLAYLIST.
     let calculatedHeight = 84 + (titleLines * 24);
 
     if (songTitle) {

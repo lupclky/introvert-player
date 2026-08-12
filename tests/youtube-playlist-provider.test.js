@@ -38,7 +38,7 @@ test('trích metadata và thứ tự video từ ytInitialData', async () => {
   assert.deepEqual(result.tracks.map(track => track.durationSec), [190, 260]);
 });
 
-test('lấy lượt xem từng video trước khi lọc playlist', async () => {
+test('vẫn giữ metadata lượt xem nhưng không dùng để loại video playlist', async () => {
   const data = { contents: [
     { playlistVideoRenderer: { videoId: 'abcdefghijk', title: { simpleText: 'Ít view' }, lengthText: { simpleText: '3:00' } } },
     { playlistVideoRenderer: { videoId: 'lmnopqrstuv', title: { simpleText: 'Đủ view' }, lengthText: { simpleText: '4:00' } } }
@@ -54,6 +54,43 @@ test('lấy lượt xem từng video trước khi lọc playlist', async () => {
     playlistMaximumItemsToResolve: 50,
     minimumViewCount: 10000
   });
-  assert.deepEqual(selection.accepted.map(track => track.videoId), ['lmnopqrstuv']);
-  assert.equal(selection.skipped[0].skipReason, 'below_minimum_views');
+  assert.deepEqual(playlist.tracks.map(track => track.viewCount), [9999, 10000]);
+  assert.deepEqual(selection.accepted.map(track => track.videoId), ['abcdefghijk', 'lmnopqrstuv']);
+  assert.equal(selection.skipped.length, 0);
+});
+
+test('ưu tiên duration sạch từ video metadata thay cho duration trong HTML playlist', async () => {
+  const data = { contents: [
+    { playlistVideoRenderer: {
+      videoId: 'abcdefghijk', title: { simpleText: 'Bài có duration cũ' },
+      lengthText: { simpleText: '3:10' }
+    } }
+  ] };
+  const provider = new YouTubePlaylistProvider({
+    fetchPlaylistData: async () => data,
+    fetchVideoMetadata: async () => ({ durationSec: 191, viewCount: 12345, source: 'innertube_search' })
+  });
+
+  const playlist = await provider.resolve('PL1234567890abc');
+
+  assert.equal(playlist.tracks[0].durationSec, 191);
+  assert.equal(playlist.tracks[0].durationSource, 'innertube_search');
+});
+
+test('dùng duration HTML làm fallback khi video metadata không có duration', async () => {
+  const data = { contents: [
+    { playlistVideoRenderer: {
+      videoId: 'abcdefghijk', title: { simpleText: 'Bài fallback' },
+      lengthText: { simpleText: '3:10' }
+    } }
+  ] };
+  const provider = new YouTubePlaylistProvider({
+    fetchPlaylistData: async () => data,
+    fetchVideoMetadata: async () => ({ durationSec: 0, viewCount: 12345 })
+  });
+
+  const playlist = await provider.resolve('PL1234567890abc');
+
+  assert.equal(playlist.tracks[0].durationSec, 190);
+  assert.equal(playlist.tracks[0].durationSource, 'playlist_html');
 });

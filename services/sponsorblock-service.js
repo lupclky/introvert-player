@@ -5,6 +5,10 @@
         constructor(options = {}) {
             this.fetchImpl = options.fetchImpl || globalScope.fetch?.bind(globalScope);
             this.endpoint = options.endpoint || 'https://sponsor.ajay.app/api/skipSegments';
+            const configuredTailTolerance = Number(options.tailToleranceSeconds);
+            this.tailToleranceSeconds = Number.isFinite(configuredTailTolerance)
+                ? Math.max(0, configuredTailTolerance)
+                : 1.5;
             this.categories = options.categories || [
                 'sponsor', 'intro', 'outro', 'selfpromo', 'interaction', 'music_offtopic'
             ];
@@ -36,6 +40,36 @@
                 }))
                 .filter(item => Number.isFinite(item.start) && Number.isFinite(item.end) && item.end > item.start);
             return { status: 'ok', segments };
+        }
+
+        isTerminalSegment(segmentEnd, playbackDuration) {
+            const end = Number(segmentEnd);
+            const duration = Number(playbackDuration);
+            return Number.isFinite(end)
+                && Number.isFinite(duration)
+                && duration > 0
+                && end >= duration - this.tailToleranceSeconds;
+        }
+
+        resolvePlaybackAction(currentTime, playbackDuration, segments, enabledCategories = {}) {
+            const time = Math.max(0, Number(currentTime) || 0);
+            const records = Array.isArray(segments) ? segments : [];
+
+            for (const segment of records) {
+                if (enabledCategories[segment?.category] !== true) continue;
+                const start = Number(segment?.start);
+                const end = Number(segment?.end);
+                if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) continue;
+                if (time < start || time >= end) continue;
+
+                return {
+                    type: this.isTerminalSegment(end, playbackDuration) ? 'end' : 'seek',
+                    target: end + 0.05,
+                    segment: { start, end, category: segment.category }
+                };
+            }
+
+            return { type: 'none' };
         }
     }
 

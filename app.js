@@ -3,6 +3,43 @@
 // Khởi tạo thời điểm chạy app để chống spam thông báo khi sync lúc bắt đầu
 const appStartTime = Date.now();
 
+const PLAYLIST_PRICING_POLICY = Object.freeze({
+    version: 2,
+    minimumDonationVnd: 500000,
+    baseDurationSec: 30 * 60,
+    extraDonationStepVnd: 50000,
+    extraDurationStepSec: 5 * 60
+});
+
+function readStoredPlaylistPricingValue(key, fallback, min, max) {
+    if (Number(localStorage.getItem('dua_playlist_pricing_version')) !== PLAYLIST_PRICING_POLICY.version) {
+        return fallback;
+    }
+    const rawValue = localStorage.getItem(key);
+    if (rawValue === null || String(rawValue).trim() === '') return fallback;
+    const value = Number(rawValue);
+    if (!Number.isFinite(value)) return fallback;
+    return Math.min(max, Math.max(min, Math.round(value)));
+}
+
+function normalizeDashboardPlaylistPricing(input = {}, acceptSavedValues = true) {
+    const source = acceptSavedValues && Number(input.playlistPricingVersion) === PLAYLIST_PRICING_POLICY.version
+        ? input
+        : {};
+    const normalize = (value, fallback, min, max) => {
+        const parsed = Number(value);
+        if (!Number.isFinite(parsed)) return fallback;
+        return Math.min(max, Math.max(min, Math.round(parsed)));
+    };
+    return {
+        playlistPricingVersion: PLAYLIST_PRICING_POLICY.version,
+        playlistMinimumDonationVnd: normalize(source.playlistMinimumDonationVnd, PLAYLIST_PRICING_POLICY.minimumDonationVnd, 0, 1000000000),
+        playlistBaseDurationSec: normalize(source.playlistBaseDurationSec, PLAYLIST_PRICING_POLICY.baseDurationSec, 60, Number.MAX_SAFE_INTEGER),
+        playlistExtraDonationStepVnd: normalize(source.playlistExtraDonationStepVnd, PLAYLIST_PRICING_POLICY.extraDonationStepVnd, 1, 1000000000),
+        playlistExtraDurationStepSec: normalize(source.playlistExtraDurationStepSec, PLAYLIST_PRICING_POLICY.extraDurationStepSec, 60, Number.MAX_SAFE_INTEGER)
+    };
+}
+
 // Firebase Web config is public client bootstrap metadata. Keep one shared
 // definition so every ZyPage listener uses the same default app.
 window.DEFAULT_FIREBASE_CONFIG ||= Object.freeze({
@@ -631,17 +668,13 @@ const state = {
     // Donate mở YouTube Playlist
     playlistSettings: {
         playlistEnabled: true,
-        playlistMinimumDonationVnd: (() => {
-            const value = Number(localStorage.getItem('dua_playlist_minimum_vnd'));
-            return Number.isFinite(value) && value >= 0 ? value : 1500000;
-        })(),
-        playlistMaximumDurationSec: parseInt(localStorage.getItem('dua_playlist_max_duration_sec')) || 4200,
+        playlistPricingVersion: PLAYLIST_PRICING_POLICY.version,
+        playlistMinimumDonationVnd: readStoredPlaylistPricingValue('dua_playlist_minimum_vnd', PLAYLIST_PRICING_POLICY.minimumDonationVnd, 0, 1000000000),
+        playlistBaseDurationSec: readStoredPlaylistPricingValue('dua_playlist_base_duration_sec', PLAYLIST_PRICING_POLICY.baseDurationSec, 60, Number.MAX_SAFE_INTEGER),
+        playlistExtraDonationStepVnd: readStoredPlaylistPricingValue('dua_playlist_extra_step_vnd', PLAYLIST_PRICING_POLICY.extraDonationStepVnd, 1, 1000000000),
+        playlistExtraDurationStepSec: readStoredPlaylistPricingValue('dua_playlist_extra_duration_sec', PLAYLIST_PRICING_POLICY.extraDurationStepSec, 60, Number.MAX_SAFE_INTEGER),
+        playlistMaximumDurationSec: readStoredPlaylistPricingValue('dua_playlist_base_duration_sec', PLAYLIST_PRICING_POLICY.baseDurationSec, 60, Number.MAX_SAFE_INTEGER),
         playlistMaximumItemsToResolve: parseInt(localStorage.getItem('dua_playlist_max_items')) || 50,
-        minimumViewCount: (() => {
-            const raw = localStorage.getItem('dua_minimum_view_count');
-            const value = Number(raw);
-            return raw !== null && Number.isFinite(value) && value >= 0 ? value : 0;
-        })(),
         playlistAutoAccept: localStorage.getItem('dua_playlist_auto_accept') !== 'false',
         playlistContinuousPlayback: localStorage.getItem('dua_playlist_continuous') !== 'false',
         playlistDeduplicateTracks: localStorage.getItem('dua_playlist_dedupe') !== 'false'
@@ -1020,8 +1053,9 @@ function initializePlaylistSettingsUI() {
     const settings = state.playlistSettings;
     const values = {
         'playlist-minimum-input': settings.playlistMinimumDonationVnd,
-        'playlist-duration-input': Math.max(1, Math.round(Number(settings.playlistMaximumDurationSec || 4200) / 60)),
-        'minimum-view-count-input': Number.isFinite(Number(settings.minimumViewCount)) ? Number(settings.minimumViewCount) : 0
+        'playlist-duration-input': Math.max(1, Math.round(Number(settings.playlistBaseDurationSec || PLAYLIST_PRICING_POLICY.baseDurationSec) / 60)),
+        'playlist-extra-amount-input': settings.playlistExtraDonationStepVnd,
+        'playlist-extra-duration-input': Math.max(1, Math.round(Number(settings.playlistExtraDurationStepSec || PLAYLIST_PRICING_POLICY.extraDurationStepSec) / 60))
     };
     Object.entries(values).forEach(([id, value]) => {
         const element = document.getElementById(id);
@@ -1029,6 +1063,10 @@ function initializePlaylistSettingsUI() {
         if (element.type === 'checkbox') element.checked = Boolean(value);
         else element.value = value;
     });
+    const pricingNote = document.getElementById('playlist-pricing-note');
+    if (pricingNote) {
+        pricingNote.textContent = `Từ ${Number(settings.playlistMinimumDonationVnd || 0).toLocaleString('vi-VN')} VNĐ được phát ${Math.round(Number(settings.playlistBaseDurationSec || 0) / 60).toLocaleString('vi-VN')} phút; mỗi ${Number(settings.playlistExtraDonationStepVnd || 0).toLocaleString('vi-VN')} VNĐ dư thêm ${Math.round(Number(settings.playlistExtraDurationStepSec || 0) / 60).toLocaleString('vi-VN')} phút.`;
+    }
 }
 
 function savePlaylistSettings() {
@@ -1037,15 +1075,19 @@ function savePlaylistSettings() {
         const value = Number(element?.value);
         return Number.isFinite(value) ? Math.min(max, Math.max(min, Math.round(value))) : fallback;
     };
-    const maximumDurationMinutes = numberValue('playlist-duration-input', 70, 1, 1440);
-
+    const pricing = normalizeDashboardPlaylistPricing({
+        playlistPricingVersion: PLAYLIST_PRICING_POLICY.version,
+        playlistMinimumDonationVnd: numberValue('playlist-minimum-input', PLAYLIST_PRICING_POLICY.minimumDonationVnd, 0, 1000000000),
+        playlistBaseDurationSec: numberValue('playlist-duration-input', PLAYLIST_PRICING_POLICY.baseDurationSec / 60, 1, 525600) * 60,
+        playlistExtraDonationStepVnd: numberValue('playlist-extra-amount-input', PLAYLIST_PRICING_POLICY.extraDonationStepVnd, 1, 1000000000),
+        playlistExtraDurationStepSec: numberValue('playlist-extra-duration-input', PLAYLIST_PRICING_POLICY.extraDurationStepSec / 60, 1, 525600) * 60
+    });
     state.playlistSettings = {
         ...state.playlistSettings,
         playlistEnabled: true,
-        playlistMinimumDonationVnd: numberValue('playlist-minimum-input', 1500000, 0, 1000000000),
-        playlistMaximumDurationSec: maximumDurationMinutes * 60,
+        ...pricing,
+        playlistMaximumDurationSec: pricing.playlistBaseDurationSec,
         playlistMaximumItemsToResolve: 50,
-        minimumViewCount: numberValue('minimum-view-count-input', 0, 0, 1000000000000),
         playlistAutoAccept: true,
         playlistContinuousPlayback: true,
         playlistDeduplicateTracks: true
@@ -1053,15 +1095,19 @@ function savePlaylistSettings() {
 
     const storageMap = {
         dua_playlist_enabled: state.playlistSettings.playlistEnabled,
+        dua_playlist_pricing_version: state.playlistSettings.playlistPricingVersion,
         dua_playlist_minimum_vnd: state.playlistSettings.playlistMinimumDonationVnd,
+        dua_playlist_base_duration_sec: state.playlistSettings.playlistBaseDurationSec,
+        dua_playlist_extra_step_vnd: state.playlistSettings.playlistExtraDonationStepVnd,
+        dua_playlist_extra_duration_sec: state.playlistSettings.playlistExtraDurationStepSec,
         dua_playlist_max_duration_sec: state.playlistSettings.playlistMaximumDurationSec,
         dua_playlist_max_items: state.playlistSettings.playlistMaximumItemsToResolve,
-        dua_minimum_view_count: state.playlistSettings.minimumViewCount,
         dua_playlist_auto_accept: state.playlistSettings.playlistAutoAccept,
         dua_playlist_continuous: state.playlistSettings.playlistContinuousPlayback,
         dua_playlist_dedupe: state.playlistSettings.playlistDeduplicateTracks
     };
     Object.entries(storageMap).forEach(([key, value]) => localStorage.setItem(key, String(value)));
+    localStorage.removeItem('dua_minimum_view_count');
     initializePlaylistSettingsUI();
     const urlInput = document.getElementById('zypage-url');
     saveConfigToAppData(urlInput ? urlInput.value.trim() : '', state.zypageShopId);
@@ -1339,6 +1385,7 @@ function buildRealtimeQueueSnapshot() {
         donorName: song.donorName || '', amount: Number(song.amount || 0), message: song.message || '',
         duration: Math.max(0, Math.floor(Number(song.duration) || 0)), start: Number(song.start || 0), end: song.end || null,
         isOwnerAdd: Boolean(song.isOwnerAdd), isPinned: Boolean(song.isPinned),
+        timeLimitExempt: Boolean(song.timeLimitExempt || (song.playlistRequestId && song.playlistTrackId)),
         playlistRequestId: song.playlistRequestId || null, playlistTrackId: song.playlistTrackId || null,
         playlistTitle: song.playlistTitle || null, playlistPosition: song.playlistPosition || null,
         playlistTotalTracks: song.playlistTotalTracks || null, playlistTotalDurationSec: song.playlistTotalDurationSec || null
@@ -1476,6 +1523,12 @@ function markDonationKeyAsProcessed(key) {
 }
 
 function calculateMaxDurationForSong(songOrAmount) {
+    if (songOrAmount && typeof songOrAmount === 'object') {
+        const isPlaylistTimeLimitExempt = window.PlaylistQueueService?.isTimeLimitExempt
+            ? window.PlaylistQueueService.isTimeLimitExempt(songOrAmount)
+            : Boolean(songOrAmount.playlistRequestId && songOrAmount.playlistTrackId);
+        if (songOrAmount.timeLimitExempt === true || isPlaylistTimeLimitExempt) return 0;
+    }
     if (!state.maxDurationEnabled) return 0;
     
     let amount = 0;
@@ -1510,6 +1563,7 @@ function calculateMaxDurationForSong(songOrAmount) {
 
 function isExtensionAllowedForSong(song) {
     if (!song) return false;
+    if (song.timeLimitExempt === true || (song.playlistRequestId && song.playlistTrackId)) return false;
     // Nếu chưa có thời lượng thực của bài hát, mặc định cho phép để tránh bị chặn oan lúc mới load
     if (!song.duration || song.duration <= 0) return true;
     
@@ -2655,17 +2709,32 @@ function handlePlayerError(code, title) {
         errorDescription = "Video không tồn tại hoặc đã bị xóa / chuyển sang chế độ riêng tư.";
     } else if (code === 5) {
         errorDescription = "Không thể phát video này trong trình phát HTML5.";
+    } else if (code === 'drm_protected') {
+        errorDescription = "Video dùng DRM: cả YouTube iframe lẫn DirectStream đều không có nguồn media có thể phát trong OBS.";
+    } else if (code === 'authentication_required') {
+        errorDescription = "YouTube yêu cầu xác thực chống bot nên DirectStream không thể lấy URL phát.";
+    } else if (code === 'embedding_disabled') {
+        errorDescription = "Chủ video đã tắt phát nhúng và nguồn DirectStream thay thế cũng không khả dụng.";
+    } else if (code === 'format_unavailable') {
+        errorDescription = "YouTube không cung cấp luồng DirectStream nào có chứa audio cho video này.";
+    } else if (code === 'resolver_timeout') {
+        errorDescription = "DirectStream mất quá nhiều thời gian để phân giải nguồn phát.";
+    } else if (code === 'direct_stream_hls_failed') {
+        errorDescription = "Nguồn HLS dự phòng đã tải được nhưng OBS không thể tiếp tục phát sau khi thử phục hồi.";
+    } else if (code === 'direct_stream_play_failed' || code === 'direct_stream_resolution_failed' || code === 'yt_dlp_failed') {
+        errorDescription = "Iframe không phát được và nguồn DirectStream dự phòng cũng thất bại.";
     }
 
     const fullMsg = `Bài hát: <strong>${title}</strong> gặp sự cố phát.<br><br>
         <span style="color: var(--pineapple-orange-dark); font-weight: 800;"><i class="fa-solid fa-triangle-exclamation"></i> Chi tiết:</span> ${errorDescription}<br><br>
         <em>Hệ thống đã tự động bỏ qua để phát bài tiếp theo. Hãy chọn bản nhạc khác thay thế (ví dụ: bản Vietsub, Lyric do fan đăng tải).</em>`;
 
-    finishPlaylistTrack(state.currentSong, 'error', 'player_error_' + code);
-
-    // Hiển thị thông báo màu đỏ/cam trên Dashboard
-    showDashboardSystemAlert("Lỗi trình phát", fullMsg, "LỖI PHÁT NHẠC");
     logSystem(`Lỗi phát bài "${title}" (Mã lỗi: ${code}). Chi tiết: ${errorDescription}`, "error");
+    // Dùng cùng một đường chuyển bài với nút Next/Vote Skip. Không để
+    // player_error tự xây thêm một cơ chế queue riêng gây double skip.
+    skipSong(false, 'player_error_' + code);
+    // Hiển thị sau thông báo skip để phần giải thích lỗi vẫn là thông báo cuối.
+    showDashboardSystemAlert("Lỗi trình phát", fullMsg, "LỖI PHÁT NHẠC");
 }
 
 // --- MÔ PHỎNG THÊM LINK NHANH MẪU ---
@@ -2712,6 +2781,7 @@ function getQuickAddService() {
             parsePlaylistId: parseYoutubePlaylistId,
             resolveSoundcloudUrl: resolveSoundcloudUrlIfNeeded,
             fetchMetadata: fetchSongMetadata,
+            addManualPlaylist: (...args) => window.electronAPI?.addManualPlaylist?.(...args),
             parseDuration: parseDurationToSeconds
         }));
 }
@@ -2754,11 +2824,6 @@ async function addYoutubePlaylistFromQuickAdd(url) {
         return;
     }
 
-    if (!state.currentSong.voteSkipActive && state.playlistVoteSkip?.active) {
-        showDashboardSystemAlert('Vote Skip Playlist đang bật', 'Hãy tắt Vote Skip Playlist trước khi mở Vote Skip bài hát.');
-        return;
-    }
-
     const nameInput = document.getElementById('quick-donor-name');
     const amountInput = document.getElementById('quick-donor-amount');
     const { donorName, amount: donorAmount, isOwnerAdd } = getQuickAddUiController().readOptions();
@@ -2771,7 +2836,7 @@ async function addYoutubePlaylistFromQuickAdd(url) {
     }
 
     try {
-        const result = await window.electronAPI.addManualPlaylist(
+        const result = await getQuickAddService().addPlaylist(
             url,
             { donorName, donationAmount: donorAmount, isOwnerAdd },
             getPlaylistSettings(),
@@ -3998,7 +4063,7 @@ function togglePlayPause() {
 }
 
 // --- SKIP BÀI (NEXT) ---
-function skipSong(isManual = true) {
+function skipSong(isManual = true, skipReasonOverride = null) {
     if (state.focusMode) return;
     if (isManual && isControlsDisabled()) return;
     if (!state.currentSong) return;
@@ -4018,7 +4083,8 @@ function skipSong(isManual = true) {
     const skipAction = () => {
         const completedSong = state.currentSong;
         const nextSong = getNextSong();
-        const skipReason = !isManual && completedSong?.voteSkipSuccess === true ? 'vote_skip' : 'skipped_by_streamer';
+        const skipReason = skipReasonOverride
+            || (!isManual && completedSong?.voteSkipSuccess === true ? 'vote_skip' : 'skipped_by_streamer');
         finishPlaylistTrack(completedSong, 'skipped', skipReason);
         logSystem(`Bỏ qua bài hát: <strong>${completedSong.title}</strong>`);
         showDashboardSystemAlert("Bỏ qua bài hát", `Đã bỏ qua bài hát: <strong>${completedSong.title}</strong>`);
@@ -6282,16 +6348,6 @@ function getZyPageQueueIngestionService(eventProcessor = getZyPageDonationEventP
                     } catch (_) {}
                 }
                 renderQueue();
-            },
-            getMinimumViewCount: () => state.playlistSettings.minimumViewCount,
-            onRejected: (result, liveEvent) => {
-                const minimum = Number(result.minimumViewCount || 0).toLocaleString('vi-VN');
-                const detail = result.reason === 'unknown_view_count'
-                    ? 'không xác định được lượt xem'
-                    : `chỉ có ${Number(result.viewCount || 0).toLocaleString('vi-VN')} lượt xem`;
-                const message = `Không nhận link của <strong>${escapeDashboardHtml(liveEvent?.donorName || 'Khách')}</strong>: ${detail}, yêu cầu tối thiểu ${minimum} lượt xem.`;
-                logSystem(`[Bộ lọc view] ${message}`, 'system');
-                showDashboardSystemAlert('Không đủ lượt xem', message);
             }
         }));
 }
@@ -6721,16 +6777,23 @@ function handleMqttMessage(topic, messageStrOrObj) {
             logSystem(`[Tập lệnh thực thi] Nhận lại: <strong>${payload.type}</strong> ${payload.data ? `[${JSON.stringify(payload.data)}]` : ''}`, 'system');
         }
 
+        // Overlay có thể kết nối lại và gửi request_sync trước khi Dashboard
+        // kịp subscribe, khiến lượt reload lúc khởi động bị bỏ lỡ. Trạng thái
+        // phát hoặc heartbeat đầu tiên cũng xác nhận rằng Overlay đã online.
+        // Hạ cờ trước khi gửi lệnh để lần kết nối sau reload không tạo vòng lặp.
+        const isOverlayStartupSignal = payload.type === 'request_sync'
+            || payload.type === 'realtime.heartbeat'
+            || payload.type === 'overlay_state';
+        if (state.pendingOverlayReset && isOverlayStartupSignal) {
+            state.pendingOverlayReset = false;
+            logSystem("Overlay đã online trong phiên mở app mới. Đang tự động tải lại overlay...");
+            triggerResetOverlay();
+            return;
+        }
+
         if (payload.type === 'request_sync') {
             logSystem("Nhận yêu cầu đồng bộ cấu hình từ Overlay.");
-            
-            if (state.pendingOverlayReset) {
-                state.pendingOverlayReset = false;
-                logSystem("Phát hiện lượt reset overlay chưa thực hiện khi mở app. Đang gửi lệnh reset...");
-                triggerResetOverlay();
-                return;
-            }
-            
+
             publishRealtimeSnapshot();
             sendControlCommand('volume', state.volume);
             const canResume = state.currentSong && !document.getElementById('resume-playback-modal');
@@ -6979,15 +7042,22 @@ async function loadConfigFromAppData() {
             }
 
             if (config.playlistSettings && typeof config.playlistSettings === 'object') {
+                const { minimumViewCount: _ignoredViewCount, ...savedPlaylistSettings } = config.playlistSettings;
+                const savedPricing = normalizeDashboardPlaylistPricing(savedPlaylistSettings, true);
                 state.playlistSettings = {
                     ...state.playlistSettings,
-                    ...config.playlistSettings,
+                    ...savedPlaylistSettings,
                     playlistEnabled: true,
+                    // Cấu hình cũ chưa có version được chuyển về mặc định 500k/30p/50k/5p.
+                    // Cấu hình version 2 do người dùng lưu được giữ nguyên.
+                    ...savedPricing,
+                    playlistMaximumDurationSec: savedPricing.playlistBaseDurationSec,
                     playlistMaximumItemsToResolve: 50,
                     playlistAutoAccept: true,
                     playlistContinuousPlayback: true,
                     playlistDeduplicateTracks: true
                 };
+                localStorage.removeItem('dua_minimum_view_count');
                 initializePlaylistSettingsUI();
             }
 
@@ -7506,7 +7576,7 @@ async function openWhatsNewWalkthrough(event) {
         event.preventDefault();
         event.stopPropagation();
     }
-    let ver = '26.8.3';
+    let ver = '26.8.11';
     if (window.electronAPI && typeof window.electronAPI.getAppVersion === 'function') {
         try {
             ver = await window.electronAPI.getAppVersion();

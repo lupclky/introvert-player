@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const { parsePlaylistDonationMessage, parseYoutubeUrl } = require('./playlist-message-parser');
 const {
   normalizePlaylistSettings,
+  calculatePlaylistDurationLimitSec,
   validatePlaylistAmount,
   selectTracksWithinDuration
 } = require('./playlist-policy');
@@ -192,7 +193,16 @@ class PlaylistService {
         totalItems: resolved.sourceItemCount || resolved.tracks.length
       });
 
-      const selection = selectTracksWithinDuration(resolved.tracks, settings, blacklistVideoIds);
+      // Playlist donate dùng hạn mức động theo số tiền. Playlist thêm thủ công
+      // không có donation nên nhận đúng thời lượng cơ sở của chính sách.
+      const pricingAmount = request.donationAmount >= settings.playlistMinimumDonationVnd
+        ? request.donationAmount
+        : settings.playlistMinimumDonationVnd;
+      const durationLimitSec = calculatePlaylistDurationLimitSec(pricingAmount, settings);
+      const selection = selectTracksWithinDuration(resolved.tracks, {
+        ...settings,
+        playlistMaximumDurationSec: durationLimitSec
+      }, blacklistVideoIds);
       const skippedReasons = selection.skipped.reduce((summary, track) => {
         const reason = track.skipReason || 'unknown';
         summary[reason] = (summary[reason] || 0) + 1;
@@ -204,6 +214,7 @@ class PlaylistService {
         sourceItems: resolved.tracks.length,
         acceptedItems: selection.accepted.length,
         skippedItems: selection.skipped.length,
+        durationLimitSec,
         skippedReasons
       });
       const acceptedTracks = selection.accepted.map(track => ({

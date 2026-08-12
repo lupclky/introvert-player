@@ -224,6 +224,14 @@
             white-space: nowrap;
         }
 
+        .idle-playlist-price-slide .idle-price-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .idle-playlist-price-slide .idle-price-item {
+            padding-inline: 0.58rem;
+        }
+
         .obs-owner-price-promo {
             display: none;
             width: 100%;
@@ -267,6 +275,25 @@
         body.theme-enchanted-wild .idle-price-threshold {
             font-size: 0.84rem;
             font-weight: 800;
+        }
+
+        /* Set 18 dùng bố cục bảng phẳng: bỏ từng ô bo tròn và phân tách bằng đường kẻ mảnh. */
+        body.theme-enchanted-wild .idle-price-grid {
+            column-gap: 0.72rem;
+            row-gap: 0;
+        }
+
+        body.theme-enchanted-wild .idle-price-item,
+        body.theme-enchanted-wild .idle-playlist-price-slide .idle-price-item {
+            padding: 0.3rem 0.08rem 0.28rem;
+            background: transparent;
+            border: 0;
+            border-bottom: 1px solid color-mix(in srgb, var(--theme-highlight-color) 34%, transparent);
+            border-radius: 0;
+        }
+
+        body.theme-enchanted-wild .obs-owner-price-promo .idle-price-item {
+            padding-block: 0.23rem 0.21rem;
         }
 
         body.theme-enchanted-wild .obs-empty-overlay .idle-price-slide {
@@ -432,6 +459,8 @@
             --badge-padding: .24rem .72rem;
             --badge-font-size: .82rem;
             font-family: 'Be Vietnam Pro', 'Inter', sans-serif;
+            text-rendering: optimizeLegibility;
+            font-synthesis: none;
         }
 
         body.theme-enchanted-wild .obs-compact-player,
@@ -504,7 +533,7 @@
 
         body.theme-enchanted-wild .obs-next-songs-modal .modal-song-item:first-child {
             border-color: rgba(33, 104, 75, .18);
-            background: linear-gradient(90deg, rgba(59, 145, 99, .1), transparent 72%);
+            background: transparent;
             box-shadow: none;
         }
 
@@ -551,6 +580,58 @@
         body.theme-enchanted-wild .obs-next-songs-modal .modal-song-donor {
             color: #27684e;
             font-weight: 500;
+        }
+
+        /* Ít hơn 4 bài: tận dụng phần chiều cao còn trống để ưu tiên title đầy đủ. */
+        body.theme-enchanted-wild .obs-next-songs-modal .modal-body[data-count="1"] .modal-song-item,
+        body.theme-enchanted-wild .obs-next-songs-modal .modal-body[data-count="2"] .modal-song-item,
+        body.theme-enchanted-wild .obs-next-songs-modal .modal-body[data-count="3"] .modal-song-item {
+            flex: 1 1 0;
+            min-height: 0;
+            max-height: none;
+        }
+
+        body.theme-enchanted-wild .obs-next-songs-modal .modal-body[data-count="1"] .modal-song-details,
+        body.theme-enchanted-wild .obs-next-songs-modal .modal-body[data-count="2"] .modal-song-details,
+        body.theme-enchanted-wild .obs-next-songs-modal .modal-body[data-count="3"] .modal-song-details {
+            justify-content: center;
+        }
+
+        body.theme-enchanted-wild .obs-next-songs-modal .modal-body[data-count="1"] .modal-song-title,
+        body.theme-enchanted-wild .obs-next-songs-modal .modal-body[data-count="2"] .modal-song-title,
+        body.theme-enchanted-wild .obs-next-songs-modal .modal-body[data-count="3"] .modal-song-title {
+            overflow: visible;
+            text-overflow: clip;
+            white-space: normal;
+            overflow-wrap: anywhere;
+        }
+
+        body.theme-enchanted-wild .obs-next-songs-modal .modal-body[data-count="3"] .modal-song-title {
+            font-size: .96rem;
+            line-height: 1.25;
+        }
+
+        body.theme-enchanted-wild .obs-next-songs-modal .modal-body[data-count="2"] .modal-song-item {
+            padding-block: 13px;
+        }
+
+        body.theme-enchanted-wild .obs-next-songs-modal .modal-body[data-count="2"] .modal-song-title {
+            font-size: 1.04rem;
+            line-height: 1.3;
+        }
+
+        body.theme-enchanted-wild .obs-next-songs-modal .modal-body[data-count="1"] .modal-song-item {
+            padding-block: 18px;
+        }
+
+        body.theme-enchanted-wild .obs-next-songs-modal .modal-body[data-count="1"] .modal-song-title {
+            font-size: 1.12rem;
+            line-height: 1.35;
+        }
+
+        body.theme-enchanted-wild .obs-next-songs-modal .modal-body[data-count="1"] .modal-song-meta {
+            margin-top: 4px;
+            font-size: .84rem;
         }
 
         /* Khi chủ kênh tự phát nhạc (isOwnerAdd): 
@@ -3049,6 +3130,8 @@
             border: 2px solid rgba(31, 126, 82, .72) !important;
             border-radius: 16px !important;
             box-shadow: 0 14px 34px rgba(20, 106, 76, .28), 0 0 20px rgba(190, 247, 126, .32), inset 0 1px 0 rgba(255, 255, 255, .82) !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
         }
 
         body.theme-enchanted-wild .obs-next-song-fullscreen {
@@ -3084,8 +3167,8 @@
             right: 0;
             z-index: 2;
             order: 1;
-            height: 24px;
-            flex: 0 0 24px;
+            height: 27px;
+            flex: 0 0 27px;
             align-self: stretch;
             margin: 0 !important;
         }
@@ -3095,7 +3178,7 @@
             order: 2;
             flex: 1 1 auto;
             height: 100%;
-            padding-top: 36px;
+            padding-top: 39px;
             box-sizing: border-box;
             justify-content: flex-start !important;
             align-items: center !important;
@@ -3172,17 +3255,19 @@
             gap: 0;
             overflow: hidden;
             font-family: 'Be Vietnam Pro', 'Inter', sans-serif !important;
-            font-size: .74rem !important;
+            font-size: .84rem !important;
             line-height: 1 !important;
-            font-weight: 900 !important;
-            letter-spacing: .07em !important;
+            font-weight: 800 !important;
+            letter-spacing: .035em !important;
             text-transform: uppercase;
             color: #f0d5a4 !important;
             background: #684229 !important;
             border: 1px solid #a8784d !important;
             border-radius: 8px !important;
             padding: 5px 10px !important;
-            text-shadow: 0 -1px 0 rgba(49, 25, 13, .82), 0 1px 0 rgba(255, 226, 174, .18);
+            min-height: 27px !important;
+            height: 27px !important;
+            text-shadow: none !important;
             box-shadow:
                 inset 0 1px 0 rgba(255, 224, 172, .2),
                 inset 0 -2px 0 rgba(48, 25, 13, .34),
@@ -3215,27 +3300,42 @@
             border: 1px solid rgba(173, 218, 125, .68);
             border-radius: 9px 3px 9px 3px;
             padding: 4px 9px;
-            font-weight: 800;
-            text-shadow: 0 1px 2px rgba(4, 29, 20, .86);
+            min-height: 27px !important;
+            height: 27px !important;
+            font-size: .84rem !important;
+            font-weight: 750;
+            letter-spacing: 0;
+            text-shadow: none !important;
             box-shadow: inset 0 1px 0 rgba(226, 255, 185, .2), 0 0 9px rgba(146, 225, 105, .22);
         }
 
         body.theme-enchanted-wild .next-fullscreen-title {
             font-family: 'Be Vietnam Pro', 'Inter', sans-serif !important;
             color: #155b43 !important;
-            font-weight: 800 !important;
+            font-size: 1.44rem !important;
+            line-height: 1.22 !important;
+            font-weight: 700 !important;
+            letter-spacing: -.012em;
             -webkit-text-stroke: 0;
-            text-shadow: 0 1px 2px rgba(7, 53, 38, .18);
+            text-shadow: none !important;
+        }
+
+        body.theme-enchanted-wild .next-fullscreen-donor-row {
+            font-size: 1.16rem !important;
+            line-height: 1.2;
+            text-shadow: none !important;
         }
 
         body.theme-enchanted-wild .next-fullscreen-donor-name {
             color: var(--theme-song-meta-color) !important;
-            font-weight: 800;
+            font-weight: 700;
+            text-shadow: none !important;
         }
 
         body.theme-enchanted-wild .next-fullscreen-donor-amount {
             color: #16885c !important;
-            font-weight: 900;
+            font-weight: 800;
+            text-shadow: none !important;
         }
 
         body.theme-enchanted-wild .obs-alert-action-text {
@@ -3850,9 +3950,12 @@
             allow="autoplay"></iframe>
     </div>
 
-    <!-- Khung Direct Audio Stream (chỉ phát ngầm dự phòng) -->
-    <audio id="obs-direct-audio-player" style="display: none;" allow="autoplay"></audio>
+    <!-- Media ẩn cho DirectStream; video cần thiết để phát được HLS ghép hình + tiếng. -->
+    <video id="obs-direct-audio-player" style="display: none;" playsinline></video>
 
+    <script src="node_modules/hls.js/dist/hls.min.js"></script>
+    <script src="services/sponsorblock-service.js"></script>
+    <script src="services/youtube-playback-fallback-policy.js"></script>
     <script>
         // Redirect debug logs to local server terminal
         (function () {
@@ -4044,23 +4147,10 @@
                     maximumFractionDigits: 1
                 }).format(thousands)}K`;
             };
-            const rows = [];
-            try {
-                const playlistSettings = JSON.parse(localStorage.getItem('dua_playlist_settings') || 'null');
-                const playlistAmount = Math.max(0, Number(playlistSettings?.playlistMinimumDonationVnd) || 0);
-                const playlistMinutes = Math.max(0, Number(playlistSettings?.playlistMaximumDurationSec) || 0) / 60;
-                if (playlistSettings?.playlistEnabled !== false && playlistAmount > 0 && playlistMinutes > 0) {
-                    rows.push({
-                        threshold: `Playlist ${numberFormat.format(playlistMinutes)}p`,
-                        duration: formatAmountK(playlistAmount)
-                    });
-                }
-            } catch (_) { }
-
-            rows.push(...normalized.map(item => ({
+            const rows = normalized.map(item => ({
                 threshold: `Dưới ${formatAmountK(item.amount)}`,
                 duration: `${numberFormat.format(item.duration)} phút`
-            })));
+            }));
 
             const defaultDuration = Math.max(0, Number(config.defaultDurationMinutes) || 0);
             if (defaultDuration > 0 && normalized.length > 0) {
@@ -4070,6 +4160,45 @@
                 });
             }
             return rows;
+        }
+
+        function readIdlePlaylistPricing() {
+            const priceTableConfig = readIdleTimeLimitConfig();
+            if (!priceTableConfig || priceTableConfig.showIdlePriceTable === false) return null;
+            const defaults = {
+                enabled: true,
+                minimumDonationVnd: 500000,
+                baseDurationSec: 30 * 60,
+                extraDonationStepVnd: 50000,
+                extraDurationStepSec: 5 * 60
+            };
+            try {
+                const settings = JSON.parse(localStorage.getItem('dua_playlist_settings') || 'null');
+                if (settings?.playlistEnabled === false) return null;
+                // Snapshot cũ chỉ có mốc 1,5 triệu/70 phút. Chỉ đọc các giá trị
+                // động khi Dashboard đã gửi đúng phiên bản chính sách mới.
+                if (Number(settings?.playlistPricingVersion) !== 2) return defaults;
+                const normalize = (value, fallback, min) => {
+                    const parsed = Number(value);
+                    return Number.isFinite(parsed) ? Math.max(min, parsed) : fallback;
+                };
+                return {
+                    enabled: true,
+                    minimumDonationVnd: normalize(settings.playlistMinimumDonationVnd, defaults.minimumDonationVnd, 0),
+                    baseDurationSec: normalize(settings.playlistBaseDurationSec, defaults.baseDurationSec, 60),
+                    extraDonationStepVnd: normalize(settings.playlistExtraDonationStepVnd, defaults.extraDonationStepVnd, 1),
+                    extraDurationStepSec: normalize(settings.playlistExtraDurationStepSec, defaults.extraDurationStepSec, 60)
+                };
+            } catch (_) {
+                return defaults;
+            }
+        }
+
+        function formatIdleAmountK(amount) {
+            return `${new Intl.NumberFormat('vi-VN', {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 1
+            }).format(Math.max(0, Number(amount) || 0) / 1000)}K`;
         }
 
         function buildIdleSlides(message) {
@@ -4084,8 +4213,29 @@
                     totalPages: Math.ceil(rows.length / IDLE_PRICE_PAGE_SIZE)
                 });
             }
+            const playlistPricing = readIdlePlaylistPricing();
+            if (playlistPricing?.enabled) {
+                slides.push({
+                    type: 'playlist-prices',
+                    title: 'Bảng giá Playlist',
+                    rows: [
+                        {
+                            threshold: `Tối thiểu ${formatIdleAmountK(playlistPricing.minimumDonationVnd)}`,
+                            duration: `${new Intl.NumberFormat('vi-VN').format(playlistPricing.baseDurationSec / 60)} phút`
+                        },
+                        {
+                            threshold: `Thêm ${formatIdleAmountK(playlistPricing.extraDonationStepVnd)}`,
+                            duration: `+${new Intl.NumberFormat('vi-VN').format(playlistPricing.extraDurationStepSec / 60)} phút`
+                        }
+                    ]
+                });
+            }
             slides.push({ type: 'message', message });
-            return { slides, rows };
+            return { slides, rows, playlistPricing };
+        }
+
+        function hasIdlePriceSlides() {
+            return buildIdleSlides('').slides.some(slide => slide.type !== 'message');
         }
 
         function renderIdleSlideshow(element, message) {
@@ -4105,8 +4255,8 @@
             }
 
             const safeMessage = message || 'Order nhạc tự động Zypage 50k';
-            const { slides, rows } = buildIdleSlides(safeMessage);
-            const signature = JSON.stringify({ message: safeMessage, rows });
+            const { slides } = buildIdleSlides(safeMessage);
+            const signature = JSON.stringify({ message: safeMessage, slides });
 
             if (!idleSlideshowActive || signature !== idleSlideshowSignature) {
                 idleSlideshowActive = true;
@@ -4143,9 +4293,10 @@
                 </div>
             `).join('');
 
+            const playlistClass = slide.type === 'playlist-prices' ? ' idle-playlist-price-slide' : '';
             element.innerHTML = `
-                <div class="idle-slide idle-price-slide ${transitionClass}">
-                    <div class="idle-price-title">Bảng giá</div>
+                <div class="idle-slide idle-price-slide${playlistClass} ${transitionClass}">
+                    <div class="idle-price-title">${escapeIdleHtml(slide.title || 'Bảng giá')}</div>
                     <div class="idle-price-grid">${itemsHtml}</div>
                 </div>
             `;
@@ -4315,7 +4466,6 @@
         let isMorphingTransitionActive = false;
         let morphTimeoutId = null;
         let lastSongLoadStartTimestamp = 0;
-        let iframeLoadRetryCount = 0;
         let stuckStateStartTime = null;
         let lastWarnedSongId = null;
         let warningCountdownInterval = null;
@@ -4576,6 +4726,12 @@
         let currentLoudnessVideoId = null;
 
         let skipSegments = [];
+        let skipSegmentsSongId = null;
+        const sponsorBlockPlaybackPolicy = new SponsorBlockService({ tailToleranceSeconds: 1.5 });
+        const youtubePlaybackFallbackPolicy = new YouTubePlaybackFallbackPolicy({
+            blockedStateGraceMs: 8000,
+            generalGraceMs: 12000
+        });
         const defaultSponsorBlockCategories = {
             sponsor: true,
             intro: true,
@@ -4613,6 +4769,7 @@
 
         // yt-dlp direct stream bypass variables
         let directAudioPlayer = null;
+        let directHlsPlayer = null;
         let isDirectAudioPlaying = false;
         let currentDirectVideoId = null;
         let directAudioDuration = 0;
@@ -4662,7 +4819,13 @@
                 originalDuration = nextSong.duration;
             }
 
-            const maxDurationEnabled = localStorage.getItem('dua_max_duration_enabled') === 'true';
+            const isPlaylistTrack = Boolean(
+                nextSong.timeLimitExempt
+                || nextSong.isPlaylistTrack
+                || (nextSong.playlistRequestId && nextSong.playlistTrackId)
+            );
+            const maxDurationEnabled = !isPlaylistTrack
+                && localStorage.getItem('dua_max_duration_enabled') === 'true';
 
             let maxDur = 0;
             if (maxDurationEnabled) {
@@ -4831,6 +4994,7 @@
                 const listEl = document.getElementById('obs-next-songs-list');
                 if (listEl) {
                     listEl.innerHTML = '';
+                    listEl.dataset.count = String(nextSongs.length);
                     if (nextSongs.length > 0) {
                         nextSongs.forEach((ns, index) => {
                             const itemEl = document.createElement('div');
@@ -5221,7 +5385,10 @@
                     const nextSongObj = {
                         duration: currentSong.nextSongDuration,
                         start: currentSong.nextSongStart,
-                        end: currentSong.nextSongEnd
+                        end: currentSong.nextSongEnd,
+                        playlistRequestId: currentSong.nextSongPlaylistRequestId,
+                        playlistTrackId: currentSong.nextSongPlaylistTrackId,
+                        timeLimitExempt: currentSong.nextSongTimeLimitExempt
                     };
                     const nextSongDurationLimit = calculateNextSongLimitDuration(nextSongObj);
                     const drawerDurationEl = document.getElementById('obs-next-duration');
@@ -5322,7 +5489,10 @@
                     const nextSongObj = {
                         duration: currentSong.nextSongDuration,
                         start: currentSong.nextSongStart,
-                        end: currentSong.nextSongEnd
+                        end: currentSong.nextSongEnd,
+                        playlistRequestId: currentSong.nextSongPlaylistRequestId,
+                        playlistTrackId: currentSong.nextSongPlaylistTrackId,
+                        timeLimitExempt: currentSong.nextSongTimeLimitExempt
                     };
                     const nextSongDurationLimit = calculateNextSongLimitDuration(nextSongObj);
                     const drawerDurationEl = document.getElementById('obs-next-duration');
@@ -5916,6 +6086,7 @@
             let target = Math.max(0, Number(requestedTime) || 0);
             if (!Array.isArray(skipSegments) || skipSegments.length === 0) return target;
             loadSponsorBlockCategories();
+            const playbackDuration = getPayloadDuration();
 
             // Lặp để xử lý cả các segment bật có phần giao nhau hoặc nối tiếp.
             for (let pass = 0; pass < skipSegments.length; pass += 1) {
@@ -5926,6 +6097,11 @@
                     const end = Number(segment.end);
                     if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) continue;
                     if (target >= start && target < end) {
+                        // Seeking past a tail segment can exceed YouTube's real duration
+                        // and wrap the iframe back to 0:00. End handling owns this case.
+                        if (sponsorBlockPlaybackPolicy.isTerminalSegment(end, playbackDuration)) {
+                            return target;
+                        }
                         target = end + 0.05;
                         moved = true;
                     }
@@ -5935,46 +6111,55 @@
             return target;
         }
 
-        function skipSponsorBlockSegment(currentTime, seekTo) {
-            if (typeof seekTo !== 'function' || !Array.isArray(skipSegments) || skipSegments.length === 0) return false;
+        function skipSponsorBlockSegment(currentTime, playbackDuration, expectedSongId, seekTo) {
+            const normalizedSongId = expectedSongId == null ? null : String(expectedSongId);
+            if (typeof seekTo !== 'function'
+                || normalizedSongId === null
+                || normalizedSongId !== activePlaybackSongId
+                || normalizedSongId !== skipSegmentsSongId
+                || !Array.isArray(skipSegments)
+                || skipSegments.length === 0) return false;
             loadSponsorBlockCategories();
             const now = Date.now();
 
-            for (const segment of skipSegments) {
-                if (sponsorBlockCategories[segment.category] !== true) continue;
-                const start = Number(segment.start);
-                const end = Number(segment.end);
-                if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) continue;
-
-                const segmentKey = `${segment.category}:${start}-${end}`;
-                if (currentTime >= start && currentTime < end) {
-                    const isRetry = lastSkippedSegmentKey === segmentKey
-                        && Math.abs(lastSBSeekTarget - end) < 0.01;
-                    // Iframe seekTo can be ignored while YouTube is starting or
-                    // buffering. Retry until the observed playhead leaves the
-                    // segment instead of assuming the first call succeeded.
-                    if (isRetry && now - lastSBSeekTimestamp < 600) return false;
-                    console.log(`SponsorBlock Overlay: Nhảy phân đoạn [${segment.category}] (${currentTime.toFixed(1)}s -> ${end.toFixed(1)}s)`);
-                    lastSBSeekTimestamp = now;
-                    lastSBSeekTarget = end;
-                    lastSkippedSegmentKey = segmentKey;
-                    try {
-                        seekTo(end + 0.05);
-                    } catch (error) {
-                        console.warn('SponsorBlock Overlay: Lệnh tua thất bại, sẽ thử lại.', error);
-                        return false;
-                    }
-                    if (!isRetry) triggerSponsorBlockToast();
-                    return true;
-                }
-
-                if (lastSkippedSegmentKey === segmentKey) {
-                    lastSkippedSegmentKey = null;
-                    lastSBSeekTimestamp = 0;
-                    lastSBSeekTarget = 0;
-                }
+            const action = sponsorBlockPlaybackPolicy.resolvePlaybackAction(
+                currentTime,
+                playbackDuration,
+                skipSegments,
+                sponsorBlockCategories
+            );
+            if (action.type === 'none') {
+                lastSkippedSegmentKey = null;
+                lastSBSeekTimestamp = 0;
+                lastSBSeekTarget = 0;
+                return false;
             }
-            return false;
+
+            const { segment } = action;
+            const segmentKey = `${segment.category}:${segment.start}-${segment.end}`;
+            const isRetry = lastSkippedSegmentKey === segmentKey
+                && Math.abs(lastSBSeekTarget - segment.end) < 0.01;
+            if (isRetry && now - lastSBSeekTimestamp < 600) return false;
+
+            lastSBSeekTimestamp = now;
+            lastSBSeekTarget = segment.end;
+            lastSkippedSegmentKey = segmentKey;
+
+            if (action.type === 'end') {
+                console.log(`SponsorBlock Overlay: Đoạn [${segment.category}] chạm đuôi (${segment.end.toFixed(1)}s/${Number(playbackDuration).toFixed(1)}s); kết bài thay vì tua vượt duration.`);
+                triggerEndedEvent('sponsorblock_tail', normalizedSongId);
+                return true;
+            }
+
+            console.log(`SponsorBlock Overlay: Nhảy phân đoạn [${segment.category}] (${Number(currentTime).toFixed(1)}s -> ${segment.end.toFixed(1)}s)`);
+            try {
+                seekTo(action.target);
+            } catch (error) {
+                console.warn('SponsorBlock Overlay: Lệnh tua thất bại, sẽ thử lại.', error);
+                return false;
+            }
+            if (!isRetry) triggerSponsorBlockToast();
+            return true;
         }
 
         function normalizePlaybackDuration(playerDuration) {
@@ -6127,14 +6312,19 @@
                                 currentTime = directAudioPlayer.currentTime;
                             }
                         }
-                        const skipped = !isResumeSeekInProgress() && skipSponsorBlockSegment(currentTime, targetTime => {
-                            const duration = normalizePlaybackDuration(directAudioPlayer.duration);
-                            directAudioPlayer.currentTime = duration > 0
-                                ? Math.min(targetTime, duration)
+                        const playbackDuration = normalizePlaybackDuration(directAudioPlayer.duration);
+                        const skipped = !isResumeSeekInProgress() && skipSponsorBlockSegment(
+                            currentTime,
+                            playbackDuration,
+                            currentDirectSongId,
+                            targetTime => {
+                            directAudioPlayer.currentTime = playbackDuration > 0
+                                ? Math.min(targetTime, Math.max(0, playbackDuration - 0.5))
                                 : targetTime;
-                        });
+                            }
+                        );
                         if (skipped) currentTime = directAudioPlayer.currentTime;
-                        const duration = directAudioPlayer.duration || 0;
+                        const duration = playbackDuration;
                         currentPlayback.currentTime = currentTime;
                         currentPlayback.duration = duration;
                         updateTrackProgress(currentTime, duration, true);
@@ -6185,6 +6375,31 @@
             }
         }
 
+        function reportDirectStreamFailure(code, message, videoId, songId) {
+            let song = null;
+            try { song = JSON.parse(localStorage.getItem('dua_current_song') || 'null'); } catch (_) { }
+            if (!song || songId == null || String(song.id) !== String(songId)) return;
+
+            const normalizedCode = code || 'direct_stream_failed';
+            publishMqtt('overlay_error', {
+                message,
+                code: normalizedCode,
+                videoId,
+                songId
+            });
+            // Iframe đã thất bại và DirectStream cũng không phát được. Gửi đúng
+            // player_error để Dashboard dùng chung cơ chế chuyển bài, tránh giữ
+            // vĩnh viễn một item ở 0:00.
+            publishMqtt('overlay_event', {
+                type: 'player_error',
+                code: normalizedCode,
+                title: song.title || 'YouTube',
+                songId,
+                provider: 'direct_stream',
+                timestamp: Date.now()
+            });
+        }
+
         function resolveAndPlayDirectStream(videoId, startTime, expectedSongId = activePlaybackSongId) {
             const normalizedExpectedSongId = expectedSongId == null ? null : String(expectedSongId);
             if (normalizedExpectedSongId !== activePlaybackSongId) {
@@ -6194,12 +6409,12 @@
             initDirectAudioPlayer();
             if (!directAudioPlayer) {
                 console.error("Direct Audio Player element not found.");
-                publishMqtt('overlay_error', {
-                    message: 'Direct Audio Player element not found.',
-                    code: 'direct_stream_player_missing',
+                reportDirectStreamFailure(
+                    'direct_stream_player_missing',
+                    'Direct Audio Player element not found.',
                     videoId,
-                    songId: normalizedExpectedSongId
-                });
+                    normalizedExpectedSongId
+                );
                 return;
             }
 
@@ -6219,11 +6434,14 @@
             }
 
             fetch(streamApiUrl)
-                .then(response => {
+                .then(async response => {
+                    const payload = await response.json().catch(() => ({}));
                     if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
+                        const error = new Error(payload.error || `HTTP error! status: ${response.status}`);
+                        error.code = payload.code || 'direct_stream_resolution_failed';
+                        throw error;
                     }
-                    return response.json();
+                    return payload;
                 })
                 .then(data => {
                     if (!isDirectAudioPlaying
@@ -6234,13 +6452,11 @@
                         return;
                     }
                     if (data.success && data.url) {
-                        console.log("Successfully resolved direct stream url:", data.url);
-                        directAudioPlayer.src = data.url;
-
+                        console.log(`Successfully resolved direct stream via ${data.resolver || 'yt-dlp'}.`);
                         const activeVol = getAdjustedVolume();
                         directAudioPlayer.volume = activeVol / 100;
 
-                        directAudioPlayer.play()
+                        const beginPlayback = () => directAudioPlayer.play()
                             .then(() => {
                                 if (activePlaybackSongId !== normalizedExpectedSongId) {
                                     stopDirectAudioStream();
@@ -6256,27 +6472,81 @@
                                 if (activePlaybackSongId !== normalizedExpectedSongId) return;
                                 console.error("Error playing direct audio stream:", err);
                                 stopDirectAudioStream();
-                                publishMqtt('overlay_error', {
-                                    message: `Direct stream playback failed: ${err.message || err}`,
-                                    code: 'direct_stream_play_failed',
+                                reportDirectStreamFailure(
+                                    'direct_stream_play_failed',
+                                    `Direct stream playback failed: ${err.message || err}`,
                                     videoId,
-                                    songId: normalizedExpectedSongId
-                                });
+                                    normalizedExpectedSongId
+                                );
                             });
+
+                        const isHlsStream = /\.m3u8(?:$|[?#])/i.test(data.url)
+                            || /\/manifest\/hls_playlist\//i.test(data.url);
+                        if (isHlsStream && window.Hls?.isSupported?.()) {
+                            if (directHlsPlayer) {
+                                try { directHlsPlayer.destroy(); } catch (_) { }
+                            }
+                            console.log('Direct stream: phát nguồn HLS qua hls.js.');
+                            directHlsPlayer = new window.Hls({
+                                enableWorker: false,
+                                maxBufferLength: 30,
+                                backBufferLength: 15
+                            });
+                            const hlsForRequest = directHlsPlayer;
+                            let hlsRecoveryAttempts = 0;
+                            hlsForRequest.on(window.Hls.Events.MANIFEST_PARSED, () => {
+                                if (directHlsPlayer !== hlsForRequest
+                                    || activePlaybackSongId !== normalizedExpectedSongId) return;
+                                beginPlayback();
+                            });
+                            hlsForRequest.on(window.Hls.Events.ERROR, (_event, details) => {
+                                if (!details?.fatal || directHlsPlayer !== hlsForRequest
+                                    || activePlaybackSongId !== normalizedExpectedSongId) return;
+                                console.error('Direct stream HLS fatal error:', details);
+                                if (hlsRecoveryAttempts < 2) {
+                                    hlsRecoveryAttempts += 1;
+                                    console.warn(`Direct stream HLS: thử phục hồi ${hlsRecoveryAttempts}/2 (${details.type || 'unknown'}).`);
+                                    if (details.type === window.Hls.ErrorTypes.MEDIA_ERROR) {
+                                        try { hlsForRequest.recoverMediaError(); } catch (_) { }
+                                    } else {
+                                        setTimeout(() => {
+                                            if (directHlsPlayer !== hlsForRequest
+                                                || activePlaybackSongId !== normalizedExpectedSongId) return;
+                                            try { hlsForRequest.startLoad(); } catch (_) { }
+                                        }, 500 * hlsRecoveryAttempts);
+                                    }
+                                    return;
+                                }
+                                stopDirectAudioStream();
+                                reportDirectStreamFailure(
+                                    'direct_stream_hls_failed',
+                                    `HLS playback failed: ${details.type || 'unknown'} / ${details.details || 'unknown'}`,
+                                    videoId,
+                                    normalizedExpectedSongId
+                                );
+                            });
+                            hlsForRequest.loadSource(data.url);
+                            hlsForRequest.attachMedia(directAudioPlayer);
+                        } else {
+                            directAudioPlayer.src = data.url;
+                            beginPlayback();
+                        }
                     } else {
-                        throw new Error(data.error || "Unknown resolution error");
+                        const error = new Error(data.error || "Unknown resolution error");
+                        error.code = data.code || 'direct_stream_resolution_failed';
+                        throw error;
                     }
                 })
                 .catch(err => {
                     if (activePlaybackSongId !== normalizedExpectedSongId) return;
                     console.error("Failed to resolve direct audio stream:", err);
                     stopDirectAudioStream();
-                    publishMqtt('overlay_error', {
-                        message: `Direct stream resolution failed: ${err.message || err}`,
-                        code: 'direct_stream_resolution_failed',
+                    reportDirectStreamFailure(
+                        err.code || 'direct_stream_resolution_failed',
+                        `Direct stream resolution failed: ${err.message || err}`,
                         videoId,
-                        songId: normalizedExpectedSongId
-                    });
+                        normalizedExpectedSongId
+                    );
                 });
         }
 
@@ -6286,7 +6556,18 @@
             const bypassEnabled = localStorage.getItem('dua_yt_bypass_enabled') !== 'false';
             const resolvedVideoId = videoId || currentVideoId;
             const fallbackSongId = activePlaybackSongId;
-            if (!bypassEnabled || isDirectAudioPlaying || !resolvedVideoId || fallbackSongId == null) return false;
+            if (!bypassEnabled || !resolvedVideoId || fallbackSongId == null) return false;
+
+            // onError/watchdog của iframe có thể báo lặp trong lúc yt-dlp đang
+            // resolve hoặc thẻ audio đang chuẩn bị phát. Đây vẫn là lỗi đã được
+            // DirectStream xử lý; trả true để caller không phát thêm player_error
+            // và khiến Dashboard skip mất bài hiện tại.
+            if (isDirectAudioPlaying
+                && String(currentDirectSongId) === String(fallbackSongId)
+                && String(currentDirectVideoId) === String(resolvedVideoId)) {
+                console.log(`Overlay Player: Bỏ lỗi iframe lặp; DirectStream đang xử lý ${resolvedVideoId}.`);
+                return true;
+            }
             if (directFallbackAttemptedSongId === fallbackSongId) return false;
             directFallbackAttemptedSongId = fallbackSongId;
             console.warn(`Overlay Player: Chuyển sang DirectStream (${reason}) cho ${resolvedVideoId}.`);
@@ -6310,6 +6591,11 @@
             currentDirectVideoId = null;
             currentDirectSongId = null;
             directAudioStartTime = 0;
+            if (directHlsPlayer) {
+                const hlsToDestroy = directHlsPlayer;
+                directHlsPlayer = null;
+                try { hlsToDestroy.destroy(); } catch (_) { }
+            }
             if (directAudioPlayer) {
                 try {
                     directAudioPlayer.pause();
@@ -6378,7 +6664,6 @@
         function initOverlayPlayer(videoId, startTime, expectedSongId = activePlaybackSongId) {
             const playerSongId = expectedSongId == null ? null : String(expectedSongId);
             lastSongLoadStartTimestamp = Date.now();
-            iframeLoadRetryCount = 0;
             currentVideoId = videoId; // Set currentVideoId to avoid double loading in updateOverlayUI
             lastCommandType = 'play'; // Đặt lệnh mặc định về play khi khởi tạo mới
             if (overlayPlayer) {
@@ -6801,10 +7086,11 @@
                     // State-change messages can be missed while Dashboard or the
                     // local socket reconnects. Keep publishing BUFFERING for the
                     // whole interruption, not only on the first YouTube callback.
+                    const observedDuration = normalizePlaybackDuration(overlayPlayer.getDuration?.());
                     if (playerState === YT.PlayerState.BUFFERING) {
                         publishOverlayPlaybackState({
                             currentTime: observedCurrentTime,
-                            duration: normalizePlaybackDuration(overlayPlayer.getDuration?.()),
+                            duration: observedDuration,
                             isLive: isLiveStream,
                             isPlaying: false,
                             isBuffering: true
@@ -6816,7 +7102,7 @@
                     // BUFFERING/CUED while processing seekTo, and may ignore the
                     // first seek issued immediately after onReady.
                     if (!isLiveStream && !isResumeSeekInProgress()) {
-                        skipSponsorBlockSegment(observedCurrentTime, targetTime => {
+                        skipSponsorBlockSegment(observedCurrentTime, observedDuration, activePlaybackSongId, targetTime => {
                             overlayPlayer.seekTo(targetTime, true);
                             if (playerState !== YT.PlayerState.PLAYING
                                 && typeof overlayPlayer.playVideo === 'function') {
@@ -6909,10 +7195,15 @@
                     }
 
                     if (playerState === YT.PlayerState.PLAYING || playerState === YT.PlayerState.PAUSED) {
-                        // Reset watchdog timer
-                        lastSongLoadStartTimestamp = 0;
-
                         const currentTime = overlayPlayer.getCurrentTime();
+                        // PAUSED tại 0:00 có thể chính là trạng thái YouTube dùng
+                        // khi chặn embed. Chỉ tắt watchdog sau khi có bằng chứng
+                        // player đã thực sự chạy.
+                        if (playerState === YT.PlayerState.PLAYING
+                            || activePlaybackHasStarted
+                            || (Number(currentTime) || 0) > 0.5) {
+                            lastSongLoadStartTimestamp = 0;
+                        }
                         const duration = normalizePlaybackDuration(overlayPlayer.getDuration());
                         // Detect live stream chính xác qua YouTube API & tự động lấy author nếu thiếu
                         try {
@@ -7201,7 +7492,6 @@
                 triggerEndedEvent('youtube_ended', playerSongId);
             } else if (event.data === YT.PlayerState.PLAYING) {
                 lastSongLoadStartTimestamp = 0;
-                iframeLoadRetryCount = 0;
                 activePlaybackHasStarted = true;
                 // onReady can race with a repeated current_song render and leave
                 // the monitor cleared while the replacement iframe still plays.
@@ -7212,7 +7502,8 @@
                 // otherwise be passed before the first polling cycle.
                 if (!isLiveStream && !isResumeSeekInProgress()) {
                     const playbackTime = Math.max(0, Number(event.target.getCurrentTime?.()) || 0);
-                    skipSponsorBlockSegment(playbackTime, targetTime => {
+                    const playbackDuration = normalizePlaybackDuration(event.target.getDuration?.());
+                    skipSponsorBlockSegment(playbackTime, playbackDuration, playerSongId, targetTime => {
                         event.target.seekTo(targetTime, true);
                         if (typeof event.target.playVideo === 'function') event.target.playVideo();
                     });
@@ -7551,7 +7842,7 @@
             }
 
             if (isOwnerSong) {
-                const shouldShowPriceTable = buildIdlePriceRows().length > 0;
+                const shouldShowPriceTable = hasIdlePriceSlides();
                 widgetElement.classList.toggle('owner-price-table-active', shouldShowPriceTable);
                 if (shouldShowPriceTable && ownerPricePromo) {
                     const orderMessage = localStorage.getItem('dua_empty_queue_message') || 'Order nhạc tự động Zypage 50k';
@@ -7728,55 +8019,53 @@
                     loaderMediaType = JSON.parse(localStorage.getItem('dua_current_song') || '{}')?.type || 'youtube';
                 } catch (_) { }
                 const isYouTubeLoader = loaderMediaType === 'youtube';
-                // OBS đôi khi không phát sự kiện PLAYING dù playhead vẫn chạy.
-                // Tiến trình thực tế phải vô hiệu loader watchdog để tránh đổi
-                // nguồn sai tại giây 15/30.
+                // Một policy duy nhất quyết định thời điểm chuyển nguồn. Iframe
+                // bị chặn rõ ràng ở 0:00 chỉ chờ 8 giây; buffering chưa rõ nguyên
+                // nhân có tối đa 12 giây. Không thử playVideo thêm một vòng 15 giây.
                 if (isYouTubeLoader && !isDirectAudioPlaying && lastSongLoadStartTimestamp > 0 && overlayPlayer) {
+                    let playerState = null;
+                    let observedCurrentTime = 0;
+                    let observedDuration = 0;
                     try {
-                        if ((Number(overlayPlayer.getCurrentTime?.()) || 0) > 0.5) {
-                            activePlaybackHasStarted = true;
-                            lastSongLoadStartTimestamp = 0;
-                        }
+                        playerState = overlayPlayer.getPlayerState?.();
+                        observedCurrentTime = Math.max(0, Number(overlayPlayer.getCurrentTime?.()) || 0);
+                        observedDuration = normalizePlaybackDuration(overlayPlayer.getDuration?.());
                     } catch (_) { }
-                }
-
-                // LOADER WATCHDOG: thử DirectStream trước khi bỏ bài.
-                if (isYouTubeLoader && !isDirectAudioPlaying && lastSongLoadStartTimestamp > 0 && (Date.now() - lastSongLoadStartTimestamp > 15000)) {
-                    console.error("Overlay Player: Loader Watchdog triggered (song loading timed out >15s).");
-                    lastSongLoadStartTimestamp = 0;
-                    let fallbackId = currentVideoId;
-                    let fallbackStart = 0;
-                    try {
-                        const songRaw = localStorage.getItem('dua_current_song');
-                        if (songRaw) {
-                            const songObj = JSON.parse(songRaw);
-                            fallbackId = songObj.videoId || fallbackId;
-                            fallbackStart = getSongPlaybackStart(songObj);
-                        }
-                    } catch (_) { }
-                    // OBS/CEF may take longer than 15 seconds to emit the first
-                    // PLAYING state. A loader timeout must never remove the song.
-                    if (iframeLoadRetryCount < 1 && overlayPlayer && typeof overlayPlayer.playVideo === 'function') {
-                        iframeLoadRetryCount += 1;
-                        lastSongLoadStartTimestamp = Date.now();
-                        console.warn('Overlay Player: Retrying iframe playback after loader timeout.');
-                        try { overlayPlayer.playVideo(); } catch (_) { }
-                        return;
-                    }
-
-                    lastSongLoadStartTimestamp = 0;
-                    // Initial load and one retry have both failed. At this point the
-                    // iframe failure is confirmed, so DirectStream is preferable to
-                    // leaving the current queue item stuck forever.
-                    if (tryDirectStreamFallback('iframe load timeout after retry', fallbackId, fallbackStart)) {
-                        return;
-                    }
-                    publishMqtt('overlay_error', {
-                        message: 'YouTube iframe and DirectStream both failed; keeping the song in the queue.',
-                        code: 'iframe_and_direct_stream_failed',
-                        videoId: fallbackId
+                    const loaderDecision = youtubePlaybackFallbackPolicy.evaluateInitialLoad({
+                        elapsedMs: Date.now() - lastSongLoadStartTimestamp,
+                        currentTime: observedCurrentTime,
+                        duration: observedDuration,
+                        playerState,
+                        hasStarted: activePlaybackHasStarted,
+                        isPlaybackSuppressed: Boolean(warningCountdownInterval || isLuckyRolling),
+                        states: YT.PlayerState
                     });
-                    return;
+
+                    if (loaderDecision.action === 'confirm_playback') {
+                        activePlaybackHasStarted = true;
+                        lastSongLoadStartTimestamp = 0;
+                    } else if (loaderDecision.action === 'fallback') {
+                        console.error(`Overlay Player: Loader Watchdog chuyển DirectStream (${loaderDecision.reason}).`);
+                        lastSongLoadStartTimestamp = 0;
+                        let fallbackId = currentVideoId;
+                        let fallbackStart = 0;
+                        try {
+                            const songRaw = localStorage.getItem('dua_current_song');
+                            if (songRaw) {
+                                const songObj = JSON.parse(songRaw);
+                                fallbackId = songObj.videoId || fallbackId;
+                                fallbackStart = getSongPlaybackStart(songObj);
+                            }
+                        } catch (_) { }
+                        if (tryDirectStreamFallback(loaderDecision.reason, fallbackId, fallbackStart)) return;
+                        publishMqtt('overlay_event', {
+                            type: 'player_error',
+                            code: 'iframe_and_direct_stream_failed',
+                            songId: activePlaybackSongId,
+                            timestamp: Date.now()
+                        });
+                        return;
+                    }
                 }
 
                 // Resume prompts are owned by Dashboard. Do not allow a stale
@@ -7931,6 +8220,8 @@
                     activePlaybackSongId = null;
                     activePlaybackHasStarted = false;
                     directFallbackAttemptedSongId = null;
+                    skipSegments = [];
+                    skipSegmentsSongId = null;
                     lastSkippedSegmentKey = null;
                     lastSBSeekTimestamp = 0;
                     lastSBSeekTarget = 0;
@@ -8099,8 +8390,11 @@
                     warningSongId = null;
                 }
 
-                skipSegments = data.skipSegments || [];
-                if (isResumeSeekInProgress()) {
+                const isNewSong = String(lastSongId ?? '') !== String(data.id ?? '');
+                const incomingSongId = data.id == null ? null : String(data.id);
+                skipSegments = Array.isArray(data.skipSegments) ? data.skipSegments : [];
+                skipSegmentsSongId = incomingSongId;
+                if (!isNewSong && isResumeSeekInProgress()) {
                     const sponsorAdjustedResume = resolveSponsorBlockSeekTarget(resumeTargetTime);
                     if (sponsorAdjustedResume > resumeTargetTime + 0.01) {
                         console.log(`Overlay Resume: Hợp nhất mốc phát tiếp ${resumeTargetTime.toFixed(1)}s với SponsorBlock thành ${sponsorAdjustedResume.toFixed(1)}s.`);
@@ -8110,7 +8404,6 @@
                     }
                 }
 
-                const isNewSong = String(lastSongId ?? '') !== String(data.id ?? '');
                 const currentEmptyMsg = localStorage.getItem('dua_empty_queue_message') || 'Order nhạc tự động Zypage 50k';
                 let emptyMsgChanged = false;
                 if (lastRenderedEmptyQueueMessage !== currentEmptyMsg) {
@@ -8120,12 +8413,15 @@
 
                 if (isNewSong) {
                     endedSignalSongId = null;
-                    activePlaybackSongId = data.id == null ? null : String(data.id);
+                    activePlaybackSongId = incomingSongId;
                     activePlaybackHasStarted = false;
                     iframeLastObservedTime = 0;
                     iframeLastProgressAt = 0;
                     iframePlaybackStalled = false;
                     directFallbackAttemptedSongId = null;
+                    lastSkippedSegmentKey = null;
+                    lastSBSeekTimestamp = 0;
+                    lastSBSeekTarget = 0;
                     // Reset thanh tiến trình và thời gian hiển thị về 0 ngay lập tức khi sang bài mới
                     if (progressFill) progressFill.style.width = '0%';
                     if (progressThumb) progressThumb.style.left = '0%';
@@ -9192,8 +9488,10 @@
         if (scaleVal !== 1.0) {
             const overlayContent = document.getElementById('overlay-content');
             if (overlayContent) {
-                overlayContent.style.transform = `scale(${scaleVal})`;
-                overlayContent.style.transformOrigin = 'top left';
+                // Chromium zoom rasterizes text at the requested output size.
+                // A transform scales an already-rendered layer and looks soft in OBS.
+                overlayContent.style.zoom = String(scaleVal);
+                overlayContent.style.transform = 'none';
             }
         }
 

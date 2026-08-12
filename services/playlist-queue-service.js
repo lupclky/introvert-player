@@ -5,6 +5,10 @@ function isPlaylistTrack(song) {
 }
 
 class PlaylistQueueService {
+  static isTimeLimitExempt(song) {
+    return isPlaylistTrack(song);
+  }
+
   static songsFromRequest(request, timestamp = Date.now()) {
     const isManualOwnerAdd = request?.source === 'manual_owner';
     const isManualQuickAdd = request?.source === 'manual_quick_add';
@@ -35,6 +39,9 @@ class PlaylistQueueService {
       timestamp: timestamp + index,
       localAddedAt: Date.now(),
       isPlaylistTrack: true,
+      // Playlist requests are limited by their total accepted duration. Applying
+      // the single-song donation cap again would incorrectly cut every track.
+      timeLimitExempt: true,
       isOwnerAdd: isManualOwnerAdd,
       isQuickAdd: isManualQuickAdd
     }));

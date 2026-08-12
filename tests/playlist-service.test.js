@@ -6,7 +6,7 @@ const { DatabaseSync } = require('node:sqlite');
 const { PlaylistRepository } = require('../services/playlist-repository');
 const { PlaylistService } = require('../services/playlist-service');
 
-function createService() {
+function createService(overrides = {}) {
   const db = new DatabaseSync(':memory:');
   db.exec('PRAGMA foreign_keys = ON');
   const repository = new PlaylistRepository(db);
@@ -19,7 +19,7 @@ function createService() {
       return {
         externalPlaylistId: playlistId,
         title: 'Playlist đêm', ownerName: 'Kênh A', thumbnailUrl: 'thumb', sourceItemCount: 3,
-        tracks: [
+        tracks: overrides.tracks || [
           { position: 1, videoId: 'abcdefghijk', title: 'Bài 1', channelName: 'Kênh A', durationSec: 180, viewCount: 50000 },
           { position: 2, videoId: 'lmnopqrstuv', title: 'Bài 2', channelName: 'Kênh A', durationSec: 240, viewCount: 20000 },
           { position: 3, videoId: 'abcdefghijk', title: 'Bài trùng', channelName: 'Kênh A', durationSec: 180, viewCount: 50000 }
@@ -32,7 +32,7 @@ function createService() {
 }
 
 const donation = {
-  id: 'donation_service_1', name: 'Mèo Cam', amount: 1500000,
+  id: 'donation_service_1', name: 'Mèo Cam', amount: 500000,
   message: '!playlist https://www.youtube.com/playlist?list=PL1234567890abc'
 };
 
@@ -51,6 +51,51 @@ test('xử lý donation playlist trọn luồng và lọc video trùng', async (
     assert.deepEqual(filterEvent.data.skippedReasons, { duplicate: 1 });
   } finally {
     fixture.db.close();
+  }
+});
+
+test('donation dưới 500 nghìn chờ duyệt và không tải metadata playlist', async () => {
+  const fixture = createService();
+  try {
+    const result = await fixture.service.processDonation({
+      ...donation,
+      id: 'donation_below_playlist_minimum',
+      amount: 499999
+    });
+    assert.equal(result.request.status, 'pending_review');
+    assert.equal(result.request.rejectionReason, 'insufficient_amount');
+    assert.equal(fixture.provider.calls, 0);
+  } finally {
+    fixture.db.close();
+  }
+});
+
+test('service tăng giới hạn từ 30 lên 35 phút khi donation đủ thêm 50 nghìn', async () => {
+  const tracks = [
+    { position: 1, videoId: 'base1800sec', title: 'Bài 30 phút', channelName: 'Kênh A', durationSec: 1800, viewCount: 50000 },
+    { position: 2, videoId: 'extra300sec', title: 'Bài 5 phút', channelName: 'Kênh A', durationSec: 300, viewCount: 50000 }
+  ];
+  const baseFixture = createService({ tracks });
+  const extraFixture = createService({ tracks });
+  try {
+    const baseResult = await baseFixture.service.processDonation({
+      ...donation,
+      id: 'donation_playlist_500k',
+      amount: 500000
+    });
+    const extraResult = await extraFixture.service.processDonation({
+      ...donation,
+      id: 'donation_playlist_550k',
+      amount: 550000
+    });
+
+    assert.equal(baseResult.request.totalDurationSec, 30 * 60);
+    assert.equal(baseResult.request.acceptedItemCount, 1);
+    assert.equal(extraResult.request.totalDurationSec, 35 * 60);
+    assert.equal(extraResult.request.acceptedItemCount, 2);
+  } finally {
+    baseFixture.db.close();
+    extraFixture.db.close();
   }
 });
 
@@ -78,7 +123,7 @@ test('donation chat accepts a watch URL with list as a playlist', async () => {
     const result = await fixture.service.processDonation({
       id: 'donation_watch_playlist',
       name: 'Viewer',
-      amount: 1500000,
+      amount: 500000,
       message: 'Mở playlist này https://www.youtube.com/watch?v=22RqlqEWxpE&list=PLbscJlpbMW88&pp=sAgC'
     });
     assert.equal(result.matched, true);
@@ -97,7 +142,7 @@ test('official donation accepts a playlist URL supplied through songLink', async
     const result = await fixture.service.processDonation({
       id: 'donation_song_link_playlist',
       name: 'Viewer',
-      amount: 1500000,
+      amount: 500000,
       message: 'Mở nhạc giúp mình',
       songLink: 'https://www.youtube.com/watch?v=22RqlqEWxpE&list=PLbscJlpbMW88&pp=sAgC'
     });

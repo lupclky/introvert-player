@@ -6,6 +6,7 @@
             this.parsePlaylistId = options.parsePlaylistId || (() => null);
             this.resolveSoundcloudUrl = options.resolveSoundcloudUrl || (async value => value);
             this.fetchMetadata = options.fetchMetadata || (async () => ({}));
+            this.addManualPlaylist = options.addManualPlaylist || null;
             this.parseDuration = options.parseDuration || (() => 0);
             this.now = options.now || Date.now;
             this.random = options.random || Math.random;
@@ -34,6 +35,12 @@
             }
             media.metadata = await this.fetchMetadata(media.type, media.videoId || null, media.soundcloudUrl || null);
             return media;
+        }
+        async addPlaylist(input, context = {}, settings = {}, blacklistVideoIds = []) {
+            const media = this.classify(input);
+            if (media.kind !== 'playlist') return { matched: false, error: 'invalid_playlist_url' };
+            if (typeof this.addManualPlaylist !== 'function') throw new Error('playlist_transport_unavailable');
+            return this.addManualPlaylist(media.url, context, settings, blacklistVideoIds);
         }
         createSong(media, options = {}) {
             const source = media.metadata ? media : {

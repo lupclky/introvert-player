@@ -1,5 +1,17 @@
 # Nhật ký thay đổi (Changelog) - Introvert Player
 
+## [26.8.12] - 2026-08-12
+### Sửa Quick Add Playlist và SponsorBlock
+- Sửa lỗi thanh tìm kiếm nhận diện playlist YouTube nhưng không gửi yêu cầu thêm vào hàng đợi khi chưa có bài đang phát.
+- Khóa dữ liệu SponsorBlock theo từng bài và kết thúc trực tiếp khi phân đoạn outro chạm đuôi video, tránh iframe phát lại từ đầu.
+
+## [26.8.11] - 2026-08-11
+### Playlist Beta, đồng bộ phát và Overlay Set 18
+- Cải thiện đồng bộ trạng thái phát, kết bài, tiếp tục phát và âm lượng giữa Dashboard với OBS Overlay.
+- Bổ sung luồng Playlist Beta, cấu hình thời lượng theo số tiền donate và hiển thị bảng giá riêng trên Overlay.
+- Hoàn thiện giao diện Set 18 cho hàng đợi, bài tiếp theo, donate mới và bảng giá.
+- Cải thiện thông báo taskbar, metadata thời lượng, SponsorBlock và fallback Direct Stream.
+
 ## [26.8.0] - 2026-06-24
 ### 🎨 Tái cấu trúc Bố cục Giao diện & Tinh giản Dashboard
 - **Thanh thêm nhanh trên Titlebar**: Tích hợp ô nhập URL và tìm kiếm nhạc nhanh (`#quick-add-form`) lên trung tâm của Titlebar. Thiết kế thanh tìm kiếm dạng tối giản kèm Popover thông minh tự động hiển thị các tùy chọn (Tên người gửi, Số tiền, Chủ kênh) và kết quả gợi ý tìm kiếm khi người dùng focus, click ra ngoài hoặc bấm Escape sẽ tự động ẩn đi.

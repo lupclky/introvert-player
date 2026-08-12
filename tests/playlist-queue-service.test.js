@@ -17,6 +17,9 @@ function request(id = 'p1') {
 test('playlist vào queue đúng thứ tự và không trùng', () => {
   let result = PlaylistQueueService.enqueue([{ id: 'single' }], request());
   assert.deepEqual(result.queue.map(song => song.id), ['single', 'p1-1', 'p1-2']);
+  assert.equal(result.added[0].timeLimitExempt, true);
+  assert.equal(PlaylistQueueService.isTimeLimitExempt(result.added[0]), true);
+  assert.equal(PlaylistQueueService.isTimeLimitExempt({ id: 'single' }), false);
   result = PlaylistQueueService.enqueue(result.queue, request());
   assert.equal(result.added.length, 0);
 });

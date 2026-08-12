@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const { spawn } = require('child_process');
+const { parseViewCount } = require('./view-count-policy');
 
 class YouTubeDurationService {
     constructor(options = {}) {
@@ -11,6 +12,7 @@ class YouTubeDurationService {
         this.fsImpl = options.fsImpl || fs;
         this.getYtDlpPath = options.getYtDlpPath || (() => '');
         this.apiKey = options.apiKey || process.env.YOUTUBE_API_KEY || process.env.YT_API_KEY || '';
+        this.enableInnerTubeSearch = options.enableInnerTubeSearch !== false;
         this.enablePlayDl = options.enablePlayDl !== false;
         this.now = options.now || Date.now;
         this.logger = options.logger || console;
@@ -35,6 +37,24 @@ class YouTubeDurationService {
         const minutes = Number(match[3] || 0);
         const seconds = Number(match[4] || 0);
         return Math.max(0, Math.floor(days * 86400 + hours * 3600 + minutes * 60 + seconds));
+    }
+
+    static parseClockDuration(value) {
+        const text = String(value || '').trim();
+        if (!/^\d{1,3}(?::\d{1,2}){1,2}$/.test(text)) return 0;
+        const parts = text.split(':').map(Number);
+        if (parts.some(part => !Number.isFinite(part))) return 0;
+        return Math.max(0, Math.floor(parts.reduce((total, part) => total * 60 + part, 0)));
+    }
+
+    static findExactVideoRenderer(value, videoId) {
+        if (!value || typeof value !== 'object') return null;
+        if (value.videoRenderer?.videoId === videoId) return value.videoRenderer;
+        for (const child of Object.values(value)) {
+            const found = YouTubeDurationService.findExactVideoRenderer(child, videoId);
+            if (found) return found;
+        }
+        return null;
     }
 
     normalizeResult(result, source, cached = false) {
@@ -104,12 +124,14 @@ class YouTubeDurationService {
         const failures = [];
         const sources = [
             ['youtube-data-api', () => this.resolveWithYouTubeDataApi(videoId)],
+            ['innertube-search', () => this.resolveWithInnerTubeSearch(videoId)],
             ['yt-dlp', () => this.resolveWithYtDlp(videoId)],
             ['play-dl', () => this.resolveWithPlayDl(videoId)]
         ];
 
         for (const [source, resolver] of sources) {
             if (source === 'youtube-data-api' && !this.apiKey) continue;
+            if (source === 'innertube-search' && (!this.enableInnerTubeSearch || !this.fetchImpl)) continue;
             if (source === 'play-dl' && !this.enablePlayDl) continue;
             try {
                 const rawResult = await resolver();
@@ -158,6 +180,44 @@ class YouTubeDurationService {
         return {
             duration: info?.video_details?.durationInSec,
             views: info?.video_details?.views || ''
+        };
+    }
+
+    async resolveWithInnerTubeSearch(videoId) {
+        if (!this.fetchImpl) throw new Error('fetch is not available');
+        const response = await this.withTimeout(
+            this.fetchImpl('https://www.youtube.com/youtubei/v1/search', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36'
+                },
+                body: JSON.stringify({
+                    query: videoId,
+                    context: {
+                        client: {
+                            clientName: 'WEB',
+                            clientVersion: '2.20210621.02.00'
+                        }
+                    }
+                })
+            }),
+            this.sourceTimeoutMs,
+            'InnerTube Search'
+        );
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const payload = await response.json();
+        const renderer = YouTubeDurationService.findExactVideoRenderer(payload, videoId);
+        if (!renderer) throw new Error('exact video not found');
+        const durationText = renderer.lengthText?.simpleText
+            || renderer.lengthText?.runs?.map(run => run?.text || '').join('')
+            || '';
+        const viewText = renderer.viewCountText?.simpleText
+            || renderer.shortViewCountText?.simpleText
+            || '';
+        return {
+            duration: YouTubeDurationService.parseClockDuration(durationText),
+            views: parseViewCount(viewText) ?? ''
         };
     }
 

@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const QuickAddService = require('../services/quick-add-service');
 
-function service(overrides = {}) {
+function createService(overrides = {}) {
     return new QuickAddService({
         parseYoutubeId: value => String(value).includes('video') ? 'abcdefghijk' : null,
         parsePlaylistId: value => String(value).includes('list=') ? 'playlist123' : null,
@@ -13,13 +13,13 @@ function service(overrides = {}) {
 }
 
 test('quick add classifies playlist before the video contained in a watch URL', () => {
-    const result = service().classify('https://youtube.com/watch?v=video123456&list=playlist123');
+    const result = createService().classify('https://youtube.com/watch?v=video123456&list=playlist123');
     assert.equal(result.kind, 'playlist');
     assert.equal(result.playlistId, 'playlist123');
 });
 
 test('quick add coi YouTube Mix tự sinh RD là một bài đơn', () => {
-    const result = service({
+    const result = createService({
         parseYoutubeId: () => 'BZqfL_2CzKg',
         parsePlaylistId: () => 'RDBZqfL_2CzKg'
     }).classify('https://youtube.com/watch?v=BZqfL_2CzKg&list=RDBZqfL_2CzKg&start_radio=1');
@@ -28,12 +28,12 @@ test('quick add coi YouTube Mix tự sinh RD là một bài đơn', () => {
 });
 
 test('quick add rejects Spotify and invalid inputs', () => {
-    assert.deepEqual(service().classify('spotify:track:abc'), { kind: 'unsupported', provider: 'spotify' });
-    assert.equal(service().classify('not a link').kind, 'invalid');
+    assert.deepEqual(createService().classify('spotify:track:abc'), { kind: 'unsupported', provider: 'spotify' });
+    assert.equal(createService().classify('not a link').kind, 'invalid');
 });
 
 test('quick add resolves SoundCloud and creates a normalized queue item', async () => {
-    const quickAdd = service();
+    const quickAdd = createService();
     const media = await quickAdd.resolve('https://on.soundcloud.com/short');
     const song = quickAdd.createSong(media, { donorName: 'Mèo', amount: 50000, isOwnerAdd: false });
     assert.equal(media.soundcloudUrl, 'https://soundcloud.com/user/short');
@@ -44,9 +44,28 @@ test('quick add resolves SoundCloud and creates a normalized queue item', async 
 });
 
 test('quick add creates the same queue shape from a search result', () => {
-    const song = service().createSong({ id: 'video-result', title: 'Search', thumbnail: 'x', duration: '1:00' }, { isOwnerAdd: true });
+    const song = createService().createSong({ id: 'video-result', title: 'Search', thumbnail: 'x', duration: '1:00' }, { isOwnerAdd: true });
     assert.equal(song.type, 'youtube');
     assert.equal(song.videoId, 'abcdefghijk');
     assert.equal(song.isOwnerAdd, true);
     assert.equal(song.isQuickAdd, false);
+});
+
+test('quick add chuyển playlist đã nhận diện sang transport thêm thủ công', async () => {
+    const calls = [];
+    const quickAdd = createService({
+        addManualPlaylist: async (...args) => {
+            calls.push(args);
+            return { matched: true, request: { id: 'playlist-request', status: 'ready' } };
+        }
+    });
+    const context = { donorName: 'Chủ kênh', donationAmount: 0, isOwnerAdd: true };
+    const settings = { playlistEnabled: true };
+    const blacklist = ['blocked-video'];
+    const url = 'https://youtube.com/playlist?list=playlist123';
+
+    const result = await quickAdd.addPlaylist(url, context, settings, blacklist);
+
+    assert.equal(result.request.status, 'ready');
+    assert.deepEqual(calls, [[url, context, settings, blacklist]]);
 });

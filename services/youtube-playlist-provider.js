@@ -152,7 +152,11 @@ class YouTubePlaylistProvider {
       throw new TypeError('fetchPlaylistData is required');
     }
     this.fetchPlaylistData = options.fetchPlaylistData;
-    this.fetchVideoStats = typeof options.fetchVideoStats === 'function' ? options.fetchVideoStats : null;
+    // Keep the old option name as a compatibility fallback for existing callers.
+    // The resolver now represents clean per-video metadata, not only view stats.
+    this.fetchVideoMetadata = typeof options.fetchVideoMetadata === 'function'
+      ? options.fetchVideoMetadata
+      : (typeof options.fetchVideoStats === 'function' ? options.fetchVideoStats : null);
   }
 
   async resolve(playlistId, options = {}) {
@@ -163,7 +167,7 @@ class YouTubePlaylistProvider {
     const data = await this.fetchPlaylistData(String(playlistId));
     const metadata = extractPlaylistMetadata(data, String(playlistId));
     let tracks = extractPlaylistTracks(data, maxItems, options.onProgress, Math.min(metadata.sourceItemCount || maxItems, maxItems));
-    if (this.fetchVideoStats && tracks.length > 0) {
+    if (this.fetchVideoMetadata && tracks.length > 0) {
       const enriched = new Array(tracks.length);
       let cursor = 0;
       const workers = Array.from({ length: Math.min(5, tracks.length) }, async () => {
@@ -171,14 +175,22 @@ class YouTubePlaylistProvider {
           const index = cursor++;
           const track = tracks[index];
           try {
-            const stats = await this.fetchVideoStats(track.videoId);
+            const metadata = await this.fetchVideoMetadata(track.videoId);
+            const cleanDurationSec = Number(metadata?.durationSec);
             enriched[index] = {
               ...track,
-              viewCount: Number.isFinite(Number(stats?.viewCount)) ? Number(stats.viewCount) : null,
-              durationSec: track.durationSec || Number(stats?.durationSec) || 0
+              viewCount: Number.isFinite(Number(metadata?.viewCount)) ? Number(metadata.viewCount) : null,
+              // InnerTube player metadata is authoritative. Playlist HTML can be
+              // stale, rounded or missing, so it is only a fallback.
+              durationSec: Number.isFinite(cleanDurationSec) && cleanDurationSec > 0
+                ? Math.floor(cleanDurationSec)
+                : track.durationSec,
+              durationSource: Number.isFinite(cleanDurationSec) && cleanDurationSec > 0
+                ? (metadata?.source || 'video_metadata')
+                : 'playlist_html'
             };
           } catch (_) {
-            enriched[index] = { ...track, viewCount: null };
+            enriched[index] = { ...track, viewCount: null, durationSource: 'playlist_html' };
           }
         }
       });

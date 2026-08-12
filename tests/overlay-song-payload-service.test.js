@@ -5,8 +5,8 @@ const OverlaySongPayloadService = require('../services/overlay-song-payload-serv
 test('payload builder creates a complete current and next song snapshot', () => {
     const builder = new OverlaySongPayloadService({ calculateMaxDuration: () => 120 });
     const payload = builder.build(
-        { id: 1, title: 'Now', author: 'Channel', amount: 50000, duration: 283.9, voteSkipActive: true, voteSkipTarget: 75000, voteAmount: 25000, playlistRequestId: 'p', playlistPosition: 1, playlistTotalTracks: 2 },
-        { id: 2, title: 'Next', channelTitle: 'Next Channel', duration: 200, playlistRequestId: 'p', playlistPosition: 2 },
+        { id: 1, title: 'Now', author: 'Channel', amount: 50000, duration: 283.9, voteSkipActive: true, voteSkipTarget: 75000, voteAmount: 25000, playlistRequestId: 'p', playlistTrackId: 'pt-1', playlistPosition: 1, playlistTotalTracks: 2 },
+        { id: 2, title: 'Next', channelTitle: 'Next Channel', duration: 200, playlistRequestId: 'p', playlistTrackId: 'pt-2', playlistPosition: 2 },
         { skipSegments: [[1, 2]], extensionPrice: 50000, extensionMinutes: 6, voteSkipDefaultAmount: 20000, luckyMode: true, volume: 67 },
         { isResuming: true, resumeFrom: 35 }
     );
@@ -19,6 +19,9 @@ test('payload builder creates a complete current and next song snapshot', () => 
     assert.equal(payload.nextSongAuthor, 'Next Channel');
     assert.equal(payload.nextSongChannelName, 'Next Channel');
     assert.equal(payload.nextSongDuration, 200);
+    assert.equal(payload.timeLimitExempt, true);
+    assert.equal(payload.nextSongTimeLimitExempt, true);
+    assert.equal(payload.nextSongPlaylistTrackId, 'pt-2');
     assert.equal(payload.nextSongPlaylistPosition, 2);
     assert.equal(payload.voteSkipActive, true);
     assert.equal(payload.voteSkipTarget, 75000);

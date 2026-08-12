@@ -1,9 +1,6 @@
 (function attachZyPageQueueIngestionService(globalScope) {
     'use strict';
 
-    const viewCountPolicy = globalScope.ViewCountPolicy
-        || (typeof require === 'function' ? require('./view-count-policy') : null);
-
     class ZyPageQueueIngestionService {
         constructor(options = {}) {
             this.state = options.state || { queue: [], endedKeys: [] };
@@ -16,8 +13,6 @@
             this.insertSong = options.insertSong || (() => false);
             this.onInserted = options.onInserted || (() => {});
             this.onMetadataUpdated = options.onMetadataUpdated || (() => {});
-            this.onRejected = options.onRejected || (() => {});
-            this.getMinimumViewCount = options.getMinimumViewCount || (() => 0);
             this.now = options.now || Date.now;
         }
 
@@ -217,21 +212,6 @@
             if (existingSong) return { handled: true, inserted: false, reason: 'duplicate', existingSong };
 
             const metadata = await this.fetchMetadata(media.type, media.videoId, media.soundcloudUrl);
-            const viewPolicy = viewCountPolicy?.evaluateViewCount(
-                metadata?.views ?? metadata?.viewCount,
-                this.getMinimumViewCount()
-            ) || { accepted: true, count: null, minimum: 0, reason: '' };
-            if (!viewPolicy.accepted) {
-                const result = {
-                    handled: true,
-                    inserted: false,
-                    reason: viewPolicy.reason,
-                    viewCount: viewPolicy.count,
-                    minimumViewCount: viewPolicy.minimum
-                };
-                this.onRejected(result, liveEvent, metadata);
-                return result;
-            }
             const song = {
                 ...candidate,
                 isZyPage: true,

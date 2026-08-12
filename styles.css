@@ -6065,6 +6065,7 @@ body.app-dashboard .settings-input-unit { display: grid; grid-template-columns: 
 body.app-dashboard .settings-input-unit b { font-size: 0.68rem; opacity: 0.6; }
 body.app-dashboard .settings-switch-row { display: flex; align-items: center; gap: 0.5rem; color: var(--pineapple-text); font-size: 0.78rem; }
 body.app-dashboard .settings-switch-row.compact { white-space: nowrap; }
+body.app-dashboard .playlist-pricing-note { margin: 0.7rem 0 0; color: var(--pineapple-text); font-size: 0.76rem; line-height: 1.45; opacity: 0.72; }
 body.app-dashboard .playlist-settings-save { width: fit-content; margin-top: 0.8rem; }
 
 @media (max-width: 760px) {

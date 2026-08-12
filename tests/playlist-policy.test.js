@@ -2,20 +2,51 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { DEFAULT_PLAYLIST_SETTINGS, normalizePlaylistSettings, validatePlaylistAmount, selectTracksWithinDuration } = require('../services/playlist-policy');
+const {
+  PLAYLIST_PRICING,
+  DEFAULT_PLAYLIST_SETTINGS,
+  normalizePlaylistSettings,
+  calculatePlaylistDurationLimitSec,
+  validatePlaylistAmount,
+  selectTracksWithinDuration
+} = require('../services/playlist-policy');
 
-const settings = { playlistMinimumDonationVnd: 1500000, playlistMaximumDurationSec: 4200, minimumViewCount: 0 };
+const settings = { ...DEFAULT_PLAYLIST_SETTINGS, playlistMaximumDurationSec: 4200 };
 
-test('cấu hình playlist mặc định là 1,5 triệu, 70 phút và không yêu cầu lượt xem', () => {
-  assert.equal(DEFAULT_PLAYLIST_SETTINGS.playlistMinimumDonationVnd, 1500000);
-  assert.equal(DEFAULT_PLAYLIST_SETTINGS.playlistMaximumDurationSec, 70 * 60);
-  assert.equal(DEFAULT_PLAYLIST_SETTINGS.minimumViewCount, 0);
+test('cấu hình playlist mặc định là 500 nghìn và 30 phút', () => {
+  assert.equal(PLAYLIST_PRICING.minimumDonationVnd, 500000);
+  assert.equal(DEFAULT_PLAYLIST_SETTINGS.playlistMinimumDonationVnd, 500000);
+  assert.equal(DEFAULT_PLAYLIST_SETTINGS.playlistBaseDurationSec, 30 * 60);
+  assert.equal(DEFAULT_PLAYLIST_SETTINGS.playlistMaximumDurationSec, 30 * 60);
+  assert.equal(DEFAULT_PLAYLIST_SETTINGS.playlistExtraDonationStepVnd, 50000);
+  assert.equal(DEFAULT_PLAYLIST_SETTINGS.playlistExtraDurationStepSec, 5 * 60);
   assert.deepEqual(normalizePlaylistSettings({}), DEFAULT_PLAYLIST_SETTINGS);
 });
 
 test('amount validator kiểm tra đúng ranh giới', () => {
-  assert.equal(validatePlaylistAmount(1499999, settings).valid, false);
-  assert.equal(validatePlaylistAmount(1500000, settings).valid, true);
+  assert.equal(validatePlaylistAmount(499999, settings).valid, false);
+  assert.equal(validatePlaylistAmount(500000, settings).valid, true);
+});
+
+test('thời lượng playlist chỉ tăng khi tiền dư đủ từng mốc 50 nghìn', () => {
+  assert.equal(calculatePlaylistDurationLimitSec(499999, settings), 0);
+  assert.equal(calculatePlaylistDurationLimitSec(500000, settings), 30 * 60);
+  assert.equal(calculatePlaylistDurationLimitSec(549999, settings), 30 * 60);
+  assert.equal(calculatePlaylistDurationLimitSec(550000, settings), 35 * 60);
+  assert.equal(calculatePlaylistDurationLimitSec(1000000, settings), 80 * 60);
+});
+
+test('công thức playlist dùng các mốc giá và thời lượng tùy chỉnh', () => {
+  const customSettings = {
+    ...settings,
+    playlistMinimumDonationVnd: 300000,
+    playlistBaseDurationSec: 20 * 60,
+    playlistExtraDonationStepVnd: 100000,
+    playlistExtraDurationStepSec: 10 * 60
+  };
+  assert.equal(calculatePlaylistDurationLimitSec(299999, customSettings), 0);
+  assert.equal(calculatePlaylistDurationLimitSec(399999, customSettings), 20 * 60);
+  assert.equal(calculatePlaylistDurationLimitSec(400000, customSettings), 30 * 60);
 });
 
 test('nhận toàn bộ khi tổng dưới giới hạn', () => {
@@ -26,7 +57,7 @@ test('nhận toàn bộ khi tổng dưới giới hạn', () => {
   assert.equal(result.totalDurationSec, 2700);
 });
 
-test('nhận chính xác tổng 70 phút', () => {
+test('bộ lọc nhận chính xác tổng bằng giới hạn được truyền vào', () => {
   const result = selectTracksWithinDuration([
     { videoId: 'a', durationSec: 2100 }, { videoId: 'b', durationSec: 2100 }
   ], settings);
@@ -45,7 +76,7 @@ test('không cắt bài làm vượt giới hạn', () => {
   assert.equal(result.skipped.find(track => track.videoId === 'd').skipReason, 'duration_limit');
 });
 
-test('bài đầu dài hơn 70 phút làm playlist rỗng', () => {
+test('bài đầu dài hơn giới hạn làm playlist rỗng', () => {
   const result = selectTracksWithinDuration([{ videoId: 'a', durationSec: 4201 }], settings);
   assert.equal(result.accepted.length, 0);
   assert.equal(result.status, 'rejected');
@@ -68,12 +99,12 @@ test('lọc trùng, unavailable và blacklist', () => {
   assert.deepEqual(result.skipped.map(track => track.skipReason), ['duplicate', 'private', 'blacklisted']);
 });
 
-test('lọc video playlist dưới mốc lượt xem', () => {
+test('playlist không loại video theo lượt xem hoặc khi thiếu lượt xem', () => {
   const result = selectTracksWithinDuration([
     { videoId: 'a', durationSec: 60, viewCount: 9999 },
     { videoId: 'b', durationSec: 60, viewCount: 10000 },
-    { videoId: 'c', durationSec: 60, viewCount: 50000 }
+    { videoId: 'c', durationSec: 60 }
   ], { ...settings, minimumViewCount: 10000 });
-  assert.deepEqual(result.accepted.map(track => track.videoId), ['b', 'c']);
-  assert.equal(result.skipped[0].skipReason, 'below_minimum_views');
+  assert.deepEqual(result.accepted.map(track => track.videoId), ['a', 'b', 'c']);
+  assert.equal(result.skipped.length, 0);
 });

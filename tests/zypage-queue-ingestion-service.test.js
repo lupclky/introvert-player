@@ -72,7 +72,7 @@ test('link trong chat lấy metadata và tuân thủ mốc donate', async () => 
     assert.equal(inserted[0].fromMessage, true);
 });
 
-test('link trong chat dưới mốc view không được thêm vào queue', async () => {
+test('link trong chat ít view vẫn được thêm vào queue', async () => {
     const rejected = [];
     const { service, inserted } = createService({ options: {
         fetchMetadata: async () => ({ title: 'Ít view', thumbnail: 'thumb', author: 'Channel', views: 9999 }),
@@ -82,10 +82,9 @@ test('link trong chat dưới mốc view không được thêm vào queue', asyn
     const result = await service.ingestMessage({
         message: 'https://youtube.com/watch?v=abcdefghijk', amount: 50000, donorName: 'A'
     }, 49000);
-    assert.equal(result.inserted, false);
-    assert.equal(result.reason, 'below_minimum_views');
-    assert.equal(inserted.length, 0);
-    assert.equal(rejected.length, 1);
+    assert.equal(result.inserted, true);
+    assert.equal(inserted.length, 1);
+    assert.equal(rejected.length, 0);
 });
 
 test('không khôi phục transaction đã nằm trong endedKeys', async () => {
