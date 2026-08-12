@@ -354,6 +354,14 @@
                         </div>
 
                         <!-- Countdown timer cho Live Stream trên Dashboard -->
+                        <section id="dashboard-lyrics" class="dashboard-lyrics" hidden aria-label="Lời bài hát đồng bộ">
+                            <div class="dashboard-lyrics-header">
+                                <span>Lời bài hát</span>
+                                <span id="dashboard-lyrics-source" class="dashboard-lyrics-source">LRCLIB</span>
+                            </div>
+                            <div id="dashboard-lyrics-lines" class="dashboard-lyrics-lines"></div>
+                        </section>
+
                         <div id="dash-live-countdown" class="dash-live-countdown">
                             <span class="dash-cd-dot"></span>
                             <span class="dash-cd-label">KẾT THÚC SAU</span>
@@ -1019,6 +1027,11 @@
                                         <input type="checkbox" class="sb-checkbox" id="hide-empty-overlay-toggle">
                                         <span>Ẩn Overlay hoàn toàn khi không có nhạc</span>
                                     </label>
+                                    <label class="sb-checkbox-label"
+                                        style="font-size: 0.95rem; font-weight: 700; color: var(--pineapple-text); cursor: pointer; user-select: none; display: inline-flex; align-items: center; gap: 0.4rem;">
+                                        <input type="checkbox" class="sb-checkbox" id="show-overlay-lyrics-toggle">
+                                        <span>Hiển thị lyrics trên OBS Overlay</span>
+                                    </label>
                                 </div>
                             </div>
                         </div>
@@ -1614,6 +1627,7 @@
     <script src="services/dashboard-bootstrap-controller.js"></script>
     <script src="services/overlay-event-service.js"></script>
     <script src="services/overlay-song-payload-service.js"></script>
+    <script src="services/lyrics-timeline-service.js"></script>
     <script src="app.js"></script>
 </body>
 

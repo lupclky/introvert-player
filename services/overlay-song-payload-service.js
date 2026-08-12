@@ -36,6 +36,23 @@
                 playlistPosition: song.playlistPosition || null, playlistTotalTracks: song.playlistTotalTracks || null,
                 playlistTotalDurationSec: song.playlistTotalDurationSec || null,
                 playlistThumbnailUrl: song.playlistThumbnailUrl || null,
+                lyrics: song.lyrics?.available && Array.isArray(song.lyrics.lines)
+                    ? {
+                        available: true, resolved: true, eligible: true, synced: true, source: song.lyrics.source || 'LRCLIB',
+                        romanized: Boolean(song.lyrics.romanized),
+                        trackName: song.lyrics.trackName || song.title || '',
+                        artistName: song.lyrics.artistName || channelName(song),
+                        lines: song.lyrics.lines.map(line => ({
+                            time: Math.max(0, Number(line?.time) || 0), text: String(line?.text || ''),
+                            ...(line?.originalText ? { originalText: String(line.originalText) } : {})
+                        })).filter(line => line.text).slice(0, 500)
+                    }
+                    : song.lyrics?.resolved
+                        ? {
+                            available: false, resolved: true, eligible: Boolean(song.lyrics.eligible),
+                            reason: String(song.lyrics.reason || 'not_found'), lines: []
+                        }
+                        : null,
                 timeLimitExempt: Boolean(song.timeLimitExempt || (song.playlistRequestId && song.playlistTrackId)),
                 nextSongTitle: nextSong?.title || null,
                 nextSongAuthor: nextSong ? channelName(nextSong) : null,

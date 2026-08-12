@@ -5,7 +5,7 @@ const OverlaySongPayloadService = require('../services/overlay-song-payload-serv
 test('payload builder creates a complete current and next song snapshot', () => {
     const builder = new OverlaySongPayloadService({ calculateMaxDuration: () => 120 });
     const payload = builder.build(
-        { id: 1, title: 'Now', author: 'Channel', amount: 50000, duration: 283.9, voteSkipActive: true, voteSkipTarget: 75000, voteAmount: 25000, playlistRequestId: 'p', playlistTrackId: 'pt-1', playlistPosition: 1, playlistTotalTracks: 2 },
+        { id: 1, title: 'Now', author: 'Channel', amount: 50000, duration: 283.9, voteSkipActive: true, voteSkipTarget: 75000, voteAmount: 25000, playlistRequestId: 'p', playlistTrackId: 'pt-1', playlistPosition: 1, playlistTotalTracks: 2, lyrics: { available: true, source: 'Phiên âm · LRCLIB', romanized: true, lines: [{ time: 1.25, text: 'saranghae', originalText: '사랑해' }] } },
         { id: 2, title: 'Next', channelTitle: 'Next Channel', duration: 200, playlistRequestId: 'p', playlistTrackId: 'pt-2', playlistPosition: 2 },
         { skipSegments: [[1, 2]], extensionPrice: 50000, extensionMinutes: 6, voteSkipDefaultAmount: 20000, luckyMode: true, volume: 67 },
         { isResuming: true, resumeFrom: 35 }
@@ -26,6 +26,8 @@ test('payload builder creates a complete current and next song snapshot', () => 
     assert.equal(payload.voteSkipActive, true);
     assert.equal(payload.voteSkipTarget, 75000);
     assert.equal(payload.voteAmount, 25000);
+    assert.equal(payload.lyrics.romanized, true);
+    assert.deepEqual(payload.lyrics.lines, [{ time: 1.25, text: 'saranghae', originalText: '사랑해' }]);
     assert.equal(Object.hasOwn(payload, 'voteSkipSuccess'), false);
     assert.equal(Object.hasOwn(payload, 'voteSkipContributors'), false);
 });
@@ -43,4 +45,10 @@ test('payload builder preserves an intentional mute volume', () => {
     const builder = new OverlaySongPayloadService();
     const payload = builder.build({ id: 1, title: 'Muted' }, null, { volume: 0 });
     assert.equal(payload.volume, 0);
+});
+
+test('payload builder preserves resolved instrumental lyrics state', () => {
+    const builder = new OverlaySongPayloadService();
+    const payload = builder.build({ id: 'song-1', title: 'Instrumental', lyrics: { resolved: true, eligible: true, available: false, reason: 'not_found' } }, null, {});
+    assert.deepEqual(payload.lyrics, { available: false, resolved: true, eligible: true, reason: 'not_found', lines: [] });
 });

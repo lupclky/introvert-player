@@ -118,11 +118,13 @@ test('cấu hình Overlay được cập nhật trong snapshot để reconnect k
       type: 'max_duration',
       data: { value: 900, config: { showIdlePriceTable: true } }
     });
+    service.publish('channel_a', 'to_overlay', { type: 'show_overlay_lyrics', data: { value: false } });
     const snapshot = service.getSnapshot('channel_a');
     assert.equal(snapshot.overlayConfig.theme, 'cutepink');
     assert.equal(snapshot.overlayConfig.opacity, '82');
     assert.equal(snapshot.overlayConfig.maxDuration, 900);
     assert.equal(snapshot.overlayConfig.timeLimitConfig.showIdlePriceTable, true);
+    assert.equal(snapshot.overlayConfig.showOverlayLyrics, false);
   } finally { database.close(); }
 });
 

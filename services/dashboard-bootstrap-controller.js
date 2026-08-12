@@ -118,6 +118,11 @@
                 onChange: checked => this.logSystem(`Đã cấu hình ${checked ? 'Ẩn' : 'Hiện'} overlay khi không có nhạc.`)
             });
             this.initBooleanSetting({
+                elementId: 'show-overlay-lyrics-toggle', stateKey: 'showOverlayLyrics',
+                storageKey: 'dua_show_overlay_lyrics', mqttTopic: 'show_overlay_lyrics', payloadKey: 'value',
+                onChange: checked => this.logSystem(`Đã ${checked ? 'bật' : 'tắt'} lyrics trên OBS Overlay.`)
+            });
+            this.initBooleanSetting({
                 elementId: 'show-idle-price-table-toggle', stateKey: 'showIdlePriceTable',
                 storageKey: 'dua_show_idle_price_table',
                 onChange: checked => {

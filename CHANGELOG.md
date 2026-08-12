@@ -1,6 +1,30 @@
 # Nhật ký thay đổi (Changelog) - Introvert Player
 
 ## [26.8.12] - 2026-08-12
+### Lyrics realtime
+- Lyrics tiếng Hàn tự động ưu tiên phiên âm Latin trên Dashboard và OBS Overlay; giữ lời Hangul gốc trong payload để dự phòng.
+- Thêm công tắc bật/tắt lyrics riêng cho OBS Overlay trong Cài đặt; trạng thái được lưu và đồng bộ realtime/snapshot, mặc định bật.
+- Tăng nhẹ khoảng cách dọc giữa ba câu lyrics trên Overlay để nội dung thoáng và dễ đọc hơn.
+- Căn câu lyrics đầu tiên vào chính giữa vùng lời ngay khi bắt đầu phát; thêm khoảng đệm timeline động ở đầu/cuối để không còn bị kẹp sát mép.
+- Tăng nhẹ kích thước toàn bộ lyrics trên Overlay, gồm cả câu dài và câu đang hát, để dễ đọc hơn trong OBS mà vẫn giữ tối đa ba câu.
+- Sửa định vị auto-scroll Dashboard theo tọa độ thực bên trong vùng lyrics, tránh cuộn lệch làm mất câu đang hát; mở rộng lyrics Overlay sát các mép card để tăng diện tích đọc.
+- Overlay chỉ hiển thị tối đa ba câu quanh câu đang hát, nhưng mỗi câu dài vẫn có thể xuống tới bốn dòng để ưu tiên kích thước và nội dung đầy đủ.
+- Dashboard hiển thị toàn bộ lyrics trong vùng cuộn; hỗ trợ bấm trực tiếp vào một câu để tua và tự bám lại câu đang hát sau khi người dùng ngừng cuộn.
+- Thêm lyrics đồng bộ theo thời gian phát thật cho video YouTube Topic và nguồn Apple Music, dùng metadata Apple/iTunes cùng dữ liệu timestamp từ LRCLIB.
+- Hiển thị câu trước, câu hiện tại và câu tiếp theo trên Dashboard lẫn OBS Overlay; tự bám theo tua, resume, SponsorBlock, iframe và DirectStream.
+- Overlay tự tăng chiều cao khi có lyrics và trở về bố cục cũ khi bài không có lời đồng bộ.
+- Loại bản lyrics timestamp bị thiếu bằng độ phủ nội dung/thời gian, ưu tiên bản đầy đủ nhất; cửa sổ lời luôn lấp đủ ba dòng ở đầu và cuối bài.
+- Tăng chiều cao vùng lyrics trên Overlay, tăng cỡ chữ và cho phép câu dài xuống dòng để không còn bị nhỏ hoặc cắt mất nội dung.
+- Giữ cố định chiều cao lyrics trên theme Set 18, không để CSS thu gọn 160px ghi đè sau animation; tự khôi phục nếu một trạng thái Overlay khác làm lệch chiều cao.
+- Hiển thị ba chấm nhấp nháy theo màu theme trên Dashboard và Overlay khi LRCLIB xác nhận bài không có lời đồng bộ.
+- Overlay lyrics có cùng chiều cao 280px với khung đếm ngược/donate mới; toàn bộ lời được dựng một lần và cuộn dọc liên tục theo timestamp như Apple Music, không còn xóa dựng lại gây nháy.
+- Bài được xác nhận không có lyrics giữ nguyên Overlay gọn 160px; ba chấm chỉ hiện thành chỉ báo nhỏ dưới trình phát, không mở vùng trống 280px.
+- Câu lyrics trên Overlay được xuống tối đa ba dòng và tự giảm font theo độ dài; bỏ chế độ một dòng kèm dấu ba chấm để ưu tiên hiển thị trọn câu.
+- Thu gọn riêng header trình phát khi có lyrics: thumbnail, font bài/kênh/donate/tiền và thanh tiến trình nhỏ hơn; vùng lyrics dùng linh hoạt toàn bộ phần còn lại tới sát viền dưới của card 280px.
+- Cân lại chế độ lyrics để câu dài vẫn xuống tối đa ba dòng, phần trình phát và vùng lời chia không gian rõ ràng trong card 280px.
+- Tăng lại thứ bậc trình phát trong card lyrics: thumbnail 56px, title 1.05rem, kênh 0.84rem, donate/tiền 0.88rem; thanh tiến trình dùng lưới ba cột để hai mốc thời gian cân hàng. Câu đang hát tăng thật lên 1.24rem (tự hạ cho câu dài), đậm và sáng rõ hơn.
+- Bỏ giới hạn chiều cao và `margin-top: auto` của vùng lyrics để phần trống dưới thanh tiến trình được dùng hoàn toàn cho lời bài hát.
+
 ### Sửa Quick Add Playlist và SponsorBlock
 - Sửa lỗi thanh tìm kiếm nhận diện playlist YouTube nhưng không gửi yêu cầu thêm vào hàng đợi khi chưa có bài đang phát.
 - Khóa dữ liệu SponsorBlock theo từng bài và kết thúc trực tiếp khi phân đoạn outro chạm đuôi video, tránh iframe phát lại từ đầu.

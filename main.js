@@ -25,6 +25,8 @@ const { registerZyPageShopIdIpcService } = require('./services/zypage-shop-id-ip
 const { YouTubeDurationService } = require('./services/youtube-duration-service');
 const { YouTubeStreamService } = require('./services/youtube-stream-service');
 const { BrowserMediaStateService } = require('./services/browser-media-state-service');
+const { SyncedLyricsService } = require('./services/synced-lyrics-service');
+const { registerSyncedLyricsIpcService } = require('./services/synced-lyrics-ipc-service');
 
 let db = null;
 let playlistRepository = null;
@@ -114,6 +116,11 @@ const youtubeStreamService = new YouTubeStreamService({
   timeoutMs: 12000
 });
 const browserMediaStateService = new BrowserMediaStateService();
+const syncedLyricsService = new SyncedLyricsService({
+  clientName: 'IntrovertPlayer',
+  clientVersion: app.getVersion(),
+  clientContact: 'https://zypage.com'
+});
 
 function broadcastBrowserMediaState(state) {
   const message = JSON.stringify({
@@ -1229,6 +1236,7 @@ let lastIsDarkMode = false;
 registerMainContextMenuService({ ipcMain, Menu, BrowserWindow, shell, clipboard });
 registerZyPageSongEndIpcService({ ipcMain });
 registerZyPageShopIdIpcService({ ipcMain });
+registerSyncedLyricsIpcService({ ipcMain, service: syncedLyricsService });
 
 // Lắng nghe yêu cầu hiển thị thông báo taskbar từ Dashboard (Renderer)
 ipcMain.on('show-taskbar-notification', (event, data) => {

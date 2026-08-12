@@ -472,6 +472,259 @@ async function fetchSongMetadata(type, videoId, soundcloudUrl) {
     return getSongMetadataService().get(type, videoId, soundcloudUrl);
 }
 
+const dashboardLyricsTimeline = window.LyricsTimelineService
+    ? new window.LyricsTimelineService({ beforeCount: 1, afterCount: 1 })
+    : null;
+let dashboardLyricsRenderKey = '';
+let dashboardLyricsRequestKey = '';
+let dashboardLyricsActiveIndex = -2;
+let dashboardLyricsUserScrolling = false;
+let dashboardLyricsResyncTimer = null;
+let dashboardLyricsIgnoreScrollUntil = 0;
+
+function positionDashboardLyrics(activeIndex, behavior = 'smooth') {
+    const container = document.getElementById('dashboard-lyrics-lines');
+    if (!container) return;
+    const targetIndex = Math.max(0, Number(activeIndex) || 0);
+    const line = container.querySelector(`[data-lyric-index="${targetIndex}"]`);
+    if (!line) return;
+    const containerRect = container.getBoundingClientRect();
+    const lineRect = line.getBoundingClientRect();
+    const lineTopInsideContainer = container.scrollTop + lineRect.top - containerRect.top;
+    const top = Math.max(0, lineTopInsideContainer - (container.clientHeight / 2) + (lineRect.height / 2));
+    dashboardLyricsIgnoreScrollUntil = Date.now() + (behavior === 'smooth' ? 1000 : 120);
+    if (typeof container.scrollTo === 'function') {
+        container.scrollTo({ top, behavior });
+    } else {
+        container.scrollTop = top;
+    }
+}
+
+function scheduleDashboardLyricsResync() {
+    dashboardLyricsUserScrolling = true;
+    clearTimeout(dashboardLyricsResyncTimer);
+    dashboardLyricsResyncTimer = setTimeout(() => {
+        dashboardLyricsUserScrolling = false;
+        positionDashboardLyrics(dashboardLyricsActiveIndex, 'smooth');
+    }, 2000);
+}
+
+function seekToDashboardLyric(time, lyricIndex) {
+    if (state.focusMode || isControlsDisabled() || !state.currentSong) return;
+    const startPoint = Math.max(0, Number(state.currentSong.start) || 0);
+    const requestedTime = Math.max(startPoint, Number(time) || 0);
+    const maximumTime = currentOverlayDuration > 0
+        ? startPoint + currentOverlayDuration
+        : Math.max(startPoint, Number(state.currentSong.duration) || requestedTime);
+    const targetTime = Math.min(requestedTime, maximumTime || requestedTime);
+
+    dashboardPendingSeekTarget = targetTime;
+    dashboardSeekUiLockUntil = Date.now() + 5000;
+    state.lastReportedTime = targetTime;
+    dashboardLyricsUserScrolling = false;
+    clearTimeout(dashboardLyricsResyncTimer);
+
+    const success = attemptGlobalAction('seek', () => {
+        sendControlCommand('seek', targetTime);
+        logSystem(`Tua theo lời bài hát tới: ${formatTime(targetTime)}`);
+    });
+    if (!success) {
+        dashboardPendingSeekTarget = null;
+        dashboardSeekUiLockUntil = 0;
+        return;
+    }
+
+    dashboardLyricsActiveIndex = lyricIndex;
+    const container = document.getElementById('dashboard-lyrics-lines');
+    const previousLine = container?.querySelector('.dashboard-lyric-line.is-active');
+    previousLine?.classList.remove('is-active');
+    previousLine?.removeAttribute('aria-current');
+    const activeLine = container?.querySelector(`[data-lyric-index="${lyricIndex}"]`);
+    activeLine?.classList.add('is-active');
+    activeLine?.setAttribute('aria-current', 'true');
+    requestAnimationFrame(() => positionDashboardLyrics(lyricIndex, 'smooth'));
+}
+
+function ensureDashboardLyricsInteractions(container) {
+    if (!container || container.dataset.lyricsInteractionsBound === 'true') return;
+    container.dataset.lyricsInteractionsBound = 'true';
+    container.addEventListener('wheel', scheduleDashboardLyricsResync, { passive: true });
+    container.addEventListener('touchstart', scheduleDashboardLyricsResync, { passive: true });
+    container.addEventListener('scroll', () => {
+        if (Date.now() > dashboardLyricsIgnoreScrollUntil) scheduleDashboardLyricsResync();
+    }, { passive: true });
+    container.addEventListener('keydown', (event) => {
+        if (['PageUp', 'PageDown', 'Home', 'End', 'ArrowUp', 'ArrowDown'].includes(event.key)) {
+            scheduleDashboardLyricsResync();
+        }
+    });
+    container.addEventListener('pointerdown', (event) => {
+        if (event.target === container) scheduleDashboardLyricsResync();
+    });
+    container.addEventListener('click', (event) => {
+        const line = event.target.closest('.dashboard-lyric-line[data-lyric-time]');
+        if (!line || !container.contains(line)) return;
+        seekToDashboardLyric(Number(line.dataset.lyricTime), Number(line.dataset.lyricIndex));
+    });
+}
+
+function clearDashboardLyrics() {
+    const panel = document.getElementById('dashboard-lyrics');
+    const lines = document.getElementById('dashboard-lyrics-lines');
+    if (panel) panel.hidden = true;
+    if (lines) lines.replaceChildren();
+    clearTimeout(dashboardLyricsResyncTimer);
+    dashboardLyricsUserScrolling = false;
+    dashboardLyricsIgnoreScrollUntil = 0;
+    dashboardLyricsActiveIndex = -2;
+    dashboardLyricsRenderKey = '';
+}
+
+function updateDashboardLyrics(lyrics, currentTime = 0) {
+    const panel = document.getElementById('dashboard-lyrics');
+    const container = document.getElementById('dashboard-lyrics-lines');
+    const source = document.getElementById('dashboard-lyrics-source');
+    const isInstrumental = Boolean(lyrics?.resolved && lyrics?.eligible && lyrics?.reason === 'not_found');
+    if (!panel || !container || !dashboardLyricsTimeline || (!isInstrumental && (!lyrics?.available || !Array.isArray(lyrics.lines) || !lyrics.lines.length))) {
+        clearDashboardLyrics();
+        return;
+    }
+
+    if (isInstrumental) {
+        const renderKey = `${state.currentSong?.id || ''}:instrumental`;
+        panel.hidden = false;
+        if (source) source.textContent = 'Nhạc không lời';
+        if (renderKey !== dashboardLyricsRenderKey) {
+            dashboardLyricsRenderKey = renderKey;
+            const dots = document.createElement('div');
+            dots.className = 'dashboard-instrumental-dots';
+            dots.setAttribute('aria-label', 'Nhạc không lời');
+            for (let index = 0; index < 3; index += 1) {
+                const dot = document.createElement('span');
+                dot.className = 'dashboard-instrumental-dot';
+                dots.appendChild(dot);
+            }
+            container.replaceChildren(dots);
+        }
+        return;
+    }
+
+    const normalizedLines = dashboardLyricsTimeline.normalizeLines(lyrics.lines);
+    const activeIndex = dashboardLyricsTimeline.findActiveIndex(normalizedLines, currentTime);
+    const firstLine = normalizedLines[0];
+    const lastLine = normalizedLines[normalizedLines.length - 1];
+    const renderKey = `${state.currentSong?.id || ''}:${normalizedLines.length}:${firstLine?.time || 0}:${lastLine?.time || 0}`;
+    panel.hidden = false;
+    if (source) source.textContent = lyrics.source || 'LRCLIB';
+    ensureDashboardLyricsInteractions(container);
+    if (renderKey !== dashboardLyricsRenderKey) {
+        dashboardLyricsRenderKey = renderKey;
+        dashboardLyricsActiveIndex = -2;
+        dashboardLyricsUserScrolling = false;
+        clearTimeout(dashboardLyricsResyncTimer);
+        container.replaceChildren(...normalizedLines.map((line, index) => {
+            const element = document.createElement('button');
+            element.type = 'button';
+            element.className = 'dashboard-lyric-line';
+            element.dataset.lyricIndex = String(index);
+            element.dataset.lyricTime = String(line.time);
+            element.title = `Tua tới ${formatTime(line.time)}`;
+            element.setAttribute('aria-label', `${line.text}. Tua tới ${formatTime(line.time)}`);
+            element.textContent = line.text;
+            return element;
+        }));
+        container.scrollTop = 0;
+    }
+
+    if (activeIndex === dashboardLyricsActiveIndex) return;
+    const previousLine = container.querySelector('.dashboard-lyric-line.is-active');
+    if (previousLine) {
+        previousLine.classList.remove('is-active');
+        previousLine.removeAttribute('aria-current');
+    }
+    const activeLine = container.querySelector(`[data-lyric-index="${Math.max(0, activeIndex)}"]`);
+    if (activeIndex >= 0 && activeLine) {
+        activeLine.classList.add('is-active');
+        activeLine.setAttribute('aria-current', 'true');
+    }
+    const immediate = dashboardLyricsActiveIndex === -2;
+    dashboardLyricsActiveIndex = activeIndex;
+    if (!dashboardLyricsUserScrolling) {
+        requestAnimationFrame(() => positionDashboardLyrics(activeIndex, immediate ? 'auto' : 'smooth'));
+    }
+}
+
+async function loadSyncedLyricsForSong(song) {
+    if (!song || typeof window.electronAPI?.getSyncedLyrics !== 'function') {
+        clearDashboardLyrics();
+        return;
+    }
+    const songId = String(song.id ?? '');
+    const videoId = String(song.videoId || '');
+    const requestKey = `${songId}:${videoId}:${Date.now()}`;
+    dashboardLyricsRequestKey = requestKey;
+    try {
+        const result = await window.electronAPI.getSyncedLyrics({
+            id: song.id,
+            type: song.type || 'youtube',
+            videoId: song.videoId || null,
+            title: song.title || '',
+            author: song.rawAuthor || song.author || song.channelName || '',
+            rawAuthor: song.rawAuthor || '',
+            channelName: song.channelName || song.author || '',
+            albumName: song.albumName || song.album || '',
+            duration: Math.max(0, Number(song.duration) || 0),
+            sourceUrl: song.sourceUrl || song.songLink || song.url || ''
+        });
+        if (dashboardLyricsRequestKey !== requestKey
+            || String(state.currentSong?.id ?? '') !== songId
+            || String(state.currentSong?.videoId || '') !== videoId) return;
+
+        const lyricsState = result?.available && Array.isArray(result.lines) && result.lines.length
+            ? { ...result, resolved: true }
+            : {
+                available: false,
+                resolved: true,
+                eligible: Boolean(result?.eligible),
+                reason: String(result?.reason || 'not_found'),
+                lines: []
+            };
+        song.lyrics = lyricsState;
+        const queuedSong = state.queue.find(item => String(item.id) === songId);
+        if (queuedSong) queuedSong.lyrics = lyricsState;
+        if (state.currentSong && String(state.currentSong.id) === songId) {
+            state.currentSong.lyrics = lyricsState;
+            state.currentSong = state.currentSong;
+        }
+        updateDashboardLyrics(lyricsState, state.lastReportedTime || 0);
+
+        const payloadRaw = localStorage.getItem('dua_current_song');
+        if (payloadRaw) {
+            const payload = JSON.parse(payloadRaw);
+            if (String(payload.id ?? '') === songId) {
+                payload.lyrics = lyricsState.available
+                    ? {
+                        available: true, resolved: true, eligible: true, synced: true,
+                        source: lyricsState.source || 'LRCLIB',
+                        romanized: Boolean(lyricsState.romanized),
+                        trackName: lyricsState.trackName || song.title || '',
+                        artistName: lyricsState.artistName || song.author || song.channelName || '',
+                        lines: lyricsState.lines
+                    }
+                    : {
+                        available: false, resolved: true, eligible: lyricsState.eligible,
+                        reason: lyricsState.reason, lines: []
+                    };
+                localStorage.setItem('dua_current_song', JSON.stringify(payload));
+                publishMqtt('current_song', payload);
+            }
+        }
+    } catch (error) {
+        if (dashboardLyricsRequestKey === requestKey) clearDashboardLyrics();
+        console.warn('[Lyrics] Không thể hiển thị lời đồng bộ:', error?.message || error);
+    }
+}
+
 
 // --- BIẾN TOÀN CỤC & CẤU HÌNH ---
 let isPlayerApiReady = false;
@@ -556,6 +809,7 @@ const state = {
     volume: loadDashboardVolume(),
     maxDurationEnabled: localStorage.getItem('dua_max_duration_enabled') === 'true',
     hideEmptyOverlay: localStorage.getItem('dua_hide_empty_overlay') === 'true',
+    showOverlayLyrics: localStorage.getItem('dua_show_overlay_lyrics') !== 'false',
     showIdlePriceTable: localStorage.getItem('dua_show_idle_price_table') !== 'false',
     maxDuration: parseInt(localStorage.getItem('dua_max_duration_val')) || 180,
     limitMode: localStorage.getItem('dua_limit_mode') || 'fixed',
@@ -1433,6 +1687,7 @@ function publishRealtimeSnapshot() {
                 alertActionText: state.alertActionText,
                 emptyQueueMessage: state.emptyQueueMessage,
                 hideEmptyOverlay: Boolean(state.hideEmptyOverlay),
+                showOverlayLyrics: state.showOverlayLyrics !== false,
                 focusMode: Boolean(state.focusMode),
                 focusModeMessage: state.focusModeMessage,
                 volume: Math.max(0, Math.min(100, Number.isFinite(Number(state.volume)) ? Math.round(Number(state.volume)) : 80)),
@@ -3778,6 +4033,10 @@ async function playSong(song) {
     // Realtime database broadcast
     publishMqtt('current_song', payload);
 
+    // Lyrics tải bất đồng bộ sau khi player đã nhận bài. Metadata-only update
+    // của cùng song id không tạo lại iframe/direct stream trên Overlay.
+    loadSyncedLyricsForSong(song);
+
     // Send resume as an explicit one-shot player command. The payload position
     // still handles initial load; this command also reaches an existing player.
     if (needSeekAfterLoad) {
@@ -4370,6 +4629,7 @@ function updatePlayerUI(song) {
     const separator = document.getElementById('progress-separator');
 
     if (!song) {
+        clearDashboardLyrics();
         setDashboardVideoLoading(false);
         const directStreamBadge = document.getElementById('direct-stream-badge');
         if (directStreamBadge) directStreamBadge.style.display = 'none';
@@ -4414,6 +4674,8 @@ function updatePlayerUI(song) {
 
         return;
     }
+
+    updateDashboardLyrics(song.lyrics, state.lastReportedTime || 0);
 
     setDashboardVideoLoading(state.currentSongPlaybackConfirmed === false);
  
@@ -6828,6 +7090,7 @@ function handleMqttMessage(topic, messageStrOrObj) {
             
             if (data.currentTime !== undefined && !ignorePreSeekProgress) {
                 state.lastReportedTime = data.currentTime;
+                updateDashboardLyrics(state.currentSong?.lyrics, data.currentTime);
             }
 
             if (state.currentSong?.playlistRequestId

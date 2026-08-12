@@ -99,6 +99,8 @@ class LocalRealtimeDatabaseService {
       current.overlayConfig = { ...(current.overlayConfig || {}), emptyQueueMessage: data?.text ?? '' };
     } else if (message.type === 'hide_empty_overlay') {
       current.overlayConfig = { ...(current.overlayConfig || {}), hideEmptyOverlay: Boolean(data?.value) };
+    } else if (message.type === 'show_overlay_lyrics') {
+      current.overlayConfig = { ...(current.overlayConfig || {}), showOverlayLyrics: Boolean(data?.value) };
     } else if (message.type === 'focus_mode') {
       current.overlayConfig = { ...(current.overlayConfig || {}), focusMode: Boolean(data?.value) };
     } else if (message.type === 'focus_mode_message') {

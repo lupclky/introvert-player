@@ -6710,3 +6710,102 @@ body.app-dashboard .playlist-group-toggle {
 
 
 
+.dashboard-lyrics {
+    margin-top: 0.75rem;
+    padding: 0.75rem 0;
+    border-top: 1px solid var(--pineapple-border-color);
+    border-bottom: 1px solid var(--pineapple-border-color);
+}
+
+.dashboard-lyrics[hidden] { display: none; }
+
+.dashboard-lyrics-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.55rem;
+    color: var(--pineapple-text);
+    font-family: var(--font-title);
+    font-size: 0.76rem;
+    font-weight: 650;
+}
+
+.dashboard-lyrics-source { opacity: 0.52; font-size: 0.68rem; font-weight: 500; }
+
+.dashboard-lyrics-lines {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.18rem;
+    min-height: 7rem;
+    max-height: 15rem;
+    padding: 0.2rem 0.35rem 0.35rem;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--pineapple-orange-dark) 52%, transparent) transparent;
+    scroll-behavior: smooth;
+    text-align: center;
+}
+
+.dashboard-lyric-line {
+    appearance: none;
+    display: block;
+    width: 100%;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    padding: 0.38rem 0.5rem;
+    color: var(--pineapple-text);
+    font-family: var(--font-body);
+    font-size: 0.94rem;
+    font-weight: 520;
+    line-height: 1.35;
+    opacity: 0.58;
+    cursor: pointer;
+    transition: opacity 180ms ease, color 180ms ease, transform 180ms ease;
+}
+
+.dashboard-lyric-line:hover,
+.dashboard-lyric-line:focus-visible {
+    color: var(--pineapple-orange-dark);
+    background: color-mix(in srgb, var(--pineapple-orange) 9%, transparent);
+    opacity: 0.86;
+    outline: none;
+}
+
+.dashboard-lyric-line.is-active {
+    color: var(--pineapple-orange-dark);
+    font-size: 1.1rem;
+    font-weight: 700;
+    opacity: 1;
+    transform: scale(1.01);
+    background: color-mix(in srgb, var(--pineapple-orange) 7%, transparent);
+}
+
+.dashboard-instrumental-dots {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 4.7rem;
+    color: var(--pineapple-orange-dark);
+}
+
+.dashboard-instrumental-dot {
+    width: 0.55rem;
+    height: 0.55rem;
+    border-radius: 50%;
+    background: currentColor;
+    animation: dashboardInstrumentalPulse 1.35s ease-in-out infinite;
+}
+
+.dashboard-instrumental-dot:nth-child(2) { animation-delay: 0.18s; }
+.dashboard-instrumental-dot:nth-child(3) { animation-delay: 0.36s; }
+
+@keyframes dashboardInstrumentalPulse {
+    0%, 70%, 100% { opacity: 0.3; transform: translateY(0) scale(0.78); }
+    35% { opacity: 1; transform: translateY(-3px) scale(1); }
+}

@@ -140,6 +140,29 @@ test('initSettingsUi đồng bộ SponsorBlock', () => {
     assert.equal(published[0].topic, 'sb_categories');
 });
 
+test('initSettingsUi bật tắt lyrics Overlay và đồng bộ realtime', () => {
+    const checkbox = element();
+    const stored = new Map();
+    const published = [];
+    const state = { showOverlayLyrics: true };
+    const controller = new DashboardBootstrapController({
+        document: { getElementById: id => id === 'show-overlay-lyrics-toggle' ? checkbox : null },
+        state,
+        storage: { setItem: (key, value) => stored.set(key, value) },
+        publishMqtt: (topic, payload) => published.push({ topic, payload })
+    });
+
+    controller.initSettingsUi();
+    assert.equal(checkbox.checked, true);
+
+    checkbox.checked = false;
+    checkbox.listeners.change[0]({ target: checkbox });
+
+    assert.equal(state.showOverlayLyrics, false);
+    assert.equal(stored.get('dua_show_overlay_lyrics'), 'false');
+    assert.deepEqual(published[0], { topic: 'show_overlay_lyrics', payload: { value: false } });
+});
+
 test('initQueueUi khởi tạo queue và listener Electron đúng một lần', () => {
     const favoriteButton = element();
     const queueCard = element();
