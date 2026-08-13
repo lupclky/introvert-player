@@ -67,6 +67,22 @@ test('Overlay heartbeat is not persisted in realtime event history', () => {
   } finally { database.close(); }
 });
 
+test('nhịp lyrics 5ms chỉ chuyển tiếp và không ghi lịch sử realtime', () => {
+  const { database, clients, service } = fixture();
+  try {
+    const dashboard = { readyState: 1, realtimeRole: 'dashboard', realtimeChannelId: 'channel_a', sent: [], send(value) { this.sent.push(JSON.parse(value)); } };
+    clients.add(dashboard);
+    service.publish('channel_a', 'from_overlay', {
+      type: 'lyrics_timing', data: { songId: 'song-1', currentTime: 12.345 }
+    });
+    const count = database.prepare('SELECT COUNT(*) AS total FROM realtime_events').get().total;
+    assert.equal(Number(count), 0);
+    assert.equal(dashboard.sent.length, 1);
+    assert.equal(dashboard.sent[0].type, 'lyrics_timing');
+    assert.equal(dashboard.sent[0].data.currentTime, 12.345);
+  } finally { database.close(); }
+});
+
 test('chỉ client cùng channel nhận event', () => {
   const { database, clients, service } = fixture();
   try {

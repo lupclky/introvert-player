@@ -123,6 +123,57 @@ style.textContent = `
     cursor: not-allowed !important;
     opacity: 0.7 !important;
   }
+  .pineapple-ytmusic-add-btn {
+    cursor: pointer;
+    box-sizing: border-box;
+    min-width: 30px;
+    height: 30px;
+    padding: 0 9px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 15px;
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--ytmusic-text-primary, #fff);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    font-family: Roboto, Arial, sans-serif;
+    font-size: 18px;
+    font-weight: 500;
+    line-height: 1;
+    transition: background-color .18s ease, border-color .18s ease, opacity .18s ease;
+  }
+  .pineapple-ytmusic-add-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.32);
+  }
+  .pineapple-ytmusic-add-btn.loading {
+    cursor: wait;
+    opacity: .62;
+  }
+  .pineapple-ytmusic-playlist-btn {
+    min-width: 42px;
+    padding-inline: 11px;
+    font-size: 14px;
+    letter-spacing: -.02em;
+  }
+  ytmusic-responsive-list-item-renderer .pineapple-ytmusic-add-btn {
+    margin-right: 8px;
+  }
+  ytmusic-card-shelf-renderer .pineapple-ytmusic-add-btn {
+    margin-left: 10px;
+  }
+  ytmusic-two-row-item-renderer .pineapple-ytmusic-add-btn {
+    position: absolute;
+    right: 8px;
+    top: 8px;
+    z-index: 4;
+    background: rgba(20, 20, 20, .78);
+    backdrop-filter: blur(6px);
+  }
+  ytmusic-two-row-item-renderer {
+    position: relative !important;
+  }
 `;
 document.head.appendChild(style);
 
@@ -251,12 +302,209 @@ setInterval(publishBrowserMediaState, 1000);
 
 // Kiểm tra định kỳ trang video YouTube
 function checkRoute() {
+  if (window.location.hostname === 'music.youtube.com') {
+    injectYouTubeMusicButtons();
+    return;
+  }
   const isVideoPage = window.location.pathname === '/watch';
   if (isVideoPage) {
     injectWatchPageButton();
   }
   // Tự động quét và nhúng nút "+ Thêm nhanh" trên trang tìm kiếm/trang chủ/gợi ý
   injectSearchButtons();
+}
+
+function normalizeYouTubeMusicUrl(rawHref, kind = 'track') {
+  try {
+    const parsed = new URL(rawHref, 'https://music.youtube.com');
+    parsed.protocol = 'https:';
+    parsed.hostname = 'music.youtube.com';
+    parsed.hash = '';
+    if (kind === 'track') {
+      const videoId = parsed.searchParams.get('v');
+      return videoId ? `https://music.youtube.com/watch?v=${encodeURIComponent(videoId)}` : '';
+    }
+    const playlistId = parsed.searchParams.get('list');
+    if (playlistId) return `https://music.youtube.com/playlist?list=${encodeURIComponent(playlistId)}`;
+    // Album/EP/Single cards use a browse/MPRE... URL and only expose their
+    // playable OLAK playlist after the release page is resolved by background.
+    if (/^\/browse\/MPRE[A-Za-z0-9_-]+$/i.test(parsed.pathname)) {
+      return `https://music.youtube.com${parsed.pathname}`;
+    }
+    return '';
+  } catch (_) {
+    return '';
+  }
+}
+
+function readYouTubeMusicCardTitle(card, anchor) {
+  return (anchor?.getAttribute('title')
+    || anchor?.getAttribute('aria-label')
+    || card.querySelector('.title-column yt-formatted-string, yt-formatted-string.title, .title a, #title')?.textContent
+    || anchor?.textContent
+    || '').trim();
+}
+
+function resetYouTubeMusicButton(btn, text) {
+  btn.classList.remove('loading');
+  btn.disabled = false;
+  btn.textContent = text;
+  btn.style.removeProperty('color');
+  btn.style.removeProperty('border-color');
+}
+
+function createYouTubeMusicAddButton(card, url, title, options = {}) {
+  const isPlaylist = options.isPlaylist === true;
+  const idleText = isPlaylist ? '+ Playlist' : '+';
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = `pineapple-ytmusic-add-btn${isPlaylist ? ' pineapple-ytmusic-playlist-btn' : ''}`;
+  btn.dataset.mediaUrl = url;
+  btn.dataset.mediaTitle = title;
+  btn.dataset.mediaKind = isPlaylist ? 'playlist' : 'track';
+  btn.textContent = idleText;
+  btn.title = isPlaylist
+    ? 'Thêm playlist này vào Pineapple Studio'
+    : 'Thêm bài hát này vào hàng đợi Pineapple Studio';
+  btn.setAttribute('aria-label', btn.title);
+
+  btn.addEventListener('click', event => {
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+    if (btn.classList.contains('loading')) return;
+
+    const currentAnchor = card.querySelector(isPlaylist
+      ? 'a[href*="playlist?list="], a[href*="browse/MPRE"], a[href*="watch?"][href*="list="]'
+      : 'a[href*="watch?v="]');
+    const currentUrl = normalizeYouTubeMusicUrl(currentAnchor?.getAttribute('href') || btn.dataset.mediaUrl, isPlaylist ? 'playlist' : 'track');
+    const currentTitle = readYouTubeMusicCardTitle(card, currentAnchor) || btn.dataset.mediaTitle;
+    if (!currentUrl) return;
+
+    btn.classList.add('loading');
+    btn.disabled = true;
+    btn.textContent = '…';
+    safeSendMessage({
+      action: 'send-to-pineapple',
+      url: currentUrl,
+      title: currentTitle,
+      playNow: false
+    }, response => {
+      btn.classList.remove('loading');
+      btn.disabled = false;
+      if (response?.success) {
+        btn.textContent = '✓';
+        btn.style.setProperty('color', '#34d399');
+        btn.style.setProperty('border-color', 'rgba(52, 211, 153, .6)');
+        setTimeout(() => resetYouTubeMusicButton(btn, idleText), 2000);
+      } else {
+        btn.textContent = '×';
+        btn.style.setProperty('color', '#f87171');
+        btn.style.setProperty('border-color', 'rgba(248, 113, 113, .6)');
+        showToast(response?.error || 'Không thể thêm nhạc từ YouTube Music.', true);
+        setTimeout(() => resetYouTubeMusicButton(btn, idleText), 3000);
+      }
+    });
+  });
+  return btn;
+}
+
+function injectYouTubeMusicTrackButton(card) {
+  if (isYouTubeMusicReleaseCard(card)) return false;
+  const anchor = card.querySelector('a[href*="watch?v="]');
+  if (!anchor) return false;
+  const url = normalizeYouTubeMusicUrl(anchor.getAttribute('href'), 'track');
+  const title = readYouTubeMusicCardTitle(card, anchor);
+  if (!url || !title) return false;
+
+  card.querySelectorAll('.pineapple-ytmusic-add-btn[data-media-kind="playlist"]').forEach(button => button.remove());
+  const existing = card.querySelector('.pineapple-ytmusic-add-btn[data-media-kind="track"]');
+  if (existing) {
+    existing.dataset.mediaUrl = url;
+    existing.dataset.mediaTitle = title;
+    return true;
+  }
+  const btn = createYouTubeMusicAddButton(card, url, title);
+  if (card.matches('ytmusic-responsive-list-item-renderer')) {
+    const actions = card.querySelector('.menu, .right-items, [class*="menu"]');
+    if (actions?.parentElement) actions.parentElement.insertBefore(btn, actions);
+    else card.appendChild(btn);
+  } else if (card.matches('ytmusic-card-shelf-renderer')) {
+    const actions = card.querySelector('#buttons, .buttons, .button-container, [class*="buttons"]');
+    if (actions) actions.appendChild(btn);
+    else card.appendChild(btn);
+  } else {
+    card.appendChild(btn);
+  }
+  return true;
+}
+
+function getYouTubeMusicPrimaryAnchor(card) {
+  if (!card) return null;
+  const titleSelectors = [
+    '.title-column a[href]',
+    'yt-formatted-string.title a[href]',
+    '.title a[href]',
+    'a#title[href]',
+    '#title a[href]'
+  ];
+  for (const selector of titleSelectors) {
+    const anchor = card.querySelector(selector);
+    if (anchor) return anchor;
+  }
+  return card.querySelector('a[href*="watch?v="], a[href*="browse/MPRE"], a[href*="playlist?list="]');
+}
+
+function isYouTubeMusicReleaseCard(card) {
+  if (!card) return false;
+  const primaryHref = String(getYouTubeMusicPrimaryAnchor(card)?.getAttribute('href') || '');
+  // Song rows can contain a secondary album link. The title destination is
+  // authoritative, otherwise an individual track is mislabeled as playlist.
+  if (primaryHref.includes('/watch?') && new URL(primaryHref, 'https://music.youtube.com').searchParams.get('v')) return false;
+  if (/\/browse\/MPRE[A-Za-z0-9_-]+/i.test(primaryHref)) return true;
+  const text = String(card.textContent || '').toLowerCase();
+  return /(?:^|[·\s])(album|đĩa nhạc|single|ep)(?:$|[·\s])/i.test(text)
+    && Boolean(card.querySelector('a[href*="watch?"][href*="list="], a[href*="playlist?list="]'));
+}
+
+function injectYouTubeMusicPlaylistButton(card) {
+  const isRelease = isYouTubeMusicReleaseCard(card);
+  if (!isRelease && card.querySelector('a[href*="watch?v="]')) return false;
+  const anchor = card.querySelector(
+    'a[href*="playlist?list="], a[href*="browse/MPRE"], a[href*="watch?"][href*="list="]'
+  );
+  if (!anchor) return false;
+  const url = normalizeYouTubeMusicUrl(anchor.getAttribute('href'), 'playlist');
+  const title = readYouTubeMusicCardTitle(card, anchor);
+  if (!url || !title) return false;
+  card.querySelectorAll('.pineapple-ytmusic-add-btn[data-media-kind="track"]').forEach(button => button.remove());
+  const existing = card.querySelector('.pineapple-ytmusic-add-btn[data-media-kind="playlist"]');
+  if (existing) {
+    existing.dataset.mediaUrl = url;
+    existing.dataset.mediaTitle = title;
+    return true;
+  }
+  const btn = createYouTubeMusicAddButton(card, url, title, { isPlaylist: true });
+  if (card.matches('ytmusic-responsive-list-item-renderer')) {
+    const actions = card.querySelector('.menu, .right-items, [class*="menu"]');
+    if (actions?.parentElement) actions.parentElement.insertBefore(btn, actions);
+    else card.appendChild(btn);
+  } else if (card.matches('ytmusic-card-shelf-renderer')) {
+    const actions = card.querySelector('#buttons, .buttons, .button-container, [class*="buttons"]');
+    if (actions) actions.appendChild(btn);
+    else card.appendChild(btn);
+  } else {
+    card.appendChild(btn);
+  }
+  return true;
+}
+
+function injectYouTubeMusicButtons(root = document) {
+  root.querySelectorAll?.('ytmusic-responsive-list-item-renderer, ytmusic-two-row-item-renderer, ytmusic-card-shelf-renderer')
+    .forEach(card => {
+      const playlistInjected = injectYouTubeMusicPlaylistButton(card);
+      if (!playlistInjected) injectYouTubeMusicTrackButton(card);
+    });
 }
 
 // Hàm quét và nhúng nút thêm nhanh trên trang xem video
@@ -599,11 +847,16 @@ function startHomepageObserver() {
              'ytd-grid-video-renderer', 'ytd-compact-video-renderer', 'ytd-playlist-panel-video-renderer', 'yt-lockup-view-model'].includes(tag)) {
           injectButtonIntoCard(node);
         }
+        if (tag === 'ytmusic-responsive-list-item-renderer' || tag === 'ytmusic-two-row-item-renderer' || tag === 'ytmusic-card-shelf-renderer') {
+          const playlistInjected = injectYouTubeMusicPlaylistButton(node);
+          if (!playlistInjected) injectYouTubeMusicTrackButton(node);
+        }
         // Quét bên trong node mới thêm vào (ví dụ: cả một grid row)
         if (node.querySelectorAll) {
           node.querySelectorAll(
             'ytd-rich-item-renderer, ytd-rich-grid-media, ytd-video-renderer, ytd-grid-video-renderer, ytd-compact-video-renderer, ytd-playlist-panel-video-renderer, yt-lockup-view-model'
           ).forEach(c => injectButtonIntoCard(c));
+          injectYouTubeMusicButtons(node);
         }
       }
     }

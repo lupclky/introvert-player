@@ -79,16 +79,19 @@
         async resolveMedia(text) {
             const directVideoId = String(text || '').trim();
             if (/^[A-Za-z0-9_-]{11}$/.test(directVideoId)) {
-                return { type: 'youtube', videoId: directVideoId, soundcloudUrl: null };
+                return {
+                    type: 'youtube', videoId: directVideoId, soundcloudUrl: null,
+                    sourceUrl: `https://www.youtube.com/watch?v=${directVideoId}`
+                };
             }
             const urls = String(text || '').match(/https?:\/\/[^\s<>"']+/gi) || [];
             for (const url of urls) {
                 if (url.includes('soundcloud.com')) {
-                    return { type: 'soundcloud', videoId: null, soundcloudUrl: await this.resolveSoundcloudUrl(url) };
+                    return { type: 'soundcloud', videoId: null, soundcloudUrl: await this.resolveSoundcloudUrl(url), sourceUrl: url };
                 }
                 if (url.includes('spotify.com') || url.startsWith('spotify:')) continue;
                 const videoId = this.parseYoutubeId(url);
-                if (videoId) return { type: 'youtube', videoId, soundcloudUrl: null };
+                if (videoId) return { type: 'youtube', videoId, soundcloudUrl: null, sourceUrl: url };
             }
             return null;
         }

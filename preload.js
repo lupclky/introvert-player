@@ -12,6 +12,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     searchYouTube: (query) => ipcRenderer.invoke('search-youtube', query),
     getYoutubeMetadata: (videoId) => ipcRenderer.invoke('get-youtube-metadata', videoId),
     getSyncedLyrics: (song) => ipcRenderer.invoke('get-synced-lyrics', song),
+    debugSyncedLyrics: (song) => ipcRenderer.invoke('debug-synced-lyrics', song),
     resolveExternalUrl: (url) => ipcRenderer.invoke('resolve-external-url', url),
     checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
     startUpdate: (url) => ipcRenderer.send('start-update', url),

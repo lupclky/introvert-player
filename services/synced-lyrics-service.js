@@ -1,16 +1,39 @@
 'use strict';
 
+const { LyricsRomanizationService } = require('./lyrics-romanization-service');
+
 class SyncedLyricsService {
   constructor(options = {}) {
     this.fetchImpl = options.fetchImpl || globalThis.fetch?.bind(globalThis);
+    this.resolveYouTubeMetadata = typeof options.resolveYouTubeMetadata === 'function'
+      ? options.resolveYouTubeMetadata
+      : null;
     this.now = options.now || Date.now;
     this.logger = options.logger || console;
+    this.lyricsRomanizationService = options.lyricsRomanizationService || new LyricsRomanizationService({
+      logger: this.logger
+    });
     this.clientName = options.clientName || 'IntrovertPlayer';
     this.clientVersion = options.clientVersion || 'unknown';
     this.clientContact = options.clientContact || 'https://github.com/';
     this.timeoutMs = Math.max(1000, Number(options.timeoutMs) || 9000);
     this.cacheTtlMs = Math.max(60000, Number(options.cacheTtlMs) || 24 * 60 * 60 * 1000);
     this.failureCacheTtlMs = Math.max(60000, Number(options.failureCacheTtlMs) || 30 * 60 * 1000);
+    this.syncedRaceWindowMs = Number.isFinite(Number(options.syncedRaceWindowMs))
+      ? Math.max(0, Math.min(500, Number(options.syncedRaceWindowMs)))
+      : 160;
+    this.durationToleranceSeconds = Number.isFinite(Number(options.durationToleranceSeconds))
+      ? Math.max(0, Math.min(3, Number(options.durationToleranceSeconds)))
+      : 1.5;
+    this.unisonApiUrl = options.unisonApiUrl || 'https://unison.boidu.dev/lyrics';
+    this.biniLyricsApiUrl = options.biniLyricsApiUrl || 'https://lyrics-api.binimum.org/';
+    this.lyricsPlusApiUrl = options.lyricsPlusApiUrl || 'https://lyricsplus.prjktla.my.id/v2/lyrics/get';
+    this.resolveTrackIsrc = typeof options.resolveTrackIsrc === 'function'
+      ? options.resolveTrackIsrc
+      : null;
+    this.musixmatchApiUrl = options.musixmatchApiUrl || 'https://apic-desktop.musixmatch.com/ws/1.1/';
+    this.musixmatchToken = '';
+    this.musixmatchTokenPromise = null;
     this.cache = options.cache || new Map();
     this.inflight = new Map();
   }
@@ -41,6 +64,143 @@ class SyncedLyricsService {
       .trim();
   }
 
+  static getCoreTrackTitle(value) {
+    const qualifier = /(?:feat(?:uring)?|ft\.?|with|remix|mix|version|ver\.?|live|acoustic|remaster(?:ed)?|radio\s*edit|edit|instrumental|karaoke|cover|demo|sped\s*up|slowed(?:\s*down)?|nightcore|mono|stereo|from\s+.+)/i;
+    return SyncedLyricsService.cleanTrackTitle(value)
+      .replace(/\s*[\[(][^\])]*(?:feat(?:uring)?|ft\.?|with|remix|mix|version|ver\.?|live|acoustic|remaster(?:ed)?|radio\s*edit|edit|instrumental|karaoke|cover|demo|sped\s*up|slowed(?:\s*down)?|nightcore|mono|stereo|from\s+)[^\])]*[\])]/gi, '')
+      .replace(new RegExp(`\\s*[-\u2013\u2014|]\\s*${qualifier.source}.*$`, 'i'), '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  static getTokenSimilarity(left, right) {
+    const leftTokens = new Set(SyncedLyricsService.normalizeComparable(left).split(' ').filter(Boolean));
+    const rightTokens = new Set(SyncedLyricsService.normalizeComparable(right).split(' ').filter(Boolean));
+    if (!leftTokens.size || !rightTokens.size) return 0;
+    const intersection = [...leftTokens].filter(token => rightTokens.has(token)).length;
+    return intersection / Math.min(leftTokens.size, rightTokens.size);
+  }
+
+  static hasRelatedArtist(left, right) {
+    const normalizedLeft = SyncedLyricsService.normalizeComparable(left);
+    const normalizedRight = SyncedLyricsService.normalizeComparable(right);
+    if (!normalizedLeft || !normalizedRight) return false;
+    return normalizedLeft === normalizedRight
+      || normalizedLeft.includes(normalizedRight)
+      || normalizedRight.includes(normalizedLeft)
+      || SyncedLyricsService.getTokenSimilarity(normalizedLeft, normalizedRight) >= 0.6;
+  }
+
+  static normalizeDuration(value) {
+    const duration = Number(value);
+    // Metadata providers expose the same track differently: the player may
+    // report 250.480s while Apple/LRCLIB publish the rounded 251s. Normalize
+    // every provider to its nearest whole second before requiring equality.
+    return Number.isFinite(duration) && duration > 0 ? Math.round(duration) : 0;
+  }
+
+  static hasExactDuration(candidate, identity) {
+    const candidateDuration = SyncedLyricsService.normalizeDuration(candidate?.duration);
+    const targetDuration = SyncedLyricsService.normalizeDuration(identity?.duration);
+    return candidateDuration > 0 && targetDuration > 0 && candidateDuration === targetDuration;
+  }
+
+  static extractFeaturedArtists(value) {
+    const source = String(value || '');
+    const output = [];
+    const matcher = /(?:feat(?:uring)?\.?|ft\.?|with|cùng\s+với)\s+([^\])]+)/gi;
+    for (const match of source.matchAll(matcher)) {
+      String(match[1] || '')
+        .split(/\s*(?:,|&|\band\b|\bx\b)\s*/i)
+        .map(item => item.trim())
+        .filter(Boolean)
+        .forEach(item => output.push(item));
+    }
+    return [...new Set(output)];
+  }
+
+  hasCompatibleDuration(candidate, identity) {
+    return SyncedLyricsService.getDurationDistance(candidate, identity) <= this.durationToleranceSeconds;
+  }
+
+  static getDurationDistance(candidate, identity) {
+    const candidateDuration = Number(candidate?.duration);
+    const targetDuration = Number(identity?.duration);
+    if (!(candidateDuration > 0) || !(targetDuration > 0)) return Number.POSITIVE_INFINITY;
+    return Math.abs(candidateDuration - targetDuration);
+  }
+
+  static hasSufficientTimelineCoverage(lines, identity) {
+    const normalizedLines = Array.isArray(lines) ? lines : [];
+    const duration = Math.max(0, Number(identity?.duration) || 0);
+    // A tiny fixture or a genuinely sparse lyric does not provide enough
+    // evidence to reject. For normal lyrics, reject timelines that cover less
+    // than 70% of the release and leave over 45 seconds uncovered. This catches
+    // corrupt LRCLIB records whose declared duration is correct but whose actual
+    // timestamps belong to a shortened edit (for example SOLO ending at 1:49
+    // while the Topic audio continues to 2:50).
+    if (normalizedLines.length < 8 || duration < 120) return true;
+    const lastTimestamp = normalizedLines.reduce((latest, line) => {
+      const time = Number(line?.time);
+      return Number.isFinite(time) ? Math.max(latest, time) : latest;
+    }, 0);
+    return lastTimestamp >= duration * 0.7 || duration - lastTimestamp <= 45;
+  }
+
+  static selectClosestDuration(records, identity) {
+    return records.reduce((best, record) => {
+      if (!best) return record;
+      const recordDistance = SyncedLyricsService.getDurationDistance(record, identity);
+      const bestDistance = SyncedLyricsService.getDurationDistance(best, identity);
+      if (recordDistance !== bestDistance) return recordDistance < bestDistance ? record : best;
+      if (record?.durationVerified === true && best?.durationVerified !== true) return record;
+      return best;
+    }, null);
+  }
+
+  static extractNamedVersionCredits(value) {
+    const source = String(value || '');
+    const output = [];
+    const genericLabels = new Set([
+      'club', 'dance', 'extended', 'original', 'radio', 'official', 'audio',
+      'video', 'lyric', 'lyrics', 'vietsub', 'sped up', 'slowed', 'nightcore'
+    ]);
+    // Only Remix/Mix/Edit prefixes identify a person whose credit must also
+    // appear in provider metadata (for example "Cukak Remix"). A phrase such
+    // as "Special Music Night Ver" describes the release, not an artist.
+    const matcher = /[\[(]([^\])]+?)\s+(?:remix|mix|edit)\s*[\])]/gi;
+    for (const match of source.matchAll(matcher)) {
+      const credit = String(match[1] || '').trim();
+      const normalized = SyncedLyricsService.normalizeComparable(credit);
+      if (!normalized || genericLabels.has(normalized)) continue;
+      output.push(credit);
+    }
+    return [...new Set(output)];
+  }
+
+  static hasNamedVersionCredits(candidate, identity) {
+    const credits = SyncedLyricsService.extractNamedVersionCredits(identity?.title);
+    if (!credits.length) return true;
+    return credits.every(credit => SyncedLyricsService.includesArtist(candidate?.artistName, credit));
+  }
+
+  static includesArtist(value, artist) {
+    const haystack = SyncedLyricsService.normalizeComparable(value);
+    const needle = SyncedLyricsService.normalizeComparable(artist);
+    if (!haystack || !needle) return false;
+    if (haystack === needle || haystack.includes(needle)) return true;
+    // Credits frequently spell stage names with spaces while distributors
+    // collapse them (for example "CODY NAM VÕ" vs "CODYNAMVO").
+    return haystack.replace(/\s+/g, '').includes(needle.replace(/\s+/g, ''));
+  }
+
+  static hasRequiredArtists(candidate, identity) {
+    const requiredArtists = Array.isArray(identity?.requiredArtists) ? identity.requiredArtists.filter(Boolean) : [];
+    if (!requiredArtists.length) return true;
+    const metadata = [candidate?.trackName, candidate?.artistName, candidate?.albumName].filter(Boolean).join(' ');
+    return requiredArtists.every(artist => SyncedLyricsService.includesArtist(metadata, artist));
+  }
+
   static isTopicChannel(value) {
     return /\s*[-–—]\s*(topic|chủ\s*đề)\s*$/i.test(String(value || '').trim());
   }
@@ -52,6 +212,22 @@ class SyncedLyricsService {
     } catch (_) {
       return false;
     }
+  }
+
+  static isYouTubeMusicUrl(value) {
+    try {
+      const hostname = new URL(String(value || '')).hostname.toLowerCase();
+      return hostname === 'music.youtube.com' || hostname.endsWith('.music.youtube.com');
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static isLikelyMusicTitle(value) {
+    const title = String(value || '').trim();
+    if (!title) return false;
+    return /(?:official\s+(?:music\s+)?(?:video|audio)|lyric(?:s|\s+video)?|visualizer|vietsub|\bmv\b|\baudio\b)/i.test(title)
+      || /^.{1,80}\s[-–—|]\s.{1,120}$/.test(title);
   }
 
   static parseAppleTrackId(value) {
@@ -82,6 +258,55 @@ class SyncedLyricsService {
         const time = Number(timestamp[1]) * 60 + Number(timestamp[2]) + fractionSeconds;
         if (Number.isFinite(time) && time >= 0) output.push({ time: Math.round(time * 1000) / 1000, text });
       }
+    }
+    return output
+      .sort((left, right) => left.time - right.time)
+      .filter((line, index, lines) => index === 0 || line.time !== lines[index - 1].time || line.text !== lines[index - 1].text)
+      .slice(0, 500);
+  }
+
+  static parseClockTime(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return NaN;
+    if (/^\d+(?:\.\d+)?s$/i.test(raw)) return Number(raw.slice(0, -1));
+    const parts = raw.split(':').map(Number);
+    if (parts.some(part => !Number.isFinite(part))) return NaN;
+    if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+    if (parts.length === 2) return parts[0] * 60 + parts[1];
+    return parts.length === 1 ? parts[0] : NaN;
+  }
+
+  static decodeXmlText(value) {
+    return String(value || '')
+      .replace(/<br\s*\/?>/gi, ' ')
+      .replace(/<[^>]+>/g, '')
+      .replace(/&#(\d+);/g, (_match, code) => String.fromCodePoint(Number(code)))
+      .replace(/&#x([0-9a-f]+);/gi, (_match, code) => String.fromCodePoint(parseInt(code, 16)))
+      .replace(/&quot;/g, '"')
+      .replace(/&apos;|&#39;/g, "'")
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  static isPlaceholderArtist(value) {
+    const normalized = SyncedLyricsService.normalizeComparable(SyncedLyricsService.cleanArtist(value));
+    return !normalized || [
+      'release', 'releases', 'various artists', 'various artist',
+      'youtube music', 'youtube', 'kenh youtube', 'official release'
+    ].includes(normalized);
+  }
+
+  static parseTtmlLyrics(value) {
+    const source = String(value || '').replace(/^\uFEFF/, '');
+    const output = [];
+    for (const paragraph of source.matchAll(/<p\b([^>]*)>([\s\S]*?)<\/p>/gi)) {
+      const begin = paragraph[1].match(/\bbegin\s*=\s*["']([^"']+)["']/i)?.[1];
+      const time = SyncedLyricsService.parseClockTime(begin);
+      const text = SyncedLyricsService.decodeXmlText(paragraph[2]);
+      if (Number.isFinite(time) && time >= 0 && text) output.push({ time: Math.round(time * 1000) / 1000, text });
     }
     return output
       .sort((left, right) => left.time - right.time)
@@ -126,7 +351,9 @@ class SyncedLyricsService {
       let finalSound = finals[syllable.final] || '';
       const next = syllables[index + 1];
       if (syllable.final && next?.initial === 11 && liaison[syllable.final]) {
-        [finalSound, initialOverrides[index + 1]] = liaison[syllable.final];
+        const [remainingFinal, carriedInitial] = liaison[syllable.final];
+        finalSound = remainingFinal;
+        initialOverrides.set(index + 1, carriedInitial);
       }
       const initialSound = initialOverrides.get(index) ?? initials[syllable.initial] ?? '';
       return `${initialSound}${vowels[syllable.vowel] || ''}${finalSound}`;
@@ -169,16 +396,18 @@ class SyncedLyricsService {
     };
   }
 
-  async fetchJson(url, headers = {}) {
+  async fetchJson(url, headers = {}, requestOptions = {}) {
     if (!this.fetchImpl) throw new Error('fetch is not available');
     const controller = typeof AbortController === 'function' ? new AbortController() : null;
     const timer = controller ? setTimeout(() => controller.abort(), this.timeoutMs) : null;
     try {
       const response = await this.fetchImpl(url, {
+        ...requestOptions,
         headers: {
           'User-Agent': `${this.clientName} ${this.clientVersion} (${this.clientContact})`,
           Accept: 'application/json',
-          ...headers
+          ...headers,
+          ...(requestOptions.headers || {})
         },
         ...(controller ? { signal: controller.signal } : {})
       });
@@ -194,15 +423,61 @@ class SyncedLyricsService {
     }
   }
 
-  async fetchYouTubeIdentity(videoId) {
+  async fetchText(url, headers = {}) {
+    if (!this.fetchImpl) throw new Error('fetch is not available');
+    const controller = typeof AbortController === 'function' ? new AbortController() : null;
+    const timer = controller ? setTimeout(() => controller.abort(), this.timeoutMs) : null;
+    try {
+      const response = await this.fetchImpl(url, {
+        headers: {
+          'User-Agent': `${this.clientName} ${this.clientVersion} (${this.clientContact})`,
+          Accept: 'text/plain, application/xml, text/xml, application/json',
+          ...headers
+        },
+        ...(controller ? { signal: controller.signal } : {})
+      });
+      if (!response.ok) {
+        const error = new Error(`HTTP ${response.status}`);
+        error.status = response.status;
+        throw error;
+      }
+      return response.text();
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  }
+
+  async fetchYouTubeIdentity(videoId, options = {}) {
     if (!/^[A-Za-z0-9_-]{11}$/.test(String(videoId || ''))) return null;
     const url = `https://www.youtube.com/oembed?format=json&url=${encodeURIComponent(`https://www.youtube.com/watch?v=${videoId}`)}`;
     try {
       const data = await this.fetchJson(url);
-      return {
+      const identity = {
         title: String(data?.title || '').trim(),
-        rawArtist: String(data?.author_name || '').trim()
+        rawArtist: String(data?.author_name || '').trim(),
+        credits: '',
+        duration: 0
       };
+      if (options.includeCredits || SyncedLyricsService.isTopicChannel(identity.rawArtist)) {
+        try {
+          const response = await this.fetchImpl(`https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`, {
+            headers: {
+              'User-Agent': `${this.clientName} ${this.clientVersion} (${this.clientContact})`,
+              Accept: 'text/html'
+            }
+          });
+          if (response?.ok) {
+            const html = await response.text();
+            const match = String(html || '').match(/"shortDescription":"((?:\\.|[^"\\])*)"/);
+            if (match?.[1]) identity.credits = JSON.parse(`"${match[1]}"`);
+            const durationMatch = String(html || '').match(/"lengthSeconds"\s*:\s*"?(\d+)"?/);
+            identity.duration = SyncedLyricsService.normalizeDuration(durationMatch?.[1]);
+          }
+        } catch (error) {
+          this.logger.warn?.(`[Lyrics] Không lấy được credit YouTube ${videoId}:`, error.message);
+        }
+      }
+      return identity;
     } catch (error) {
       this.logger.warn?.(`[Lyrics] Không lấy được danh tính YouTube ${videoId}:`, error.message);
       return null;
@@ -214,9 +489,20 @@ class SyncedLyricsService {
     const targetArtist = SyncedLyricsService.normalizeComparable(identity.artist);
     const candidateTitle = SyncedLyricsService.normalizeComparable(candidate?.trackName);
     const candidateArtist = SyncedLyricsService.normalizeComparable(candidate?.artistName);
+    const targetCoreTitle = SyncedLyricsService.normalizeComparable(SyncedLyricsService.getCoreTrackTitle(identity.title));
+    const candidateCoreTitle = SyncedLyricsService.normalizeComparable(SyncedLyricsService.getCoreTrackTitle(candidate?.trackName));
+    const titleMatches = candidateTitle === targetTitle
+      || candidateTitle.includes(targetTitle)
+      || targetTitle.includes(candidateTitle)
+      || (candidateCoreTitle && candidateCoreTitle === targetCoreTitle);
+    // Artist and duration alone are not enough to identify a song. Without
+    // this guard iTunes can replace the requested title with another track by
+    // the same artist that happens to have a similar duration.
+    if (!targetTitle || !candidateTitle || !titleMatches) return -100;
     let score = 0;
     if (candidateTitle === targetTitle) score += 8;
-    else if (candidateTitle.includes(targetTitle) || targetTitle.includes(candidateTitle)) score += 4;
+    else if (candidateCoreTitle === targetCoreTitle) score += 6;
+    else score += 4;
     if (candidateArtist === targetArtist) score += 6;
     else if (candidateArtist.includes(targetArtist) || targetArtist.includes(candidateArtist)) score += 3;
     const targetDuration = Number(identity.duration) || 0;
@@ -274,19 +560,22 @@ class SyncedLyricsService {
     const artist = SyncedLyricsService.normalizeComparable(candidate.artistName);
     const targetTitle = SyncedLyricsService.normalizeComparable(identity.title);
     const targetArtist = SyncedLyricsService.normalizeComparable(identity.artist);
+    const coreTitle = SyncedLyricsService.normalizeComparable(SyncedLyricsService.getCoreTrackTitle(candidate.trackName));
+    const targetCoreTitle = SyncedLyricsService.normalizeComparable(SyncedLyricsService.getCoreTrackTitle(identity.title));
+    const titleSimilarity = SyncedLyricsService.getTokenSimilarity(coreTitle, targetCoreTitle);
     let score = 0;
-    if (title === targetTitle) score += 10;
-    else if (title.includes(targetTitle) || targetTitle.includes(title)) score += 5;
+    if (title === targetTitle) score += 12;
+    else if (coreTitle && coreTitle === targetCoreTitle) score += 10;
+    else if (title.includes(targetTitle) || targetTitle.includes(title)) score += 6;
+    else if (titleSimilarity >= 0.75) score += 5;
+    else if (titleSimilarity >= 0.5) score += 2;
     if (artist === targetArtist) score += 8;
-    else if (artist.includes(targetArtist) || targetArtist.includes(artist)) score += 3;
-    const duration = Number(candidate.duration) || 0;
-    const targetDuration = Number(identity.duration) || 0;
-    if (duration > 0 && targetDuration > 0) {
-      const difference = Math.abs(duration - targetDuration);
-      if (difference <= 2.5) score += 8;
-      else if (difference <= 8) score += 4;
-      else if (difference > 20) score -= 8;
-    }
+    else if (SyncedLyricsService.hasRelatedArtist(artist, targetArtist)) score += 4;
+    const namedVersionCredits = SyncedLyricsService.extractNamedVersionCredits(identity?.title);
+    if (namedVersionCredits.length && SyncedLyricsService.hasNamedVersionCredits(candidate, identity)) score += 12;
+    if (SyncedLyricsService.hasExactDuration(candidate, identity)) score += 16;
+    else if (this.hasCompatibleDuration(candidate, identity)) score += 12;
+    else score -= 100;
     const quality = SyncedLyricsService.getLyricsQuality(candidate);
     if (!quality.complete) score -= 30;
     if (quality.lines.length >= 30) score += 8;
@@ -299,33 +588,524 @@ class SyncedLyricsService {
     return score;
   }
 
-  async resolveLrclib(identity) {
+  isLyricsCandidateRelated(candidate, identity) {
+    if (!SyncedLyricsService.hasRequiredArtists(candidate, identity)) return false;
+    const candidateTitle = SyncedLyricsService.normalizeComparable(candidate?.trackName);
+    const targetTitle = SyncedLyricsService.normalizeComparable(identity?.title);
+    const candidateCore = SyncedLyricsService.normalizeComparable(SyncedLyricsService.getCoreTrackTitle(candidate?.trackName));
+    const targetCore = SyncedLyricsService.normalizeComparable(SyncedLyricsService.getCoreTrackTitle(identity?.title));
+    const titleRelated = Boolean(candidateTitle && targetTitle) && (
+      candidateTitle === targetTitle
+      || candidateCore === targetCore
+      || candidateTitle.includes(targetTitle)
+      || targetTitle.includes(candidateTitle)
+      || SyncedLyricsService.getTokenSimilarity(candidateCore, targetCore) >= 0.5
+    );
+    if (titleRelated) return true;
+    return SyncedLyricsService.hasExactDuration(candidate, identity)
+      && SyncedLyricsService.hasRelatedArtist(candidate?.artistName, identity?.artist)
+      && SyncedLyricsService.getTokenSimilarity(candidateCore, targetCore) >= 0.25;
+  }
+
+  async resolveLrclib(identity, aliases = [], trace = null) {
     const exactUrl = new URL('https://lrclib.net/api/get');
     exactUrl.searchParams.set('track_name', identity.title);
     exactUrl.searchParams.set('artist_name', identity.artist);
     exactUrl.searchParams.set('album_name', identity.album || '');
-    exactUrl.searchParams.set('duration', String(Math.round(Number(identity.duration) || 0)));
+    exactUrl.searchParams.set('duration', String(SyncedLyricsService.normalizeDuration(identity.duration)));
+    if (trace) trace.exactRequest = exactUrl.toString();
+    let exactFallback = null;
     try {
       const exact = await this.fetchJson(exactUrl, { 'Lrclib-Client': `${this.clientName}/${this.clientVersion}` });
-      if (SyncedLyricsService.getLyricsQuality(exact).complete) return exact;
+      exactFallback = exact;
+      const exactQuality = SyncedLyricsService.getLyricsQuality(exact);
+      const exactDuration = SyncedLyricsService.hasExactDuration(exact, identity);
+      const compatibleDuration = this.hasCompatibleDuration(exact, identity);
+      const requiredArtistsMatch = SyncedLyricsService.hasRequiredArtists(exact, identity);
+      const namedVersionCreditsMatch = SyncedLyricsService.hasNamedVersionCredits(exact, identity);
+      const timelineCoverageMatch = SyncedLyricsService.hasSufficientTimelineCoverage(exactQuality.lines, identity);
+      if (trace) trace.exactCandidate = this.summarizeDebugCandidate(exact, identity, {
+        quality: exactQuality,
+        exactDuration,
+        requiredArtistsMatch,
+        namedVersionCreditsMatch,
+        timelineCoverageMatch,
+        accepted: exactQuality.complete && compatibleDuration && requiredArtistsMatch && namedVersionCreditsMatch && timelineCoverageMatch
+      });
+      // A named remix can have several LRCLIB records with the exact same title
+      // and duration but different timeline offsets. Do not accept the first
+      // `/get` result until its artist credits also identify the named remixer.
+      if (exactQuality.complete && compatibleDuration && requiredArtistsMatch && namedVersionCreditsMatch && timelineCoverageMatch) return exact;
     } catch (error) {
+      if (trace) trace.exactError = { message: error.message, status: error.status || 0 };
       if (error.status !== 400 && error.status !== 404) throw error;
     }
 
-    const searchUrl = new URL('https://lrclib.net/api/search');
-    searchUrl.searchParams.set('track_name', identity.title);
-    searchUrl.searchParams.set('artist_name', identity.artist);
-    const matches = await this.fetchJson(searchUrl, { 'Lrclib-Client': `${this.clientName}/${this.clientVersion}` });
-    if (!Array.isArray(matches)) return null;
-    const ranked = matches
-      .map(item => ({ item, quality: SyncedLyricsService.getLyricsQuality(item), score: this.scoreLyricsCandidate(item, identity) }))
-      .filter(candidate => candidate.quality.complete)
-      .sort((left, right) => right.score - left.score);
-    return ranked[0]?.score >= 12 ? ranked[0].item : null;
+    const searchIdentities = [identity, ...aliases]
+      .filter(item => item?.title)
+      .map(item => ({ ...item, duration: Number(identity.duration) || Number(item.duration) || 0 }));
+    const searchQueries = [];
+    const queryKeys = new Set();
+    const addQuery = query => {
+      const normalized = Object.entries(query).filter(([, value]) => value).sort().map(([key, value]) => `${key}=${value}`).join('&');
+      if (!normalized || queryKeys.has(normalized)) return;
+      queryKeys.add(normalized);
+      searchQueries.push(query);
+    };
+    searchIdentities.forEach(searchIdentity => {
+      const coreTitle = SyncedLyricsService.getCoreTrackTitle(searchIdentity.title);
+      addQuery({ track_name: searchIdentity.title, artist_name: searchIdentity.artist });
+      addQuery({ track_name: searchIdentity.title });
+      if (coreTitle && SyncedLyricsService.normalizeComparable(coreTitle) !== SyncedLyricsService.normalizeComparable(searchIdentity.title)) {
+        addQuery({ track_name: coreTitle, artist_name: searchIdentity.artist });
+        addQuery({ track_name: coreTitle });
+      }
+      addQuery({ q: [coreTitle || searchIdentity.title, searchIdentity.artist].filter(Boolean).join(' ') });
+    });
+    const collected = new Map();
+    if (exactFallback) {
+      const key = String(exactFallback?.id || [exactFallback?.trackName, exactFallback?.artistName, exactFallback?.duration].join('|'));
+      collected.set(key, exactFallback);
+    }
+    for (const query of searchQueries) {
+      const searchUrl = new URL('https://lrclib.net/api/search');
+      Object.entries(query).forEach(([key, value]) => {
+        if (value) searchUrl.searchParams.set(key, value);
+      });
+      if (trace) trace.searchRequests.push(searchUrl.toString());
+      const matches = await this.fetchJson(searchUrl, { 'Lrclib-Client': `${this.clientName}/${this.clientVersion}` });
+      if (Array.isArray(matches)) {
+        matches.forEach(item => {
+          const key = String(item?.id || [item?.trackName, item?.artistName, item?.duration].join('|'));
+          const existing = collected.get(key);
+          const bestItemScore = Math.max(...searchIdentities.map(searchIdentity => this.scoreLyricsCandidate(item, searchIdentity)));
+          const bestExistingScore = existing
+            ? Math.max(...searchIdentities.map(searchIdentity => this.scoreLyricsCandidate(existing, searchIdentity)))
+            : -Infinity;
+          if (!existing || bestItemScore > bestExistingScore) {
+            collected.set(key, item);
+          }
+        });
+      }
+      const ranked = [...collected.values()]
+        .map(item => ({
+          item,
+          quality: SyncedLyricsService.getLyricsQuality(item),
+          score: Math.max(...searchIdentities.map(searchIdentity => this.scoreLyricsCandidate(item, searchIdentity))),
+          related: searchIdentities.some(searchIdentity => this.isLyricsCandidateRelated(item, searchIdentity))
+        }))
+        .filter(candidate => candidate.quality.complete
+          && candidate.related
+          && searchIdentities.some(searchIdentity => SyncedLyricsService.hasNamedVersionCredits(candidate.item, searchIdentity))
+          && searchIdentities.some(searchIdentity => this.hasCompatibleDuration(candidate.item, searchIdentity))
+          && searchIdentities.some(searchIdentity => SyncedLyricsService.hasSufficientTimelineCoverage(candidate.quality.lines, searchIdentity)))
+        .sort((left, right) => right.score - left.score);
+      if (trace) {
+        trace.candidates = [...collected.values()].map(item => {
+          const quality = SyncedLyricsService.getLyricsQuality(item);
+          const score = Math.max(...searchIdentities.map(searchIdentity => this.scoreLyricsCandidate(item, searchIdentity)));
+          const related = searchIdentities.some(searchIdentity => this.isLyricsCandidateRelated(item, searchIdentity));
+          const exactDuration = searchIdentities.some(searchIdentity => SyncedLyricsService.hasExactDuration(item, searchIdentity));
+          const compatibleDuration = searchIdentities.some(searchIdentity => this.hasCompatibleDuration(item, searchIdentity));
+          const requiredArtistsMatch = searchIdentities.some(searchIdentity => SyncedLyricsService.hasRequiredArtists(item, searchIdentity));
+          const namedVersionCreditsMatch = searchIdentities.some(searchIdentity => SyncedLyricsService.hasNamedVersionCredits(item, searchIdentity));
+          const timelineCoverageMatch = searchIdentities.some(searchIdentity => SyncedLyricsService.hasSufficientTimelineCoverage(quality.lines, searchIdentity));
+          return this.summarizeDebugCandidate(item, identity, {
+            quality,
+            score,
+            related,
+            exactDuration,
+            requiredArtistsMatch,
+            namedVersionCreditsMatch,
+            timelineCoverageMatch,
+            accepted: quality.complete && related && compatibleDuration && namedVersionCreditsMatch && timelineCoverageMatch && score >= 12
+          });
+        }).sort((left, right) => right.score - left.score);
+      }
+      if (ranked[0]?.score >= 12) return ranked[0].item;
+    }
+    return null;
+  }
+
+  async resolveUnison(videoId, identity, trace = null) {
+    if (!/^[A-Za-z0-9_-]{11}$/.test(String(videoId || ''))) return null;
+    const url = new URL(this.unisonApiUrl);
+    url.searchParams.set('v', videoId);
+    url.searchParams.set('song', identity.title);
+    url.searchParams.set('artist', identity.artist);
+    url.searchParams.set('duration', String(SyncedLyricsService.normalizeDuration(identity.duration)));
+    if (identity.album) url.searchParams.set('album', identity.album);
+    if (trace) trace.providers.unison = { request: url.toString() };
+    try {
+      const payload = await this.fetchJson(url);
+      const data = payload?.data || payload;
+      if (!data?.lyrics || String(data.videoId || videoId) !== String(videoId)) return null;
+      const lines = data.format === 'ttml'
+        ? SyncedLyricsService.parseTtmlLyrics(data.lyrics)
+        : data.format === 'lrc'
+          ? SyncedLyricsService.parseSyncedLyrics(data.lyrics)
+          : [];
+      if (!lines.length) return null;
+      if (trace) trace.providers.unison.result = { format: data.format, lines: lines.length, id: data.id || null };
+      return {
+        source: 'Unison',
+        trackName: String(data.song || identity.title),
+        artistName: String(data.artist || identity.artist),
+        albumName: String(data.album || identity.album || ''),
+        duration: Number(identity.duration) || 0,
+        durationVerified: false,
+        lines
+      };
+    } catch (error) {
+      if (trace) trace.providers.unison.error = { message: error.message, status: error.status || 0 };
+      return null;
+    }
+  }
+
+  async resolveBiniLyrics(identity, aliases = [], trace = null) {
+    const identities = [identity, ...aliases].filter(item => item?.title && item?.artist);
+    if (trace) trace.providers.biniLyrics = { requests: [], candidates: [] };
+    for (const searchIdentity of identities) {
+      const url = new URL(this.biniLyricsApiUrl);
+      url.searchParams.set('track', searchIdentity.title);
+      url.searchParams.set('artist', searchIdentity.artist);
+      if (searchIdentity.album) url.searchParams.set('album', searchIdentity.album);
+      url.searchParams.set('duration', String(SyncedLyricsService.normalizeDuration(identity.duration)));
+      if (trace) trace.providers.biniLyrics.requests.push(url.toString());
+      try {
+        const payload = await this.fetchJson(url);
+        const matches = Array.isArray(payload?.results) ? payload.results : [];
+        const ranked = matches.map(item => ({
+          raw: item,
+          trackName: item.track_name || item.trackName || '',
+          artistName: item.artist_name || item.artistName || '',
+          albumName: item.album_name || item.albumName || '',
+          duration: Number(item.duration) || 0,
+          lyricsUrl: item.lyricsUrl || item.lyrics_url || ''
+        })).filter(item => item.lyricsUrl
+          && this.hasCompatibleDuration(item, identity)
+          && SyncedLyricsService.hasRequiredArtists(item, searchIdentity)
+          && SyncedLyricsService.hasNamedVersionCredits(item, searchIdentity)
+          && this.isLyricsCandidateRelated(item, searchIdentity))
+          .sort((left, right) => this.scoreProviderMetadata(right, searchIdentity) - this.scoreProviderMetadata(left, searchIdentity));
+        if (trace) trace.providers.biniLyrics.candidates.push(...ranked.map(item => ({
+          trackName: item.trackName,
+          artistName: item.artistName,
+          duration: SyncedLyricsService.normalizeDuration(item.duration),
+          score: this.scoreProviderMetadata(item, searchIdentity)
+        })));
+        for (const candidate of ranked.slice(0, 3)) {
+          const lyricsUrl = new URL(candidate.lyricsUrl);
+          if (lyricsUrl.protocol !== 'https:' || !/(^|\.)binimum\.org$/i.test(lyricsUrl.hostname)) continue;
+          const ttml = await this.fetchText(lyricsUrl);
+          const lines = SyncedLyricsService.parseTtmlLyrics(ttml);
+          if (lines.length) return { ...candidate, source: 'BiniLyrics', durationVerified: true, lines };
+        }
+      } catch (error) {
+        if (trace) trace.providers.biniLyrics.error = { message: error.message, status: error.status || 0 };
+      }
+    }
+    return null;
+  }
+
+  scoreProviderMetadata(candidate, identity) {
+    const candidateTitle = SyncedLyricsService.normalizeComparable(candidate?.trackName);
+    const targetTitle = SyncedLyricsService.normalizeComparable(identity?.title);
+    const candidateCore = SyncedLyricsService.normalizeComparable(SyncedLyricsService.getCoreTrackTitle(candidate?.trackName));
+    const targetCore = SyncedLyricsService.normalizeComparable(SyncedLyricsService.getCoreTrackTitle(identity?.title));
+    let score = SyncedLyricsService.hasExactDuration(candidate, identity)
+      ? 20
+      : this.hasCompatibleDuration(candidate, identity) ? 16 : -100;
+    if (candidateTitle === targetTitle) score += 12;
+    else if (candidateCore === targetCore) score += 10;
+    else score += Math.round(SyncedLyricsService.getTokenSimilarity(candidateCore, targetCore) * 8);
+    if (SyncedLyricsService.hasRelatedArtist(candidate?.artistName, identity?.artist)) score += 8;
+    if (SyncedLyricsService.hasNamedVersionCredits(candidate, identity)) score += 8;
+    return score;
+  }
+
+  async resolveYouTubeCaptions(videoId, identity, trace = null) {
+    if (!/^[A-Za-z0-9_-]{11}$/.test(String(videoId || ''))) return null;
+    if (trace) trace.providers.youtubeCaptions = {};
+    try {
+      const page = await this.fetchText(`https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`, { Accept: 'text/html' });
+      const rawTracks = page.match(/"captionTracks"\s*:\s*(\[[\s\S]*?\])\s*,\s*"audioTracks"/i)?.[1];
+      if (!rawTracks) return null;
+      const tracks = JSON.parse(rawTracks);
+      const manualTracks = tracks.filter(track => track?.baseUrl && track?.kind !== 'asr');
+      if (!manualTracks.length) return null;
+      const track = manualTracks.find(item => !/translated/i.test(String(item?.name?.simpleText || ''))) || manualTracks[0];
+      const captionsUrl = new URL(track.baseUrl);
+      captionsUrl.searchParams.set('fmt', 'json3');
+      const payload = await this.fetchJson(captionsUrl);
+      const lines = (Array.isArray(payload?.events) ? payload.events : []).map(event => ({
+        time: Math.max(0, Number(event?.tStartMs) || 0) / 1000,
+        text: (Array.isArray(event?.segs) ? event.segs : []).map(segment => segment?.utf8 || '').join('').replace(/[♪♫♬]/g, '').replace(/\s+/g, ' ').trim()
+      })).filter(line => line.text);
+      if (!lines.length) return null;
+      if (trace) trace.providers.youtubeCaptions.result = { language: track.languageCode || '', lines: lines.length };
+      return {
+        source: 'YouTube Captions',
+        trackName: identity.title,
+        artistName: identity.artist,
+        albumName: identity.album || '',
+        duration: Number(identity.duration) || 0,
+        durationVerified: false,
+        lines
+      };
+    } catch (error) {
+      if (trace) trace.providers.youtubeCaptions.error = { message: error.message, status: error.status || 0 };
+      return null;
+    }
+  }
+
+  static findYouTubeMusicLyricsBrowseId(value) {
+    if (!value || typeof value !== 'object') return '';
+    const endpoint = value?.tabRenderer?.endpoint?.browseEndpoint;
+    if (endpoint?.browseEndpointContextSupportedConfigs?.browseEndpointContextMusicConfig?.pageType === 'MUSIC_PAGE_TYPE_TRACK_LYRICS') {
+      return String(endpoint.browseId || '');
+    }
+    for (const child of Object.values(value)) {
+      const found = SyncedLyricsService.findYouTubeMusicLyricsBrowseId(child);
+      if (found) return found;
+    }
+    return '';
+  }
+
+  static findYouTubeMusicPlainLyrics(value) {
+    if (!value || typeof value !== 'object') return null;
+    const shelf = value.musicDescriptionShelfRenderer;
+    if (shelf?.description?.runs) {
+      const text = shelf.description.runs.map(run => run?.text || '').join('').trim();
+      if (text) {
+        return {
+          text,
+          source: shelf.footer?.runs?.map(run => run?.text || '').join('').replace(/^Nguồn:\s*/i, '').trim()
+        };
+      }
+    }
+    for (const child of Object.values(value)) {
+      const found = SyncedLyricsService.findYouTubeMusicPlainLyrics(child);
+      if (found) return found;
+    }
+    return null;
+  }
+
+  async resolveYouTubeMusicPlainLyrics(videoId, identity, trace = null) {
+    if (trace) trace.providers.youtubeMusicLyrics = {};
+    if (!videoId) return null;
+    try {
+      const context = {
+        client: {
+          clientName: 'WEB_REMIX',
+          clientVersion: '1.20260810.01.00',
+          hl: 'vi',
+          gl: 'VN'
+        }
+      };
+      const nextResponse = await this.fetchJson('https://music.youtube.com/youtubei/v1/next?prettyPrint=false', {
+        'Content-Type': 'application/json',
+        Origin: 'https://music.youtube.com'
+      }, { method: 'POST', body: JSON.stringify({ context, videoId }) });
+      const browseId = SyncedLyricsService.findYouTubeMusicLyricsBrowseId(nextResponse);
+      if (!browseId) return null;
+      const browseResponse = await this.fetchJson('https://music.youtube.com/youtubei/v1/browse?prettyPrint=false', {
+        'Content-Type': 'application/json',
+        Origin: 'https://music.youtube.com'
+      }, { method: 'POST', body: JSON.stringify({ context, browseId }) });
+      const lyrics = SyncedLyricsService.findYouTubeMusicPlainLyrics(browseResponse);
+      const lines = String(lyrics?.text || '').split(/\r?\n/).map(text => text.trim()).filter(Boolean)
+        .map(text => ({ time: 0, text }));
+      if (!lines.length) return null;
+      if (trace) trace.providers.youtubeMusicLyrics.result = {
+        browseId,
+        source: lyrics.source || 'YouTube Music',
+        synced: false,
+        lines: lines.length
+      };
+      return {
+        source: `YouTube Music · ${lyrics.source || 'Lyrics'}`,
+        synced: false,
+        trackName: identity.title,
+        artistName: identity.artist,
+        albumName: identity.album || '',
+        duration: Number(identity.duration) || 0,
+        lines
+      };
+    } catch (error) {
+      if (trace) trace.providers.youtubeMusicLyrics.error = { message: error.message, status: error.status || 0 };
+      return null;
+    }
+  }
+
+  async fetchMusixmatch(action, parameters = {}) {
+    const url = new URL(action, this.musixmatchApiUrl);
+    Object.entries(parameters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') url.searchParams.set(key, String(value));
+    });
+    url.searchParams.set('app_id', 'web-desktop-app-v1.0');
+    url.searchParams.set('t', String(this.now()));
+    return this.fetchJson(url, {
+      Origin: 'https://www.musixmatch.com',
+      Referer: 'https://www.musixmatch.com/',
+      'Accept-Language': 'en-US,en;q=0.9'
+    });
+  }
+
+  async getMusixmatchToken() {
+    if (this.musixmatchToken) return this.musixmatchToken;
+    if (this.musixmatchTokenPromise) return this.musixmatchTokenPromise;
+    this.musixmatchTokenPromise = this.fetchMusixmatch('token.get', { user_language: 'en' })
+      .then(payload => {
+        const token = String(payload?.message?.body?.user_token || '');
+        if (Number(payload?.message?.header?.status_code) !== 200 || !token) return '';
+        this.musixmatchToken = token;
+        return token;
+      })
+      .catch(() => '')
+      .finally(() => { this.musixmatchTokenPromise = null; });
+    return this.musixmatchTokenPromise;
+  }
+
+  async resolveMusixmatch(identity, trace = null) {
+    if (trace) trace.providers.musixmatch = {};
+    try {
+      const token = await this.getMusixmatchToken();
+      if (!token) return null;
+      const matchPayload = await this.fetchMusixmatch('matcher.track.get', {
+        usertoken: token,
+        q_track: identity.title,
+        q_artist: identity.artist,
+        album: identity.album || '',
+        page_size: 1,
+        page: 1
+      });
+      const status = Number(matchPayload?.message?.header?.status_code) || 0;
+      if (status === 401) this.musixmatchToken = '';
+      if (status !== 200) return null;
+      const track = matchPayload?.message?.body?.track;
+      if (!track?.track_id || !track?.has_subtitles) return null;
+      const candidate = {
+        trackName: String(track.track_name || ''),
+        artistName: String(track.artist_name || ''),
+        albumName: String(track.album_name || ''),
+        duration: Number(track.track_length) || 0
+      };
+      const candidateCore = SyncedLyricsService.getCoreTrackTitle(candidate.trackName);
+      const identityCore = SyncedLyricsService.getCoreTrackTitle(identity.title);
+      const titleRelated = SyncedLyricsService.getTokenSimilarity(candidateCore, identityCore) >= 0.75;
+      const artistRelated = SyncedLyricsService.hasRelatedArtist(candidate.artistName, identity.artist);
+      const versionMatches = SyncedLyricsService.hasNamedVersionCredits(candidate, identity);
+      if (!titleRelated || !artistRelated || !versionMatches) return null;
+
+      const subtitlePayload = await this.fetchMusixmatch('track.subtitle.get', {
+        usertoken: token,
+        track_id: track.track_id,
+        subtitle_format: 'lrc'
+      });
+      const syncedLyrics = String(subtitlePayload?.message?.body?.subtitle?.subtitle_body || '');
+      const lines = SyncedLyricsService.parseSyncedLyrics(syncedLyrics);
+      const targetDuration = SyncedLyricsService.normalizeDuration(identity.duration);
+      const lastTimestamp = lines.at(-1)?.time || 0;
+      // Some new Musixmatch releases expose track_length=0. In that case the
+      // exact matcher result is still safe only when its timeline substantially
+      // covers, and never exceeds, the authoritative YouTube duration.
+      const durationMatches = candidate.duration > 0
+        ? this.hasCompatibleDuration(candidate, identity)
+        : targetDuration > 0 && lastTimestamp >= targetDuration * 0.65 && lastTimestamp <= targetDuration + 1;
+      if (!lines.length || !durationMatches) return null;
+      if (trace) trace.providers.musixmatch.result = {
+        trackId: track.track_id,
+        isrc: track.track_isrc || '',
+        trackName: candidate.trackName,
+        artistName: candidate.artistName,
+        trackDuration: candidate.duration,
+        expectedDuration: targetDuration,
+        lastTimestamp,
+        lines: lines.length
+      };
+      return {
+        source: 'Musixmatch',
+        ...candidate,
+        duration: Number(candidate.duration) || Number(identity.duration) || 0,
+        durationVerified: Number(candidate.duration) > 0,
+        lines
+      };
+    } catch (error) {
+      if (trace) trace.providers.musixmatch.error = { message: error.message, status: error.status || 0 };
+      return null;
+    }
+  }
+
+  async resolveLyricsPlus(identity, isrc, trace = null) {
+    if (trace) trace.providers.lyricsPlus = {};
+    const normalizedIsrc = String(isrc || '').trim().toUpperCase();
+    if (!/^[A-Z]{2}[A-Z0-9]{3}\d{7}$/.test(normalizedIsrc)) return null;
+    try {
+      const url = new URL(this.lyricsPlusApiUrl);
+      url.searchParams.set('isrc', normalizedIsrc);
+      if (trace) trace.providers.lyricsPlus.request = url.toString();
+      const payload = await this.fetchJson(url);
+      const rawLines = Array.isArray(payload?.lyrics) ? payload.lyrics : [];
+      const lines = rawLines.map(line => ({
+        time: Math.max(0, (Number(line?.time) || 0) / 1000),
+        text: String(line?.text || '').replace(/\s+/g, ' ').trim()
+      })).filter(line => line.text);
+      const durationText = String(payload?.metadata?.totalDuration || '');
+      const durationParts = durationText.split(':').map(Number);
+      const providerDuration = durationParts.length === 2 && durationParts.every(Number.isFinite)
+        ? durationParts[0] * 60 + durationParts[1]
+        : 0;
+      if (!lines.length
+        || !providerDuration
+        || !this.hasCompatibleDuration({ duration: providerDuration }, identity)) {
+        return null;
+      }
+      if (trace) trace.providers.lyricsPlus.result = {
+        isrc: normalizedIsrc,
+        source: String(payload?.metadata?.source || 'LyricsPlus'),
+        duration: providerDuration,
+        lines: lines.length
+      };
+      return {
+        source: `LyricsPlus · ${String(payload?.metadata?.source || 'Cache')}`,
+        trackName: identity.title,
+        artistName: identity.artist,
+        albumName: identity.album || '',
+        duration: providerDuration,
+        durationVerified: true,
+        lines
+      };
+    } catch (error) {
+      if (trace) trace.providers.lyricsPlus.error = { message: error.message, status: error.status || 0 };
+      return null;
+    }
+  }
+
+  summarizeDebugCandidate(candidate, identity, checks = {}) {
+    const quality = checks.quality || SyncedLyricsService.getLyricsQuality(candidate);
+    return {
+      id: candidate?.id ?? null,
+      trackName: String(candidate?.trackName || ''),
+      artistName: String(candidate?.artistName || ''),
+      albumName: String(candidate?.albumName || ''),
+      duration: SyncedLyricsService.normalizeDuration(candidate?.duration),
+      expectedDuration: SyncedLyricsService.normalizeDuration(identity?.duration),
+      lines: quality.lines?.length || 0,
+      score: Number.isFinite(checks.score) ? checks.score : this.scoreLyricsCandidate(candidate, identity),
+      exactDuration: checks.exactDuration ?? SyncedLyricsService.hasExactDuration(candidate, identity),
+      requiredArtistsMatch: checks.requiredArtistsMatch ?? SyncedLyricsService.hasRequiredArtists(candidate, identity),
+      namedVersionCreditsMatch: checks.namedVersionCreditsMatch ?? SyncedLyricsService.hasNamedVersionCredits(candidate, identity),
+      related: checks.related ?? this.isLyricsCandidateRelated(candidate, identity),
+      complete: Boolean(quality.complete),
+      timelineCoverageMatch: checks.timelineCoverageMatch
+        ?? SyncedLyricsService.hasSufficientTimelineCoverage(quality.lines, identity),
+      accepted: Boolean(checks.accepted)
+    };
   }
 
   getCacheKey(song) {
-    return [song?.videoId, song?.sourceUrl || song?.songLink || song?.url, song?.title, song?.author || song?.channelName, Math.round(Number(song?.duration) || 0)]
+    return [song?.videoId, song?.sourceUrl || song?.songLink || song?.url, song?.title, song?.author || song?.channelName, SyncedLyricsService.normalizeDuration(song?.duration)]
       .map(value => String(value || '').trim().toLowerCase())
       .join('|');
   }
@@ -360,43 +1140,242 @@ class SyncedLyricsService {
     return request;
   }
 
-  async resolveUncached(song) {
+  async debug(song = {}) {
+    const trace = {
+      generatedAt: new Date(this.now()).toISOString(),
+      input: {
+        videoId: String(song.videoId || ''),
+        title: String(song.title || ''),
+        artist: String(song.rawAuthor || song.author || song.channelName || ''),
+        playerDuration: SyncedLyricsService.normalizeDuration(song.duration),
+        sourceUrl: String(song.sourceUrl || song.songLink || song.url || '')
+      },
+      searchRequests: [],
+      candidates: [],
+      providers: {}
+    };
+    try {
+      const result = await this.resolveUncached(song, trace);
+      trace.result = { ...result, lines: Array.isArray(result.lines) ? `${result.lines.length} lines` : [] };
+    } catch (error) {
+      trace.result = { available: false, reason: 'provider_error', error: error.message, status: error.status || 0 };
+    }
+    return trace;
+  }
+
+  async resolveUncached(song, trace = null) {
+    if (trace && !trace.providers) trace.providers = {};
     const sourceUrl = song.sourceUrl || song.songLink || song.url || '';
     const isAppleSource = SyncedLyricsService.isAppleMusicUrl(sourceUrl);
+    const isYouTubeMusicSource = SyncedLyricsService.isYouTubeMusicUrl(sourceUrl);
     let youtubeIdentity = null;
-    if (song.videoId) youtubeIdentity = await this.fetchYouTubeIdentity(song.videoId);
+    const suppliedArtist = song.rawAuthor || song.author || song.channelName || '';
+    const suppliedTitle = String(song.title || '');
+    if (song.videoId) youtubeIdentity = await this.fetchYouTubeIdentity(song.videoId, {
+      includeCredits: isYouTubeMusicSource
+        || (SyncedLyricsService.isTopicChannel(suppliedArtist) && /(?:feat(?:uring)?\.?|ft\.?)\s/i.test(suppliedTitle))
+    });
+    // Preserve the source classification before a metadata fallback replaces
+    // the literal "- Topic" channel with the real artist name.
+    const youtubeWasTopic = SyncedLyricsService.isTopicChannel(youtubeIdentity?.rawArtist || suppliedArtist);
+    const suppliedDuration = Number(song.duration) || 0;
+    const youtubeArtistMissing = SyncedLyricsService.isPlaceholderArtist(youtubeIdentity?.rawArtist || suppliedArtist);
+    const youtubeDurationMissing = !(Number(youtubeIdentity?.duration) > 0 || suppliedDuration > 0);
+    let verifiedReleaseMetadata = false;
+    if (song.videoId && this.resolveYouTubeMetadata && (youtubeArtistMissing || youtubeDurationMissing)) {
+      try {
+        const fallback = await this.resolveYouTubeMetadata(song.videoId);
+        if (fallback) {
+          verifiedReleaseMetadata = fallback.isReleaseMetadata === true;
+          youtubeIdentity = {
+            ...(youtubeIdentity || {}),
+            title: String(fallback.title || fallback.track || youtubeIdentity?.title || suppliedTitle).trim(),
+            rawArtist: String(fallback.artist || fallback.creator || fallback.uploader || youtubeIdentity?.rawArtist || suppliedArtist).trim(),
+            credits: String(fallback.description || youtubeIdentity?.credits || ''),
+            duration: Math.max(0, Number(fallback.duration) || Number(youtubeIdentity?.duration) || suppliedDuration),
+            album: String(fallback.album || '').trim(),
+            metadataFallbackSource: String(fallback.source || 'youtube-metadata-fallback')
+          };
+        }
+      } catch (error) {
+        this.logger.warn?.(`[Lyrics] Metadata YouTube dự phòng thất bại ${song.videoId}:`, error.message);
+        if (trace) trace.youtubeFallbackError = error.message;
+      }
+    }
+    if (trace) trace.youtube = youtubeIdentity ? { ...youtubeIdentity } : null;
     const rawArtist = youtubeIdentity?.rawArtist || song.rawAuthor || song.author || song.channelName || '';
-    const isTopic = SyncedLyricsService.isTopicChannel(rawArtist);
-    if (!isAppleSource && !isTopic) return { available: false, eligible: false, reason: 'unsupported_source' };
+    const isTopic = youtubeWasTopic || SyncedLyricsService.isTopicChannel(rawArtist);
+    // A music-looking title is not an authoritative release identity. Regular
+    // YouTube uploads (MV, live, fan edit, compilation, etc.) can share a title
+    // with a Topic track while using a different cut or arrangement. Only
+    // Topic, YouTube Music and Apple Music sources may auto-attach lyrics.
+    if (!isAppleSource && !isYouTubeMusicSource && !isTopic && !verifiedReleaseMetadata) {
+      return { available: false, eligible: false, reason: 'unsupported_source' };
+    }
 
     const identity = {
       title: SyncedLyricsService.cleanTrackTitle(youtubeIdentity?.title || song.title),
       artist: SyncedLyricsService.cleanArtist(rawArtist),
-      album: String(song.albumName || song.album || '').trim(),
-      duration: Math.max(0, Number(song.duration) || 0)
+      album: String(song.albumName || song.album || youtubeIdentity?.album || '').trim(),
+      // A Topic watch page is the authoritative identity for the exact
+      // YouTube upload. This keeps the 100% duration rule while correcting
+      // player values that were truncated by one second (205 vs 206).
+      duration: Math.max(0, Number(youtubeIdentity?.duration) || Number(song.duration) || 0)
     };
+    const isrc = String(song.isrc || await this.resolveTrackIsrc?.({ ...song, identity, youtubeIdentity }) || '').trim().toUpperCase();
+    if (trace) trace.identity = { ...identity, playerDuration: SyncedLyricsService.normalizeDuration(song.duration) };
+    if (trace) trace.isrc = isrc || null;
     if (!identity.title || !identity.artist) return { available: false, eligible: true, reason: 'missing_metadata' };
+    if (!SyncedLyricsService.normalizeDuration(identity.duration)) {
+      return { available: false, eligible: true, reason: 'missing_duration' };
+    }
 
     const apple = await this.resolveAppleMetadata(identity, sourceUrl);
-    const canonical = apple || { ...identity, source: isAppleSource ? 'apple-link' : 'youtube-topic' };
+    if (trace) trace.apple = apple ? { ...apple, normalizedDuration: SyncedLyricsService.normalizeDuration(apple.duration) } : null;
+    const appleTitleMatchesExactly = apple
+      && SyncedLyricsService.normalizeComparable(apple.title) === SyncedLyricsService.normalizeComparable(identity.title);
+    // Apple search often returns a different featured/collaboration version
+    // with the same base title and duration. Keep YouTube's authoritative
+    // title unless Apple agrees exactly; Apple Music links still use Apple's
+    // complete metadata because that source identifies the release itself.
+    const appleFeaturedArtists = apple ? SyncedLyricsService.extractFeaturedArtists(`${apple.title} ${apple.album}`) : [];
+    const confirmedFeaturedArtists = appleFeaturedArtists.filter(artist =>
+      SyncedLyricsService.includesArtist(youtubeIdentity?.credits, artist)
+    );
+    const appleCoreTitleMatches = apple
+      && SyncedLyricsService.normalizeComparable(SyncedLyricsService.getCoreTrackTitle(apple.title))
+        === SyncedLyricsService.normalizeComparable(SyncedLyricsService.getCoreTrackTitle(identity.title));
+    const allAppleFeaturedArtistsConfirmed = appleFeaturedArtists.length > 0
+      && confirmedFeaturedArtists.length === appleFeaturedArtists.length;
+    const appleCollaborationConfirmed = apple
+      && appleCoreTitleMatches
+      && allAppleFeaturedArtistsConfirmed;
+    const trustedApple = apple && (isAppleSource || appleTitleMatchesExactly || appleCollaborationConfirmed) ? apple : null;
+    const canonical = trustedApple || {
+      ...identity,
+      source: isAppleSource
+        ? 'apple-link'
+        : isYouTubeMusicSource
+          ? 'youtube-music'
+          : isTopic
+            ? 'youtube-topic'
+            : 'youtube-topic'
+    };
+    if (confirmedFeaturedArtists.length) canonical.requiredArtists = confirmedFeaturedArtists;
     if (!canonical.duration) canonical.duration = identity.duration;
-    const record = await this.resolveLrclib(canonical);
-    const parsedLines = SyncedLyricsService.parseSyncedLyrics(record?.syncedLyrics);
-    const preferredLyrics = SyncedLyricsService.preferKoreanRomanization(parsedLines);
-    const lines = preferredLyrics.lines;
-    if (!record || !lines.length) return { available: false, eligible: true, reason: 'not_found' };
+    if (trace) {
+      trace.matching = {
+        appleTitleMatchesExactly: Boolean(appleTitleMatchesExactly),
+        appleCoreTitleMatches: Boolean(appleCoreTitleMatches),
+        appleFeaturedArtists,
+        confirmedFeaturedArtists,
+        appleCollaborationConfirmed: Boolean(appleCollaborationConfirmed),
+        trustedApple: Boolean(trustedApple)
+      };
+      trace.canonical = { ...canonical, duration: SyncedLyricsService.normalizeDuration(canonical.duration) };
+    }
+    const appleCoreSimilarity = apple
+      ? SyncedLyricsService.getTokenSimilarity(
+        SyncedLyricsService.getCoreTrackTitle(apple.title),
+        SyncedLyricsService.getCoreTrackTitle(identity.title)
+      )
+      : 0;
+    const appleAliasEligible = apple
+      && apple !== trustedApple
+      && appleCoreSimilarity >= 0.75
+      && SyncedLyricsService.hasExactDuration(apple, identity);
+    const aliases = [];
+    if (appleAliasEligible) aliases.push({ ...apple, requiredArtists: confirmedFeaturedArtists });
+    if (trustedApple && SyncedLyricsService.normalizeComparable(trustedApple.title) !== SyncedLyricsService.normalizeComparable(identity.title)) {
+      aliases.push({ ...identity, requiredArtists: confirmedFeaturedArtists });
+    }
+    const syncedProviders = [
+      ['LRCLIB', this.resolveLrclib(canonical, aliases, trace).then(record => {
+        if (!record) return null;
+        return {
+          source: 'LRCLIB',
+          trackName: String(record.trackName || canonical.title),
+          artistName: String(record.artistName || canonical.artist),
+          albumName: String(record.albumName || canonical.album || ''),
+          duration: Math.max(0, Number(record.duration) || Number(canonical.duration) || 0),
+          durationVerified: Number(record.duration) > 0,
+          lines: SyncedLyricsService.parseSyncedLyrics(record.syncedLyrics)
+        };
+      })],
+      ['LyricsPlus', this.resolveLyricsPlus(canonical, isrc, trace)],
+      ['Unison', this.resolveUnison(song.videoId, canonical, trace)],
+      ['BiniLyrics', this.resolveBiniLyrics(canonical, aliases, trace)],
+      ['YouTube Captions', this.resolveYouTubeCaptions(song.videoId, canonical, trace)],
+      ['Musixmatch', this.resolveMusixmatch(canonical, trace)]
+    ];
+    const providerErrors = [];
+    const syncedRecords = [];
+    const firstSyncedRecord = await Promise.any(syncedProviders.map(([provider, task]) =>
+      task.then(record => {
+        if (record?.lines?.length && record.synced !== false
+          && SyncedLyricsService.hasSufficientTimelineCoverage(record.lines, canonical)) {
+          syncedRecords.push(record);
+          return record;
+        }
+        throw new Error(record?.lines?.length ? 'timeline_incomplete' : 'not_found');
+      }).catch(error => {
+        providerErrors.push({ provider, message: error.message || String(error) });
+        throw error;
+      })
+    )).catch(() => null);
+    if (firstSyncedRecord) {
+      const firstDurationDistance = SyncedLyricsService.getDurationDistance(firstSyncedRecord, identity);
+      if (this.syncedRaceWindowMs > 0 && (firstSyncedRecord.durationVerified !== true || firstDurationDistance > 0)) {
+        await new Promise(resolve => setTimeout(resolve, this.syncedRaceWindowMs));
+      }
+      const closestRecord = SyncedLyricsService.selectClosestDuration(syncedRecords, identity)
+        || firstSyncedRecord;
+      if (trace) {
+        trace.providers.selected = closestRecord.source;
+        trace.providers.syncedCandidates = syncedRecords.map(candidate => ({
+          source: candidate.source,
+          duration: Number(candidate.duration) || 0,
+          durationDistance: SyncedLyricsService.getDurationDistance(candidate, identity)
+        }));
+        trace.providers.errors = providerErrors.filter(error => error.message !== 'not_found');
+      }
+      return this.createResolvedResult(closestRecord, canonical);
+    }
+
+    // Plain YouTube Music/LyricFind lyrics have no timestamps. Only request
+    // them after every synced provider has completed without a usable result.
+    let record = null;
+    try {
+      record = await this.resolveYouTubeMusicPlainLyrics(song.videoId, canonical, trace);
+    } catch (error) {
+      providerErrors.push({ provider: 'YouTube Music', message: error.message || String(error) });
+    }
+    if (trace) {
+      trace.providers.selected = record?.source || null;
+      trace.providers.errors = providerErrors.filter(error => error.message !== 'not_found');
+    }
+    if (!record?.lines?.length) return { available: false, eligible: true, reason: 'not_found' };
+    return this.createResolvedResult(record, canonical);
+  }
+
+  async createResolvedResult(record, canonical) {
+    const koreanLyrics = SyncedLyricsService.preferKoreanRomanization(record.lines || []);
+    const preferredLyrics = koreanLyrics.romanized
+      ? { ...koreanLyrics, language: 'ko' }
+      : await this.lyricsRomanizationService.romanizeLines(record.lines || []);
     return {
       available: true,
       eligible: true,
-      synced: true,
-      source: preferredLyrics.romanized ? 'Phiên âm · LRCLIB' : 'LRCLIB',
+      synced: record.synced !== false,
+      source: preferredLyrics.romanized ? `Phiên âm · ${record.source}` : record.source,
       romanized: preferredLyrics.romanized,
+      romanizationLanguage: preferredLyrics.language || '',
       metadataSource: canonical.source,
       trackName: String(record.trackName || canonical.title),
       artistName: String(record.artistName || canonical.artist),
       albumName: String(record.albumName || canonical.album || ''),
       duration: Math.max(0, Number(record.duration) || Number(canonical.duration) || 0),
-      lines
+      lines: preferredLyrics.lines
     };
   }
 }

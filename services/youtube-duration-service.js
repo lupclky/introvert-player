@@ -222,6 +222,13 @@ class YouTubeDurationService {
     }
 
     resolveWithYtDlp(videoId) {
+        return this.resolveMetadataWithYtDlp(videoId).then(metadata => ({
+            duration: metadata.duration,
+            views: metadata.viewCount || ''
+        }));
+    }
+
+    resolveMetadataWithYtDlp(videoId) {
         const ytDlpPath = this.getYtDlpPath();
         if (!ytDlpPath || !this.fsImpl.existsSync(ytDlpPath)) {
             return Promise.reject(new Error('yt-dlp.exe is not ready'));
@@ -260,7 +267,16 @@ class YouTubeDurationService {
                 }
                 try {
                     const metadata = JSON.parse(stdout);
-                    finish(null, { duration: metadata.duration, views: metadata.view_count || '' });
+                    finish(null, {
+                        title: String(metadata.track || metadata.title || '').trim(),
+                        artist: String(metadata.artist || metadata.creator || metadata.uploader || '').trim(),
+                        album: String(metadata.album || '').trim(),
+                        description: String(metadata.description || ''),
+                        duration: Math.max(0, Number(metadata.duration) || 0),
+                        viewCount: metadata.view_count || '',
+                        isReleaseMetadata: Boolean(metadata.track && (metadata.artist || metadata.creator)),
+                        source: 'yt-dlp'
+                    });
                 } catch (error) {
                     finish(error);
                 }

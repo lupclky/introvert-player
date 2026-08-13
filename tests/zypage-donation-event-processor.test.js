@@ -42,11 +42,11 @@ test('resolveMedia nhận YouTube, SoundCloud và bỏ Spotify', async () => {
 
     assert.deepEqual(
         await processor.resolveMedia('xem https://youtube.com/watch?v=abcdefghijk'),
-        { type: 'youtube', videoId: 'abcdefghijk', soundcloudUrl: null }
+        { type: 'youtube', videoId: 'abcdefghijk', soundcloudUrl: null, sourceUrl: 'https://youtube.com/watch?v=abcdefghijk' }
     );
     assert.deepEqual(
         await processor.resolveMedia('https://soundcloud.com/a/b'),
-        { type: 'soundcloud', videoId: null, soundcloudUrl: 'https://soundcloud.com/a/b/resolved' }
+        { type: 'soundcloud', videoId: null, soundcloudUrl: 'https://soundcloud.com/a/b/resolved', sourceUrl: 'https://soundcloud.com/a/b' }
     );
     assert.equal(await processor.resolveMedia('https://open.spotify.com/track/123'), null);
 });
@@ -64,7 +64,8 @@ test('music.id dạng video ID được chuẩn hóa thành URL YouTube phát đ
     });
     assert.equal(event.music.url, 'https://www.youtube.com/watch?v=Zye7IpFvc_E');
     assert.deepEqual(await processor.resolveMedia(event.music.url), {
-        type: 'youtube', videoId: 'Zye7IpFvc_E', soundcloudUrl: null
+        type: 'youtube', videoId: 'Zye7IpFvc_E', soundcloudUrl: null,
+        sourceUrl: 'https://www.youtube.com/watch?v=Zye7IpFvc_E'
     });
 });
 

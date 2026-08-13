@@ -2,6 +2,21 @@
 
 ## [26.8.12] - 2026-08-12
 ### Lyrics realtime
+- Sửa nhận diện lyrics cho bài Topic có danh sách cộng tác viên dài như `CLSUxac0F9Q`: đối chiếu tên lõi, credit YouTube và tên nghệ danh viết liền/cách (`CODYNAMVO`/`CODY NAM VÕ`), dùng thời lượng bản phát hành Apple 221,8 giây để khớp chính xác LRCLIB 222 giây.
+- Extension bổ sung nút thêm nhanh cho từng bài và nút thêm toàn bộ playlist trên trang chủ, tìm kiếm và danh sách phát của YouTube Music; playlist được chuyển vào đúng pipeline playlist của ứng dụng.
+- Khôi phục nguyên bố cục dọc toàn khung 280px trước đây cho thẻ Tiếp theo 15 giây khi bài đang phát không có lyrics; bố cục ngang thu gọn chỉ áp dụng khi cần giữ vùng lyrics.
+- Sửa bài Topic có thời lượng lẻ như “Có Em Là Nhà” (`22opdLbDgM8`): chuẩn hóa thời lượng metadata về giây gần nhất trước khi đối chiếu tuyệt đối với LRCLIB, tránh loại nhầm bản lyrics 251 giây từ nguồn phát 250,5 giây.
+- Khi bài có lyrics, hàng đợi 30–15 giây chỉ hiển thị hai bài tiếp theo; Donate mới và thẻ Tiếp theo tự đo mép trên vùng lyrics để phủ chính xác từ đỉnh Overlay tới ranh giới player–lyrics.
+- Thiết kế lại Donate mới, hàng đợi 30–15 giây và thẻ tiếp theo thành lớp nội dung cố định trong vùng player; khi có lyrics, các màn này không tăng chiều cao Overlay và không che vùng lời.
+- Khi bài không có lyrics, Donate mới, hàng đợi 30–15 giây và thẻ tiếp theo tiếp tục dùng giao diện toàn khung Overlay 280px như trước.
+- Khôi phục thẻ “Đã thêm” của chủ kênh khi bài đang phát có lyrics: thẻ đè lên vùng player, giữ thumbnail và tiêu đề nhưng không làm dịch chuyển lyrics.
+- Sửa nhận diện lyrics YouTube Music: ngăn iTunes đổi nhầm sang bài khác cùng nghệ sĩ/thời lượng và bổ sung tìm kiếm LRCLIB mở rộng theo tên bài.
+- Giữ tên bài gốc của YouTube Music khi iTunes trả về một bản featuring/cộng tác khác, tránh làm truy vấn LRCLIB thất bại.
+- Tổng quát hóa đối chiếu LRCLIB theo tên lõi và nghệ sĩ, đồng thời bắt buộc thời lượng LRCLIB trùng tuyệt đối theo giây nguyên với thời lượng thật từ player.
+- Khi player chưa báo thời lượng hoặc vừa cập nhật thời lượng thật, Dashboard chờ rồi tự truy vấn lại lyrics thay vì chọn theo ước lượng.
+- Đọc credit chính thức trong mô tả YouTube Music và đối chiếu với bản phát hành iTunes để giữ đúng nghệ sĩ cộng tác; không dùng lyrics của bản collab khác dù trùng tên và thời lượng.
+- Mở rộng nhận diện lyrics cho link YouTube Music và video YouTube có tiêu đề âm nhạc; giữ URL nguồn xuyên suốt Quick Add/ZyPage để không mất dấu YouTube Music.
+- Donate mới, đếm ngược 15 giây và danh sách hàng đợi 30–15 giây có bố cục mở rộng riêng, giữ lyrics của bài đang phát ở vùng phía dưới.
 - Lyrics tiếng Hàn tự động ưu tiên phiên âm Latin trên Dashboard và OBS Overlay; giữ lời Hangul gốc trong payload để dự phòng.
 - Thêm công tắc bật/tắt lyrics riêng cho OBS Overlay trong Cài đặt; trạng thái được lưu và đồng bộ realtime/snapshot, mặc định bật.
 - Tăng nhẹ khoảng cách dọc giữa ba câu lyrics trên Overlay để nội dung thoáng và dễ đọc hơn.

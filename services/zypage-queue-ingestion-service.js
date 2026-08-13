@@ -66,6 +66,7 @@
                 type: media.type,
                 videoId: media.videoId,
                 soundcloudUrl: media.soundcloudUrl,
+                sourceUrl: media.sourceUrl || music.url,
                 donorName: liveEvent.donorName,
                 amount: liveEvent.amount,
                 timestamp,
@@ -164,6 +165,7 @@
                 type: media.type,
                 videoId: media.videoId,
                 soundcloudUrl: media.soundcloudUrl,
+                sourceUrl: media.sourceUrl || '',
                 donorName: liveEvent.donorName,
                 amount: liveEvent.amount,
                 timestamp: this.now(),
@@ -203,6 +205,7 @@
                 type: media.type,
                 videoId: media.videoId,
                 soundcloudUrl: media.soundcloudUrl,
+                sourceUrl: media.sourceUrl || '',
                 donorName: liveEvent.donorName,
                 amount: liveEvent.amount,
                 timestamp

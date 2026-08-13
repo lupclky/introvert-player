@@ -147,7 +147,7 @@ class LocalRealtimeDatabaseService {
     if (!envelope.type) throw new Error('missing_realtime_event_type');
 
     if (direction === 'to_overlay') this.updateSnapshotFromEvent(channel, envelope);
-    if (!['overlay_state', 'playlist.track_progress', 'realtime.heartbeat'].includes(envelope.type)) {
+    if (!['overlay_state', 'lyrics_timing', 'playlist.track_progress', 'realtime.heartbeat'].includes(envelope.type)) {
       this.db.prepare(`
         INSERT OR IGNORE INTO realtime_events(id, channel_id, direction, event_type, payload_json, created_at)
         VALUES (?, ?, ?, ?, ?, ?)

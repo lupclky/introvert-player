@@ -6747,17 +6747,31 @@ body.app-dashboard .playlist-group-toggle {
     scrollbar-width: thin;
     scrollbar-color: color-mix(in srgb, var(--pineapple-orange-dark) 52%, transparent) transparent;
     scroll-behavior: smooth;
-    text-align: center;
+    text-align: left;
+}
+
+.dashboard-lyrics-lines.is-unsynced .dashboard-lyric-line {
+    cursor: default;
+    opacity: 0.82;
+}
+
+.dashboard-lyrics-lines.is-unsynced .dashboard-lyric-line:hover,
+.dashboard-lyrics-lines.is-unsynced .dashboard-lyric-line:focus-visible {
+    color: var(--pineapple-text);
+    background: transparent;
+    opacity: 0.82;
 }
 
 .dashboard-lyric-line {
     appearance: none;
-    display: block;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
     width: 100%;
     border: 0;
     border-radius: 8px;
     background: transparent;
-    padding: 0.38rem 0.5rem;
+    padding: 0.75rem 0.5rem;
     color: var(--pineapple-text);
     font-family: var(--font-body);
     font-size: 0.94rem;
@@ -6765,7 +6779,28 @@ body.app-dashboard .playlist-group-toggle {
     line-height: 1.35;
     opacity: 0.58;
     cursor: pointer;
+    text-align: left;
+    transform-origin: left center;
     transition: opacity 180ms ease, color 180ms ease, transform 180ms ease;
+}
+
+.dashboard-lyric-text {
+    display: block;
+    width: 100%;
+}
+
+.dashboard-lyric-original-text {
+    display: block;
+    width: 100%;
+    font-size: 0.88em;
+    opacity: 0.85;
+    margin-top: 0.35rem;
+    font-weight: 550;
+}
+
+.dashboard-lyric-line.is-active .dashboard-lyric-original-text {
+    font-weight: 600;
+    opacity: 0.95;
 }
 
 .dashboard-lyric-line:hover,
@@ -6788,10 +6823,15 @@ body.app-dashboard .playlist-group-toggle {
 .dashboard-instrumental-dots {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     gap: 0.5rem;
     min-height: 4.7rem;
     color: var(--pineapple-orange-dark);
+    align-self: flex-start;
+}
+
+.dashboard-lyric-line .dashboard-instrumental-dots {
+    min-height: 1.5rem;
 }
 
 .dashboard-instrumental-dot {
@@ -6800,6 +6840,20 @@ body.app-dashboard .playlist-group-toggle {
     border-radius: 50%;
     background: currentColor;
     animation: dashboardInstrumentalPulse 1.35s ease-in-out infinite;
+}
+
+.dashboard-instrumental-dots.is-countdown .dashboard-instrumental-dot {
+    animation: none;
+    opacity: 0.2;
+    transform: scale(0.85);
+    transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: none;
+}
+
+.dashboard-instrumental-dots.is-countdown .dashboard-instrumental-dot.is-lit {
+    opacity: 1;
+    transform: scale(1.1);
+    box-shadow: 0 0 10px color-mix(in srgb, currentColor 50%, transparent);
 }
 
 .dashboard-instrumental-dot:nth-child(2) { animation-delay: 0.18s; }

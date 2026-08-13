@@ -584,39 +584,23 @@ function updateDashboardLyrics(lyrics, currentTime = 0) {
     const panel = document.getElementById('dashboard-lyrics');
     const container = document.getElementById('dashboard-lyrics-lines');
     const source = document.getElementById('dashboard-lyrics-source');
-    const isInstrumental = Boolean(lyrics?.resolved && lyrics?.eligible && lyrics?.reason === 'not_found');
-    if (!panel || !container || !dashboardLyricsTimeline || (!isInstrumental && (!lyrics?.available || !Array.isArray(lyrics.lines) || !lyrics.lines.length))) {
+    if (!panel || !container || !dashboardLyricsTimeline || !lyrics?.available || !Array.isArray(lyrics.lines) || !lyrics.lines.length) {
         clearDashboardLyrics();
         return;
     }
 
-    if (isInstrumental) {
-        const renderKey = `${state.currentSong?.id || ''}:instrumental`;
-        panel.hidden = false;
-        if (source) source.textContent = 'Nhạc không lời';
-        if (renderKey !== dashboardLyricsRenderKey) {
-            dashboardLyricsRenderKey = renderKey;
-            const dots = document.createElement('div');
-            dots.className = 'dashboard-instrumental-dots';
-            dots.setAttribute('aria-label', 'Nhạc không lời');
-            for (let index = 0; index < 3; index += 1) {
-                const dot = document.createElement('span');
-                dot.className = 'dashboard-instrumental-dot';
-                dots.appendChild(dot);
-            }
-            container.replaceChildren(dots);
-        }
-        return;
-    }
-
-    const normalizedLines = dashboardLyricsTimeline.normalizeLines(lyrics.lines);
-    const activeIndex = dashboardLyricsTimeline.findActiveIndex(normalizedLines, currentTime);
+    const isSynced = lyrics.synced !== false;
+    const normalizedLines = isSynced
+        ? dashboardLyricsTimeline.normalizeLines(lyrics.lines)
+        : lyrics.lines.map(line => ({ time: 0, text: String(line?.text || '').trim() })).filter(line => line.text);
+    const activeIndex = isSynced ? dashboardLyricsTimeline.findActiveIndex(normalizedLines, currentTime) : -1;
     const firstLine = normalizedLines[0];
     const lastLine = normalizedLines[normalizedLines.length - 1];
-    const renderKey = `${state.currentSong?.id || ''}:${normalizedLines.length}:${firstLine?.time || 0}:${lastLine?.time || 0}`;
+    const renderKey = `${state.currentSong?.id || ''}:${isSynced ? 'synced' : 'plain'}:${normalizedLines.length}:${firstLine?.time || 0}:${lastLine?.time || 0}`;
     panel.hidden = false;
-    if (source) source.textContent = lyrics.source || 'LRCLIB';
-    ensureDashboardLyricsInteractions(container);
+    if (source) source.textContent = `${lyrics.source || 'LRCLIB'}${isSynced ? '' : ' · Không đồng bộ'}`;
+    container.classList.toggle('is-unsynced', !isSynced);
+    if (isSynced) ensureDashboardLyricsInteractions(container);
     if (renderKey !== dashboardLyricsRenderKey) {
         dashboardLyricsRenderKey = renderKey;
         dashboardLyricsActiveIndex = -2;
@@ -628,12 +612,56 @@ function updateDashboardLyrics(lyrics, currentTime = 0) {
             element.className = 'dashboard-lyric-line';
             element.dataset.lyricIndex = String(index);
             element.dataset.lyricTime = String(line.time);
-            element.title = `Tua tới ${formatTime(line.time)}`;
-            element.setAttribute('aria-label', `${line.text}. Tua tới ${formatTime(line.time)}`);
-            element.textContent = line.text;
+            element.disabled = !isSynced;
+            element.title = !isSynced ? '' : (line.isWaitingDots ? 'Đang chờ...' : `Tua tới ${formatTime(line.time)}`);
+            if (isSynced && !line.isWaitingDots) {
+                element.setAttribute('aria-label', `${line.text}. Tua tới ${formatTime(line.time)}`);
+            }
+
+            if (line.isWaitingDots) {
+                const dots = document.createElement('div');
+                dots.className = 'dashboard-instrumental-dots is-countdown';
+                for (let i = 0; i < 3; i++) {
+                    const dot = document.createElement('span');
+                    dot.className = 'dashboard-instrumental-dot';
+                    dots.appendChild(dot);
+                }
+                element.appendChild(dots);
+            } else if (line.originalText) {
+                const textSpan = document.createElement('span');
+                textSpan.className = 'dashboard-lyric-text';
+                textSpan.textContent = line.text;
+
+                const originalSpan = document.createElement('span');
+                originalSpan.className = 'dashboard-lyric-original-text';
+                originalSpan.textContent = line.originalText;
+
+                element.appendChild(textSpan);
+                element.appendChild(originalSpan);
+            } else {
+                element.textContent = line.text;
+            }
             return element;
         }));
         container.scrollTop = 0;
+    }
+
+    if (!isSynced) {
+        dashboardLyricsActiveIndex = -1;
+        return;
+    }
+
+    if (activeIndex >= 0 && normalizedLines[activeIndex]?.isWaitingDots) {
+        const activeLine = container.querySelector(`[data-lyric-index="${activeIndex}"]`);
+        if (activeLine) {
+            const dots = activeLine.querySelectorAll('.dashboard-instrumental-dot');
+            const startTime = normalizedLines[activeIndex].time;
+            const endTime = normalizedLines[activeIndex + 1]?.time ?? (startTime + 3);
+            dots.forEach((dot, index) => {
+                if (currentTime >= endTime - 3 + index) dot.classList.add('is-lit');
+                else dot.classList.remove('is-lit');
+            });
+        }
     }
 
     if (activeIndex === dashboardLyricsActiveIndex) return;
@@ -704,7 +732,7 @@ async function loadSyncedLyricsForSong(song) {
             if (String(payload.id ?? '') === songId) {
                 payload.lyrics = lyricsState.available
                     ? {
-                        available: true, resolved: true, eligible: true, synced: true,
+                        available: true, resolved: true, eligible: true, synced: lyricsState.synced !== false,
                         source: lyricsState.source || 'LRCLIB',
                         romanized: Boolean(lyricsState.romanized),
                         trackName: lyricsState.trackName || song.title || '',
@@ -3017,6 +3045,51 @@ function parseYoutubeId(url) {
     return getMediaParserService().parseYoutubeId(url);
 }
 
+// F12 helper: inspect YouTube -> Apple -> LRCLIB without the negative cache.
+// Example: debugSyncedLyrics('https://www.youtube.com/watch?v=8edEK_ce4k4')
+window.debugSyncedLyrics = async function debugSyncedLyrics(urlOrVideoId = '') {
+    if (typeof window.electronAPI?.debugSyncedLyrics !== 'function') {
+        throw new Error('Lyrics debug IPC is unavailable. Restart the app after installing the patch.');
+    }
+    const rawInput = String(urlOrVideoId || '').trim();
+    const directVideoId = /^[A-Za-z0-9_-]{11}$/.test(rawInput) ? rawInput : '';
+    const videoId = directVideoId || parseYoutubeId(rawInput) || String(state.currentSong?.videoId || '');
+    if (!videoId) throw new Error('Không tìm thấy YouTube video ID để debug.');
+
+    const currentSong = String(state.currentSong?.videoId || '') === videoId ? state.currentSong : null;
+    let metadata = {};
+    if (!currentSong && typeof window.electronAPI?.getYoutubeMetadata === 'function') {
+        metadata = await window.electronAPI.getYoutubeMetadata(videoId) || {};
+    }
+    const sourceUrl = /^https?:\/\//i.test(rawInput)
+        ? rawInput
+        : `https://www.youtube.com/watch?v=${videoId}`;
+    const report = await window.electronAPI.debugSyncedLyrics({
+        videoId,
+        title: currentSong?.title || metadata.title || '',
+        author: currentSong?.rawAuthor || currentSong?.author || currentSong?.channelName || metadata.author || '',
+        rawAuthor: currentSong?.rawAuthor || '',
+        channelName: currentSong?.channelName || currentSong?.author || metadata.author || '',
+        albumName: currentSong?.albumName || currentSong?.album || '',
+        duration: Math.max(0, Number(currentSong?.duration) || Number(metadata.duration) || 0),
+        sourceUrl
+    });
+    console.groupCollapsed(`[Lyrics Debug] ${videoId} · ${report?.result?.reason || (report?.result?.available ? 'matched' : 'unknown')}`);
+    console.log('Input / YouTube / canonical:', {
+        input: report?.input,
+        youtube: report?.youtube,
+        identity: report?.identity,
+        apple: report?.apple,
+        matching: report?.matching,
+        canonical: report?.canonical
+    });
+    if (Array.isArray(report?.candidates) && report.candidates.length) console.table(report.candidates);
+    console.log('LRCLIB requests:', report?.searchRequests || []);
+    console.log('Full report:', report);
+    console.groupEnd();
+    return report;
+};
+
 // --- TRÍCH XUẤT SPOTIFY TRACK ID ---
 function parseYoutubePlaylistId(rawUrl) {
     return getMediaParserService().parseYoutubePlaylistId(rawUrl);
@@ -3072,7 +3145,7 @@ function getDashboardSearchService() {
         }));
 }
 
-async function addYoutubePlaylistFromQuickAdd(url) {
+async function addYoutubePlaylistFromQuickAdd(url, contextOverride = null) {
     if (quickAddPlaylistInFlight) return;
     if (!window.electronAPI?.addManualPlaylist) {
         alert('Phiên bản ứng dụng hiện tại chưa hỗ trợ thêm playlist từ Quick Add.');
@@ -3081,7 +3154,10 @@ async function addYoutubePlaylistFromQuickAdd(url) {
 
     const nameInput = document.getElementById('quick-donor-name');
     const amountInput = document.getElementById('quick-donor-amount');
-    const { donorName, amount: donorAmount, isOwnerAdd } = getQuickAddUiController().readOptions();
+    const quickAddOptions = getQuickAddUiController().readOptions();
+    const donorName = contextOverride?.donorName ?? quickAddOptions.donorName;
+    const donorAmount = contextOverride?.donationAmount ?? quickAddOptions.amount;
+    const isOwnerAdd = contextOverride?.isOwnerAdd ?? quickAddOptions.isOwnerAdd;
     const searchResultsContainer = document.getElementById('quick-add-search-results');
 
     quickAddPlaylistInFlight = true;
@@ -3105,11 +3181,13 @@ async function addYoutubePlaylistFromQuickAdd(url) {
         if (request.status === 'ready' || request.status === 'queued') {
             const added = await enqueuePlaylistRequest(request);
             showDashboardSystemAlert('Đã thêm playlist', `${escapeDashboardHtml(request.title)} · ${added.length} video`, 'HÀNG ĐỢI');
-            clearQuickSearch();
-            if (nameInput) nameInput.value = '';
-            if (amountInput) amountInput.value = '';
-            const quickAddPopover = document.getElementById('quick-add-popover');
-            if (quickAddPopover) quickAddPopover.classList.remove('visible');
+            if (!contextOverride) {
+                clearQuickSearch();
+                if (nameInput) nameInput.value = '';
+                if (amountInput) amountInput.value = '';
+                const quickAddPopover = document.getElementById('quick-add-popover');
+                if (quickAddPopover) quickAddPopover.classList.remove('visible');
+            }
             return;
         }
 
@@ -7035,7 +7113,7 @@ function handleMqttMessage(topic, messageStrOrObj) {
         state.lastOverlayHeartbeat = Date.now();
 
         // Không log overlay_state hoặc progress định kỳ để tránh rác log
-        if (payload.type !== 'overlay_state' && payload.type !== 'progress' && payload.type !== 'status' && payload.type !== 'realtime.heartbeat') {
+        if (payload.type !== 'overlay_state' && payload.type !== 'lyrics_timing' && payload.type !== 'progress' && payload.type !== 'status' && payload.type !== 'realtime.heartbeat') {
             logSystem(`[Tập lệnh thực thi] Nhận lại: <strong>${payload.type}</strong> ${payload.data ? `[${JSON.stringify(payload.data)}]` : ''}`, 'system');
         }
 
@@ -7060,6 +7138,15 @@ function handleMqttMessage(topic, messageStrOrObj) {
             sendControlCommand('volume', state.volume);
             const canResume = state.currentSong && !document.getElementById('resume-playback-modal');
             sendControlCommand(canResume && state.isPlaying ? 'play' : canResume ? 'pause' : 'stop');
+        } else if (payload.type === 'lyrics_timing') {
+            const data = payload.data || payload.state;
+            if (!data || data.currentTime === undefined) return;
+            if (data.songId != null
+                && String(data.songId) !== String(state.currentSong?.id ?? '')) return;
+            // This high-frequency channel only advances the lyric cursor. Player
+            // progress, queue state, volume and playback controls remain owned by
+            // the normal overlay_state channel.
+            updateDashboardLyrics(state.currentSong?.lyrics, Number(data.currentTime) || 0);
         } else if (payload.type === 'overlay_state') {
             const data = payload.state;
             if (!data) return;
@@ -7130,6 +7217,11 @@ function handleMqttMessage(topic, messageStrOrObj) {
                     renderQueue();
                     updateForceExtensionButtonUI();
                     updatePlayerUI(state.currentSong);
+
+                    // Lyrics are selected with an exact whole-second duration.
+                    // Retry when Overlay reports the authoritative player
+                    // duration instead of keeping a stale metadata match/miss.
+                    loadSyncedLyricsForSong(state.currentSong);
 
                     // Ghi lại vào localStorage để đồng bộ đồng nhất
                     const payloadRaw = localStorage.getItem('dua_current_song');
@@ -8154,6 +8246,21 @@ if (window.electronAPI && typeof window.electronAPI.onAddSongExternal === 'funct
         }
 
         let url = data.url.trim();
+        const playlistId = parseYoutubePlaylistId(url);
+        if (playlistId) {
+            logSystem(`🔌 <strong>[Extension]</strong> Nhận yêu cầu thêm playlist từ Browser: <strong>${url}</strong>`, 'system');
+            try {
+                await addYoutubePlaylistFromQuickAdd(url, {
+                    donorName: 'Trình duyệt',
+                    donationAmount: 100000000,
+                    isOwnerAdd: true
+                });
+            } catch (err) {
+                console.error("Lỗi thêm playlist từ Extension:", err);
+                logSystem(`⚠️ <strong>[Extension]</strong> Lỗi thêm playlist: ${err.message}`, 'error');
+            }
+            return;
+        }
         let videoId = parseYoutubeId(url);
         let type = 'youtube';
 

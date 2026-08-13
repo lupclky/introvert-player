@@ -52,3 +52,13 @@ test('payload builder preserves resolved instrumental lyrics state', () => {
     const payload = builder.build({ id: 'song-1', title: 'Instrumental', lyrics: { resolved: true, eligible: true, available: false, reason: 'not_found' } }, null, {});
     assert.deepEqual(payload.lyrics, { available: false, resolved: true, eligible: true, reason: 'not_found', lines: [] });
 });
+
+test('payload giữ plain lyrics nhưng đánh dấu không đồng bộ cho Overlay', () => {
+    const builder = new OverlaySongPayloadService();
+    const payload = builder.build({
+        id: 'song-plain', title: 'Plain lyrics',
+        lyrics: { available: true, synced: false, source: 'YouTube Music · LyricFind', lines: [{ time: 0, text: 'Dòng lời' }] }
+    }, null, {});
+    assert.equal(payload.lyrics.available, true);
+    assert.equal(payload.lyrics.synced, false);
+});

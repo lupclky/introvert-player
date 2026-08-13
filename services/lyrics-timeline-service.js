@@ -11,10 +11,34 @@
 
         normalizeLines(lines) {
             if (!Array.isArray(lines)) return [];
-            return lines
-                .map(line => ({ time: Math.max(0, Number(line?.time) || 0), text: String(line?.text || '').trim() }))
-                .filter(line => line.text)
+            const result = lines
+                .map(line => ({
+                    time: Math.max(0, Number(line?.time) || 0),
+                    text: String(line?.text || '').trim(),
+                    ...(line?.originalText ? { originalText: String(line.originalText).trim() } : {}),
+                    ...(line?.isWaitingDots ? { isWaitingDots: true } : {})
+                }))
+                .filter(line => line.text || line.isWaitingDots)
                 .sort((left, right) => left.time - right.time);
+
+            const finalResult = [];
+            if (result.length > 0 && result[0].time > 5 && !result[0].isWaitingDots) {
+                finalResult.push({ time: 0, text: '', isWaitingDots: true });
+            }
+
+            for (let i = 0; i < result.length; i++) {
+                finalResult.push(result[i]);
+                if (i < result.length - 1) {
+                    const currentLine = result[i];
+                    const nextLine = result[i + 1];
+                    const gap = nextLine.time - currentLine.time;
+                    if (gap > 10 && !nextLine.isWaitingDots && !currentLine.isWaitingDots) {
+                        const dotsStartTime = Math.min(currentLine.time + 5, nextLine.time - 5);
+                        finalResult.push({ time: dotsStartTime, text: '', isWaitingDots: true });
+                    }
+                }
+            }
+            return finalResult;
         }
 
         findActiveIndex(lines, currentTime) {

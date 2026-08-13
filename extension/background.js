@@ -89,12 +89,13 @@ async function publishSelectedMedia() {
 }
 
 async function handleSendToPineapple(videoUrl, videoTitle, playNow) {
+  const resolvedUrl = await resolveYouTubeMusicReleaseUrl(videoUrl);
   const activePort = await findAppPort();
   const response = await fetch(`http://127.0.0.1:${activePort}/api/add-song`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      url: videoUrl,
+      url: resolvedUrl,
       title: videoTitle,
       playNow: !!playNow
     })
@@ -108,4 +109,30 @@ async function handleSendToPineapple(videoUrl, videoTitle, playNow) {
   const result = await response.json();
   if (!result.success) throw new Error(result.error || 'Không thể thêm nhạc.');
   return { success: true, port: activePort };
+}
+
+async function resolveYouTubeMusicReleaseUrl(rawUrl) {
+  let parsed;
+  try {
+    parsed = new URL(String(rawUrl || ''));
+  } catch (_) {
+    return rawUrl;
+  }
+  if (parsed.hostname !== 'music.youtube.com' || !/^\/browse\/MPRE[A-Za-z0-9_-]+$/i.test(parsed.pathname)) {
+    return rawUrl;
+  }
+
+  const response = await fetch(parsed.toString(), { credentials: 'omit' });
+  if (!response.ok) throw new Error('Không thể đọc đĩa nhạc từ YouTube Music.');
+  const html = await response.text();
+  const normalized = html
+    .replace(/\\u0026/gi, '&')
+    .replace(/\\u003d/gi, '=')
+    .replace(/&amp;/gi, '&');
+  const playlistId = normalized.match(/"playlistId"\s*:\s*"(OLAK5uy_[A-Za-z0-9_-]+)"/i)?.[1]
+    || normalized.match(/[?&]list=(OLAK5uy_[A-Za-z0-9_-]+)/i)?.[1];
+  if (!playlistId) {
+    throw new Error('Không tìm thấy playlist phát của đĩa nhạc YouTube Music.');
+  }
+  return `https://music.youtube.com/playlist?list=${encodeURIComponent(playlistId)}`;
 }

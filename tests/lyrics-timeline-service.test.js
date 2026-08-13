@@ -32,6 +32,17 @@ test('ở đầu và cuối bài vẫn lấp đầy cửa sổ lyrics nếu còn
   assert.deepEqual(service.getWindow(lines, 25).lines.map(line => line.text), ['B', 'C', 'D']);
 });
 
+test('chuẩn hóa timeline giữ lời gốc và dòng chờ của lyrics', () => {
+  const service = createService();
+  assert.deepEqual(service.normalizeLines([
+    { time: 2, text: 'saranghae', originalText: '사랑해' },
+    { time: 1, text: '', isWaitingDots: true }
+  ]), [
+    { time: 1, text: '', isWaitingDots: true },
+    { time: 2, text: 'saranghae', originalText: '사랑해' }
+  ]);
+});
+
 test('cửa sổ overlay bốn dòng giữ một câu trước và hai câu sau', () => {
   const service = createService({ options: { beforeCount: 1, afterCount: 2 } });
   const lines = [

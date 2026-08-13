@@ -27,6 +27,15 @@ test('quick add coi YouTube Mix tự sinh RD là một bài đơn', () => {
     assert.equal(result.videoId, 'BZqfL_2CzKg');
 });
 
+test('quick add giữ nguồn YouTube Music để nhận diện lyrics', async () => {
+    const quickAdd = createService({ parseYoutubeId: () => 'abcdefghijk', parsePlaylistId: () => null });
+    const input = 'https://music.youtube.com/watch?v=abcdefghijk';
+    const media = await quickAdd.resolve(input);
+    const song = quickAdd.createSong(media, { isOwnerAdd: true });
+    assert.equal(media.sourceUrl, input);
+    assert.equal(song.sourceUrl, input);
+});
+
 test('quick add rejects Spotify and invalid inputs', () => {
     assert.deepEqual(createService().classify('spotify:track:abc'), { kind: 'unsupported', provider: 'spotify' });
     assert.equal(createService().classify('not a link').kind, 'invalid');

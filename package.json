@@ -61,7 +61,11 @@
   "dependencies": {
     "@distube/ytdl-core": "^4.16.12",
     "hls.js": "^1.6.13",
+    "kuroshiro": "^1.2.0",
+    "kuroshiro-analyzer-kuromoji": "^1.1.0",
+    "pinyin-pro": "^3.29.1",
     "play-dl": "^1.9.7",
+    "wanakana": "^5.3.1",
     "ws": "^8.21.0"
   }
 }

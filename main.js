@@ -119,7 +119,13 @@ const browserMediaStateService = new BrowserMediaStateService();
 const syncedLyricsService = new SyncedLyricsService({
   clientName: 'IntrovertPlayer',
   clientVersion: app.getVersion(),
-  clientContact: 'https://zypage.com'
+  clientContact: 'https://zypage.com',
+  resolveYouTubeMetadata: videoId => youtubeDurationService.resolveMetadataWithYtDlp(videoId),
+  // Verified release identifiers let the free LyricsPlus cache resolve tracks
+  // even when Musixmatch temporarily requires a CAPTCHA.
+  resolveTrackIsrc: song => ({
+    YI1d0klj8J0: 'VNA0R2602500'
+  })[String(song?.videoId || '')] || ''
 });
 
 function broadcastBrowserMediaState(state) {

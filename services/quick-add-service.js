@@ -23,7 +23,11 @@
             if (value.includes('spotify.com') || value.startsWith('spotify:')) return { kind: 'unsupported', provider: 'spotify' };
             if (value.includes('soundcloud.com')) return { kind: 'track', type: 'soundcloud', url: value };
             return videoId
-                ? { kind: 'track', type: 'youtube', videoId, url: `https://www.youtube.com/watch?v=${videoId}` }
+                ? {
+                    kind: 'track', type: 'youtube', videoId,
+                    url: value.includes('music.youtube.com') ? value : `https://www.youtube.com/watch?v=${videoId}`,
+                    sourceUrl: value
+                }
                 : { kind: 'invalid' };
         }
         async resolve(input) {
@@ -54,7 +58,9 @@
             return {
                 id: `${timestamp}${this.random().toString(36).slice(2, 7)}`,
                 type: source.type, videoId: source.videoId || null, spotifyId: source.spotifyId || null,
-                soundcloudUrl: source.soundcloudUrl || null, title: source.metadata.title,
+                soundcloudUrl: source.soundcloudUrl || null,
+                sourceUrl: source.sourceUrl || source.url || media.sourceUrl || media.songLink || null,
+                title: source.metadata.title,
                 thumbnail: source.metadata.thumbnail, author: source.metadata.author || '',
                 duration: this.parseDuration(source.metadata.duration) || '', donorName: options.donorName || 'Em Dứa',
                 amount: Number(options.amount ?? 100000000), message: '', start: 0, end: null,

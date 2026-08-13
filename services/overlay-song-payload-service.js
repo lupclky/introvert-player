@@ -9,6 +9,7 @@
             return {
                 id: song.id, type: song.type || 'youtube', videoId: song.videoId || null,
                 soundcloudUrl: song.soundcloudUrl || null, spotifyId: song.spotifyId || null,
+                sourceUrl: song.sourceUrl || song.songLink || song.url || null,
                 title: song.title, thumbnail: song.thumbnail,
                 author: channelName(song), channelName: channelName(song),
                 donorName: song.donorName, amount: song.amount, message: song.message,
@@ -38,7 +39,7 @@
                 playlistThumbnailUrl: song.playlistThumbnailUrl || null,
                 lyrics: song.lyrics?.available && Array.isArray(song.lyrics.lines)
                     ? {
-                        available: true, resolved: true, eligible: true, synced: true, source: song.lyrics.source || 'LRCLIB',
+                        available: true, resolved: true, eligible: true, synced: song.lyrics.synced !== false, source: song.lyrics.source || 'LRCLIB',
                         romanized: Boolean(song.lyrics.romanized),
                         trackName: song.lyrics.trackName || song.title || '',
                         artistName: song.lyrics.artistName || channelName(song),
