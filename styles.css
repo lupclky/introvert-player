@@ -415,6 +415,22 @@ body.dark-mode .direct-stream-badge {
     min-width: 0;
 }
 
+.current-song-playlist-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--pineapple-orange, #FB923C);
+    flex-shrink: 0;
+    margin-right: 0.15rem;
+    filter: drop-shadow(0 0 6px color-mix(in srgb, var(--pineapple-orange, #FB923C) 35%, transparent));
+}
+
+.current-song-playlist-icon svg {
+    width: 1.15rem;
+    height: 1.15rem;
+    display: block;
+}
+
 .song-title {
     font-family: var(--font-title);
     font-size: 1.15rem;

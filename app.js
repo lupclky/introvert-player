@@ -4716,6 +4716,8 @@ function updatePlayerUI(song) {
 
         cover.src = "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=200&auto=format&fit=crop";
         title.textContent = "Chưa có bài hát nào";
+        const playlistIconEl = document.getElementById('current-song-playlist-icon');
+        if (playlistIconEl) playlistIconEl.style.display = 'none';
         donorSection.style.display = 'none';
         messageSection.style.display = 'none';
         coverWrapper.classList.remove('spinning');
@@ -4769,6 +4771,10 @@ function updatePlayerUI(song) {
     } else if (song.videoId) {
         currentSongUrl = `https://www.youtube.com/watch?v=${song.videoId}`;
     }
+
+    const isPlaylist = Boolean(song.playlistRequestId || song.isPlaylistTrack || song.playlistTrackId);
+    const playlistIconEl = document.getElementById('current-song-playlist-icon');
+    if (playlistIconEl) playlistIconEl.style.display = isPlaylist ? 'inline-flex' : 'none';
 
     if (currentSongUrl && currentSongUrl !== '#') {
         title.innerHTML = `<a href="${currentSongUrl}" target="_blank" rel="noopener noreferrer" class="song-title-link" title="Xem bài hát trên trình duyệt mặc định" onclick="openExternalLink(event, '${currentSongUrl}')">${song.title} <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 0.72rem; margin-left: 0.25rem; opacity: 0.6;"></i></a>`;

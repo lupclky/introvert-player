@@ -1526,8 +1526,8 @@
             flex: 0 0 auto;
             min-height: 1.5rem;
             padding: 0.15rem 0.08rem;
-            font-size: 1.1rem;
-            font-weight: 660;
+            font-size: 0.88rem;
+            font-weight: 550;
             line-height: 1.25;
             visibility: hidden;
             opacity: 0;
@@ -1555,16 +1555,16 @@
 
         .obs-lyric-line.is-window-visible {
             visibility: visible;
-            opacity: 0.62;
+            opacity: 0.58;
         }
 
         .obs-lyric-line.is-long {
-            font-size: 1.06rem;
+            font-size: 0.84rem;
             line-height: 1.22;
         }
 
         .obs-lyric-line.is-very-long {
-            font-size: 1rem;
+            font-size: 0.78rem;
             line-height: 1.2;
             letter-spacing: -0.01em;
         }
@@ -1589,11 +1589,11 @@
         .obs-instrumental-dots {
             display: inline-flex;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-start;
             gap: 0.48rem;
             min-height: 94px;
             color: var(--theme-highlight-color);
-            align-self: center;
+            align-self: flex-start;
         }
 
         .obs-lyric-line .obs-instrumental-dots {
@@ -1895,6 +1895,43 @@
             transition: color 0.3s ease;
             will-change: transform;
             transform: translate3d(0, 0, 0);
+        }
+
+        .obs-playlist-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--theme-highlight-color);
+            flex-shrink: 0;
+            margin-right: 0.4rem;
+            vertical-align: middle;
+        }
+
+        .obs-playlist-icon svg {
+            width: 1.15rem;
+            height: 1.15rem;
+            display: block;
+        }
+
+        .obs-owner-playlist-icon {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            color: var(--theme-song-meta-color, var(--theme-highlight-color));
+            flex-shrink: 0;
+            margin-right: 0.35rem;
+            vertical-align: middle;
+        }
+
+        #obs-player-widget.is-owner-add .obs-owner-playlist-icon,
+        body.theme-enchanted-wild #obs-player-widget.owner-promo-mode .obs-owner-playlist-icon {
+            order: 1 !important;
+        }
+
+        .obs-owner-playlist-icon svg {
+            width: 1.1rem;
+            height: 1.1rem;
+            display: block;
         }
 
         .obs-donor-name {
@@ -4646,6 +4683,15 @@
             <div class="obs-player-layout-wrapper">
                 <div class="obs-player-left-panel">
                     <div id="obs-donor-container" class="obs-donor-info" style="display: none;">
+                        <span id="obs-playlist-icon" class="obs-playlist-icon" style="display: none;" title="Playlist">
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 15V6"></path>
+                                <path d="M18.5 18a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"></path>
+                                <path d="M12 12H3"></path>
+                                <path d="M16 6H3"></path>
+                                <path d="M12 18H3"></path>
+                            </svg>
+                        </span>
                         <div id="obs-donor-name-container"
                             style="overflow: hidden; white-space: nowrap; flex: 1; min-width: 0; display: inline-block; margin-right: 0.5rem;">
                             <span id="obs-donor-name" class="obs-donor-name" style="display: inline-block;">Khách</span>
@@ -4687,6 +4733,15 @@
                     <!-- Thanh tiến trình phát nhạc thu gọn -->
                     <div class="obs-progress-container" id="obs-progress-container">
                         <span id="obs-current-time" class="obs-time">0:00</span>
+                        <span id="obs-owner-playlist-icon" class="obs-owner-playlist-icon" style="display: none;" title="Playlist">
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 15V6"></path>
+                                <path d="M18.5 18a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"></path>
+                                <path d="M12 12H3"></path>
+                                <path d="M16 6H3"></path>
+                                <path d="M12 18H3"></path>
+                            </svg>
+                        </span>
                         <div id="obs-owner-promo-title-container" class="obs-owner-promo-title-container">
                             <span id="obs-owner-promo-title" class="obs-owner-promo-title"></span>
                         </div>
@@ -5384,10 +5439,10 @@
                     const activeLine = overlayLyricsTrack.children[activeIndex];
                     if (activeLine) {
                         const dots = activeLine.querySelectorAll('.obs-instrumental-dot');
-                        const firstLyricTime = normalizedLines[activeIndex + 1]?.time || 0;
-                        const interval = firstLyricTime / 3;
+                        const startTime = normalizedLines[activeIndex].time;
+                        const endTime = normalizedLines[activeIndex + 1]?.time ?? (startTime + 3);
                         dots.forEach((dot, index) => {
-                            if (currentTime >= interval * index) dot.classList.add('is-lit');
+                            if (currentTime >= endTime - 3 + index) dot.classList.add('is-lit');
                             else dot.classList.remove('is-lit');
                         });
                     }
@@ -8894,9 +8949,18 @@
         function updatePlaylistOverlayDetails(songData) {
             const playerWidget = document.getElementById('obs-player-widget');
             const meta = document.getElementById('obs-playlist-meta');
-            const isPlaylist = Boolean(songData?.playlistRequestId);
+            const donorPlaylistIcon = document.getElementById('obs-playlist-icon');
+            const ownerPlaylistIcon = document.getElementById('obs-owner-playlist-icon');
+            const isPlaylist = Boolean(songData?.playlistRequestId || songData?.isPlaylistTrack || songData?.playlistTrackId);
+            const isOwner = Boolean(songData?.isOwnerAdd);
 
             if (playerWidget) playerWidget.classList.toggle('is-playlist-playing', isPlaylist);
+            if (donorPlaylistIcon) {
+                donorPlaylistIcon.style.display = (isPlaylist && !isOwner) ? 'inline-flex' : 'none';
+            }
+            if (ownerPlaylistIcon) {
+                ownerPlaylistIcon.style.display = (isPlaylist && isOwner) ? 'inline-flex' : 'none';
+            }
             if (!isPlaylist) {
                 if (meta) { meta.hidden = true; meta.textContent = ''; }
                 return;
