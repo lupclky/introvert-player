@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, Tray, ipcMain, session, shell, clipboard } = require('electron');
+const { app, BrowserWindow, Menu, Tray, ipcMain, session, shell, clipboard, globalShortcut } = require('electron');
 app.disableHardwareAcceleration();
 const http = require('http');
 const https = require('https');
@@ -956,6 +956,27 @@ if (!gotTheLock) {
     });
   }
 
+  function registerGlobalMediaShortcuts(win) {
+    const shortcuts = [
+      { key: 'MediaPlayPause', action: 'play-pause' },
+      { key: 'MediaNextTrack', action: 'next-track' },
+      { key: 'MediaPreviousTrack', action: 'previous-track' },
+      { key: 'MediaStop', action: 'stop' }
+    ];
+
+    shortcuts.forEach(({ key, action }) => {
+      try {
+        globalShortcut.register(key, () => {
+          if (win && !win.isDestroyed()) {
+            win.webContents.send('media-control-action', action);
+          }
+        });
+      } catch (e) {
+        console.warn(`Failed to register global media shortcut [${key}]:`, e);
+      }
+    });
+  }
+
   function createWindow(port) {
     const isWin = process.platform === 'win32';
     mainWindow = new BrowserWindow({
@@ -979,6 +1000,8 @@ if (!gotTheLock) {
     });
 
     // Mở tất cả liên kết bên ngoài (HTTP/HTTPS) bằng trình duyệt mặc định của hệ thống Windows
+    registerGlobalMediaShortcuts(mainWindow);
+
     mainWindow.webContents.setWindowOpenHandler(({ url }) => {
       if (url && /^https?:\/\//i.test(url)) {
         shell.openExternal(url);
@@ -1219,6 +1242,9 @@ if (!gotTheLock) {
 
   app.on('before-quit', () => {
     app.isQuitting = true;
+    try {
+      globalShortcut.unregisterAll();
+    } catch (_) {}
   });
 
   app.on('window-all-closed', () => {

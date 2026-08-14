@@ -109,6 +109,12 @@ window.electronAPI.onPlaylistEvent((payload) => {
 | `youtube-get-playlist-videos` | invoke | Lấy videos trong playlist |
 | `youtube-get-recommendations` | invoke | Lấy video gợi ý |
 
+### Synced Lyrics
+| Channel | Loại | Mô tả |
+|---|---|---|
+| `get-synced-lyrics` | invoke | Lấy lyrics đồng bộ cho bài hát (LRCLIB + Apple) |
+| `debug-synced-lyrics` | invoke | Debug lyrics (trả chi tiết providers, scores) |
+
 ### Playlist System
 | Channel | Loại | Mô tả |
 |---|---|---|
@@ -151,7 +157,6 @@ window.electronAPI.onPlaylistEvent((payload) => {
 | `download-ytdlp` | invoke | Tải yt-dlp |
 | `ytdlp-download-progress` | push | Tiến trình tải yt-dlp |
 | `test-donate` | push | Test donate (dev) |
-| `add-song-external` | push | Thêm bài từ extension |
 | `show-taskbar-notification` | send | Hiển thị notification |
 | `open-external-url` | send | Mở link ngoài |
 | `show-favorite-context-menu` | send | Context menu favorites |
@@ -160,6 +165,13 @@ window.electronAPI.onPlaylistEvent((payload) => {
 | `queue-context-action` | push | Kết quả context menu |
 | `save-walkthrough-html` | invoke | Lưu walkthrough HTML |
 | `save-walkthrough-image` | invoke | Lưu walkthrough image |
+
+### Browser Extension & Media
+| Channel | Loại | Mô tả |
+|---|---|---|
+| `add-song-external` | push | Thêm bài từ extension |
+| `browser-media-state` | push | Trạng thái phát từ browser extension |
+| `media-control-action` | push | Windows Media Controls / headphone action |
 
 ## Cách thêm IPC Channel mới
 
@@ -239,7 +251,7 @@ registerMyFeatureIpcService({
 });
 ```
 
-Ví dụ thực tế: `playlist-ipc-service.js`, `donation-ipc-service.js`, `zypage-song-end-ipc-service.js`
+Ví dụ thực tế: `playlist-ipc-service.js`, `donation-ipc-service.js`, `zypage-song-end-ipc-service.js`, `synced-lyrics-ipc-service.js`
 
 ## Lưu ý quan trọng
 

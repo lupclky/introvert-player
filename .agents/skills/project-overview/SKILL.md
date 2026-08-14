@@ -16,10 +16,13 @@ description: Tổng quan kiến trúc, tech stack, cấu trúc thư mục và c�
 | Framework | Electron 42.x | Main + Renderer process |
 | Frontend | Vanilla JS, HTML, CSS | Không dùng React/Vue |
 | Database | `node:sqlite` (DatabaseSync) | SQLite sync API, lưu donations + playlists + realtime channels |
+| Lyrics | LRCLIB, Apple iTunes, Musixmatch, Unison, LyricsPlus, Bini | Multi-provider synced lyrics (LRC/TTML), chạy ở Main process |
+| Romanization | kuroshiro, wanakana, pinyin-pro | Phiên âm Nhật/Trung/Hàn cho lyrics |
 | Realtime sync | Firebase Realtime Database | Qua WebSocket của Firebase SDK (renderer-side) |
 | Local sync | WebSocket (`ws` 8.x) | Main process tạo WS server cho Dashboard ↔ Overlay |
 | Media | YouTube IFrame API | Renderer-side, phát nhạc qua iframe |
 | Metadata | `@distube/ytdl-core`, `play-dl` | Main process, lấy metadata video |
+| DirectStream | yt-dlp (child_process spawn) | Bypass YouTube iframe, phát audio trực tiếp qua `<audio>` |
 | Build | `electron-builder` (NSIS) | Tạo installer Windows |
 
 ## Cấu trúc thư mục
@@ -35,17 +38,27 @@ v26.8.0/
 ├── index.html              # Streamer Dashboard (trang chính)
 ├── overlay.html            # OBS Browser Source overlay (trang phụ)
 ├── styles.css              # CSS chung cho Dashboard
-├── services/               # 54 service files — business logic đã tách module
+├── services/               # 66 service files — business logic đã tách module
 │   ├── zypage-*            # ZyPage integration (11 files)
-│   ├── playlist-*          # Playlist management (7 files)
-│   ├── dashboard-*         # Dashboard controllers & services (7 files)
-│   ├── youtube-*           # YouTube duration & playlist provider (2 files)
+│   ├── playlist-*          # Playlist management (8 files)
+│   ├── dashboard-*         # Dashboard controllers & services (8 files)
+│   ├── youtube-*           # YouTube duration, playlist, stream & fallback (4 files)
+│   ├── synced-lyrics-*     # Lyrics đồng bộ: service, IPC, timeline (3 files)
+│   ├── lyrics-*            # Romanization & timeline display (2 files)
+│   ├── windows-media-*     # Windows Media Controls / headphone (1 file)
+│   ├── dolby-spatial-*     # Dolby Spatial Audio effect chain (1 file)
+│   ├── quick-add-*         # Quick Add service & UI controller (2 files)
 │   ├── song-metadata-*     # Song metadata service
 │   ├── sponsorblock-*      # SponsorBlock service
-│   └── ...                 # Favorites, vote-skip, notification, etc.
-├── tests/                  # 45 unit test files (node:test runner)
+│   ├── overlay-*           # Overlay event & song payload (2 files)
+│   ├── media-parser-*      # URL parsing (YouTube, Spotify, SoundCloud)
+│   ├── action-code-*       # Mã khuyến mãi / bonus actions
+│   ├── sensitive-video-*   # Cấu hình video nhạy cảm từ Gist
+│   ├── browser-media-*     # Browser extension media state
+│   └── ...                 # Favorites, vote-skip, notification, queue, etc.
+├── tests/                  # 57 unit test files (node:test runner)
 ├── landing/                # Walkthrough HTML page
-├── extension/              # Browser extension
+├── extension/              # Browser extension (YouTube/Music add-to-queue)
 ├── build/                  # Build assets (icon)
 ├── asset/                  # App assets (images, sounds)
 ├── package.json            # npm config
@@ -63,6 +76,10 @@ v26.8.0/
 │  └────┬─────┘  └────┬─────┘  └─────────┬─────────┘  │
 │       │              │                  │             │
 │  ┌────┴──────────────┴──────────────────┴──────────┐ │
+│  │  SyncedLyrics │ DirectStream │ BrowserMediaState │ │
+│  │  (LRCLIB+Apple)│ (yt-dlp)    │ (Extension)       │ │
+│  └────┬──────────┴──────────────┴─────────────────┘  │
+│       │                                              │
 │  │           IPC Handlers (ipcMain)                 │ │
 │  └──────────────────────┬───────────────────────────┘ │
 └─────────────────────────┼───────────────────────────┘
@@ -71,6 +88,7 @@ v26.8.0/
 │              RENDERER (app.js + index.html)          │
 │  ┌──────────┐  ┌────────┴────────┐  ┌────────────┐  │
 │  │ Firebase  │  │  Queue Manager  │  │  YouTube   │  │
+│  │           │  │                 │  │  + Direct  │  │
 │  │ Listener  │  │  (state/queue)  │  │  IFrame    │  │
 │  └─────┬────┘  └────────┬────────┘  └────────────┘  │
 │        │                │                             │
@@ -82,7 +100,7 @@ v26.8.0/
                           │ WebSocket / localStorage
 ┌─────────────────────────┼───────────────────────────┐
 │              OBS OVERLAY (overlay.html)              │
-│  Nền trong suốt, hiển thị bài nhạc đang phát         │
+│  Nền trong suốt, hiển thị bài nhạc + synced lyrics   │
 └──────────────────────────────────────────────────────┘
 ```
 
@@ -103,7 +121,7 @@ v26.8.0/
 - Không dùng state management library — truyền `state` qua constructor options
 
 ### Versioning
-- Semantic versioning trong `package.json` (hiện tại 26.8.5)
+- Semantic versioning trong `package.json` (hiện tại 26.8.12)
 - CHANGELOG.md ghi bằng tiếng Việt
 
 ## Chạy ứng dụng

@@ -82,6 +82,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     dbMarkAllRead: () => ipcRenderer.invoke('db-mark-all-read'),
     dbClearHistory: () => ipcRenderer.invoke('db-clear-history'),
 
+    // Windows Media Controls / Headphone Integration
+    onMediaControlAction: (callback) => ipcRenderer.on('media-control-action', (event, action) => callback(action)),
+
     // Walkthrough Content System
     saveWalkthroughHTML: (cleanHTML) => ipcRenderer.invoke('save-walkthrough-html', cleanHTML),
     saveWalkthroughImage: (fileName, base64Data) => ipcRenderer.invoke('save-walkthrough-image', fileName, base64Data)

@@ -1779,6 +1779,7 @@ function finishPlaylistTrack(song, status, reason = '') {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    getWindowsMediaService();
     initializePlaylistSettingsUI();
     if (window.electronAPI?.onPlaylistEvent) window.electronAPI.onPlaylistEvent(handlePlaylistRealtimeEvent);
     restorePlaylistQueueFromDatabase().then(() => publishRealtimeSnapshot());
@@ -4135,6 +4136,7 @@ async function playSong(song) {
 
 // Cập nhật trạng thái nút Tạm dừng/Tiếp tục của Dashboard
 function updatePlayPauseButtonUI(isPlaying) {
+    getWindowsMediaService()?.updateMetadata?.(state.currentSong, isPlaying);
     const waves = document.getElementById('music-waves');
     const playBtn = document.getElementById('btn-play-pause');
     if (isPlaying) {
@@ -4366,6 +4368,48 @@ function toggleMute() {
         if (slider) slider.value = restoredVol;
         onVolumeChange(restoredVol);
     }
+}
+
+function getWindowsMediaService() {
+    if (!window.windowsMediaService) {
+        window.windowsMediaService = new (window.WindowsMediaService || function() {})( {
+            onPlay: () => {
+                if (state.currentSong) {
+                    if (!state.isPlaying) togglePlayPause();
+                } else if (state.queue && state.queue.length > 0) {
+                    playNextInQueue();
+                }
+            },
+            onPause: () => {
+                if (state.isPlaying) togglePlayPause();
+            },
+            onNext: () => {
+                skipSong(true);
+            },
+            onPrevious: () => {
+                if (state.currentSong) {
+                    sendControlCommand('seek', 0);
+                }
+            },
+            onSeek: (details) => {
+                if (details && typeof details.seekTime === 'number') {
+                    sendControlCommand('seek', details.seekTime);
+                }
+            }
+        });
+        if (typeof window.windowsMediaService.initialize === 'function') {
+            window.windowsMediaService.initialize();
+        }
+
+        if (window.electronAPI && typeof window.electronAPI.onMediaControlAction === 'function') {
+            window.electronAPI.onMediaControlAction((action) => {
+                if (typeof window.windowsMediaService?.handleMediaAction === 'function') {
+                    window.windowsMediaService.handleMediaAction(action);
+                }
+            });
+        }
+    }
+    return window.windowsMediaService;
 }
 
 // --- PHÁT / TẠM DỪNG BẰNG TAY ---
@@ -4719,6 +4763,7 @@ function updatePlayerUI(song) {
         const playlistIconEl = document.getElementById('current-song-playlist-icon');
         if (playlistIconEl) playlistIconEl.style.display = 'none';
         donorSection.style.display = 'none';
+        getWindowsMediaService()?.updateMetadata?.(null, false);
         messageSection.style.display = 'none';
         coverWrapper.classList.remove('spinning');
         if (slider) {
@@ -4775,6 +4820,7 @@ function updatePlayerUI(song) {
     const isPlaylist = Boolean(song.playlistRequestId || song.isPlaylistTrack || song.playlistTrackId);
     const playlistIconEl = document.getElementById('current-song-playlist-icon');
     if (playlistIconEl) playlistIconEl.style.display = isPlaylist ? 'inline-flex' : 'none';
+    getWindowsMediaService()?.updateMetadata?.(song, state.isPlaying);
 
     if (currentSongUrl && currentSongUrl !== '#') {
         title.innerHTML = `<a href="${currentSongUrl}" target="_blank" rel="noopener noreferrer" class="song-title-link" title="Xem bài hát trên trình duyệt mặc định" onclick="openExternalLink(event, '${currentSongUrl}')">${song.title} <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 0.72rem; margin-left: 0.25rem; opacity: 0.6;"></i></a>`;
@@ -7184,6 +7230,7 @@ function handleMqttMessage(topic, messageStrOrObj) {
             if (data.currentTime !== undefined && !ignorePreSeekProgress) {
                 state.lastReportedTime = data.currentTime;
                 updateDashboardLyrics(state.currentSong?.lyrics, data.currentTime);
+                getWindowsMediaService()?.updatePosition?.(data.currentTime, data.duration || state.currentSong?.duration);
             }
 
             if (state.currentSong?.playlistRequestId

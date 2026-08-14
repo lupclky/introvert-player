@@ -7,12 +7,13 @@ description: Quy ước và pattern bắt buộc khi tạo hoặc sửa service 
 
 ## Tổng quan
 
-Thư mục `services/` chứa 54 file, mỗi file là 1 class service độc lập. Có **2 loại module pattern** được sử dụng tùy theo context chạy của service:
+Thư mục `services/` chứa 66 file, mỗi file là 1 class service hoặc 1 hàm register độc lập. Có **3 loại module pattern** được sử dụng tùy theo context chạy của service:
 
 | Pattern | Dùng khi | Ví dụ |
 |---|---|---|
-| **IIFE Dual-Export** | Service chạy được ở CẢ renderer (browser) lẫn Node.js (test/main) | `zypage-api-item-processor.js`, `zypage-donation-event-processor.js` |
-| **CommonJS Standard** | Service CHỈ chạy ở main process (Node.js) | `playlist-service.js`, `local-realtime-database-service.js` |
+| **IIFE Dual-Export** | Service chạy được ở CẢ renderer (browser) lẫn Node.js (test/main) | `zypage-api-item-processor.js`, `dolby-spatial-audio-service.js` |
+| **CommonJS Standard** | Service CHỈ chạy ở main process (Node.js) | `playlist-service.js`, `synced-lyrics-service.js` |
+| **Register Function** | Hàm đăng ký IPC handlers hoặc service khởi tạo | `activity-log-service.js`, `synced-lyrics-ipc-service.js` |
 
 ## Pattern 1: IIFE Dual-Export (Browser + Node)
 
@@ -76,6 +77,27 @@ module.exports = { PlaylistService };
 2. **require()** chỉ ở đầu file
 3. **Export** dạng named object: `module.exports = { ClassName }` hoặc `module.exports = ClassName`
 
+## Pattern 3: Register Function (IPC / Initialization)
+
+Dùng cho các file chỉ đăng ký IPC handlers hoặc khởi tạo service với dependencies từ main process:
+
+```javascript
+'use strict';
+
+function registerMyFeatureIpcService({ ipcMain, service }) {
+    if (!ipcMain || !service) throw new TypeError('ipcMain and service are required');
+    ipcMain.handle('my-feature-action', async (_event, data) => service.doAction(data));
+}
+
+module.exports = { registerMyFeatureIpcService };
+```
+
+Ví dụ thực tế:
+- `synced-lyrics-ipc-service.js` — đăng ký 2 IPC channels cho lyrics
+- `activity-log-service.js` — đăng ký IPC cho save/open log file
+- `external-url-service.js` — export cả function và IPC register
+- `pubg-monitor-service.js` — factory function trả về handle object
+
 ## Constructor Dependency Injection
 
 **NGUYÊN TẮC CỐT LÕI**: Không bao giờ `require()` dependency bên trong class body. Tất cả dependencies được truyền qua `options` object:
@@ -138,6 +160,11 @@ DashboardBootstrapController // Dashboard prefix cho dashboard UI
 PlaylistRepository           // Theo domain
 ViewCountPolicy              // Policy suffix cho validation
 YouTubePlaylistProvider      // Provider suffix cho data fetch
+SyncedLyricsService          // Feature-based naming
+YouTubeStreamService         // Service chứa Error class riêng
+DolbySpatialAudioService     // Audio processing
+QuickAddService              // User-facing feature
+WindowsMediaService          // Platform integration
 ```
 
 ### Method naming

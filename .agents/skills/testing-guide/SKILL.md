@@ -7,7 +7,7 @@ description: Quy ước viết unit test cho Introvert Player — sử dụng no
 
 ## Tổng quan
 
-Dự án sử dụng **Node.js built-in test runner** (`node:test`) với assertion module `node:assert/strict`. Hiện có **45 test files** trong thư mục `tests/`, mỗi file tương ứng 1 service.
+Dự án sử dụng **Node.js built-in test runner** (`node:test`) với assertion module `node:assert/strict`. Hiện có **57 test files** trong thư mục `tests/`, mỗi file tương ứng 1 service.
 
 ## Chạy tests
 

@@ -238,3 +238,55 @@ Xem skill `ipc-bridge` cho chi tiết. Tóm tắt:
 - `playlist-ipc-service.js` đăng ký tất cả IPC handlers
 - Events push qua `mainWindow.webContents.send('playlist-event', envelope)`
 - `RealtimeEventService` wrap event thành envelope chuẩn
+
+## PlaylistQueueService — Queue Integration
+
+**File**: `services/playlist-queue-service.js` (CommonJS)
+
+Chuyển đổi playlist request thành song objects để đưa vào queue:
+
+```javascript
+class PlaylistQueueService {
+    static isTimeLimitExempt(song)    // Playlist tracks không bị giới hạn thời gian
+    static songsFromRequest(request)  // Chuyển tracks → song objects cho queue
+    
+    constructor(options) {
+        this.getPlaylistService = options.getPlaylistService;
+        this.getState = options.getState;
+        this.insertSong = options.insertSong;
+    }
+    
+    async queuePlaylist(requestId)    // Đưa playlist vào queue
+    feedNextTrack(requestId)          // Lấy track tiếp theo khi track hiện tại xong
+    handleTrackEnded(song, status, reason) // Xử lý khi track kết thúc
+}
+```
+
+Mỗi song từ playlist có thêm:
+- `playlistRequestId`, `playlistTrackId`, `playlistTitle`, `playlistOwnerName`
+- `playlistPosition`, `playlistTotalTracks`, `playlistTotalDurationSec`
+- `timeLimitExempt: true` (playlist tracks không bị giới hạn maxDuration)
+
+## PlaylistVoteSkipService — Vote Skip cho Playlist
+
+**File**: `services/playlist-vote-skip-service.js` (IIFE dual-export)
+
+Cho phép viewer donate để vote skip toàn bộ playlist đang phát:
+
+```javascript
+class PlaylistVoteSkipService {
+    constructor(options) {
+        // Injected callbacks: getState, isDonationProcessed, markDonationProcessed,
+        // recordDonation, updateUi, reducePlaylist, notify
+    }
+    
+    apply(donation) → boolean  // Xử lý donate vote skip
+}
+```
+
+Logic:
+1. Kiểm tra vote skip đang active cho playlist hiện tại
+2. Kiểm tra donation chưa bị xử lý (dedup)
+3. Cộng amount vào tổng vote
+4. Khi đạt target → đóng vote, reduce playlist, notify
+
