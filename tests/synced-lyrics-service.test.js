@@ -980,3 +980,48 @@ test('YouTube Music bat buoc dung nghe si cong tac trong credit chinh thuc', asy
   assert.equal(result.available, false);
   assert.equal(result.reason, 'not_found');
 });
+
+test('video YouTube Karaoke duoc nhan dien va lay lyrics synced theo ca si goc', async () => {
+  const lyrics = {
+    id: 11223344,
+    trackName: 'Mưa Đợi Chờ',
+    artistName: 'Miu Lê',
+    albumName: 'Mưa Đợi Chờ - Single',
+    duration: 238,
+    syncedLyrics: '[00:20.12] Đêm nay mưa cứ rơi rơi làm tôi nhớ về\n[00:24.91] Mong cho cơn mưa đừng vội xóa đi tình yêu'
+  };
+  const { service } = createService({
+    fetchImpl: async url => {
+      const value = String(url);
+      if (value.includes('youtube.com/oembed')) {
+        return response(200, { title: '[Karaoke] Mưa Đợi Chờ - Miu Lê | Tone Nữ', author_name: 'Karaoke Beat Chuẩn' });
+      }
+      if (value.includes('youtube.com/watch')) {
+        return response(200, '<script>"lengthSeconds":"238"</script>');
+      }
+      if (value.includes('itunes.apple.com/search')) {
+        return response(200, { results: [{
+          kind: 'song', trackName: 'Mưa Đợi Chờ', artistName: 'Miu Lê',
+          collectionName: 'Mưa Đợi Chờ - Single', trackTimeMillis: 237769
+        }] });
+      }
+      if (value.includes('lrclib.net/api/get')) return response(200, lyrics);
+      if (value.includes('lrclib.net/api/search')) return response(200, [lyrics]);
+      throw new Error(`unexpected url: ${value}`);
+    }
+  });
+
+  const result = await service.resolve({
+    videoId: 'karaokeVid12',
+    title: '[Karaoke] Mưa Đợi Chờ - Miu Lê | Tone Nữ',
+    author: 'Karaoke Beat Chuẩn',
+    duration: 238,
+    sourceUrl: 'https://www.youtube.com/watch?v=karaokeVid12'
+  });
+
+  assert.equal(result.available, true);
+  assert.equal(result.synced, true);
+  assert.equal(result.trackName, 'Mưa Đợi Chờ');
+  assert.equal(result.artistName, 'Miu Lê');
+  assert.equal(result.lines.length >= 2, true);
+});
