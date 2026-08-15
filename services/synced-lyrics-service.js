@@ -149,12 +149,12 @@ class SyncedLyricsService {
 
   static getProviderPriority(source) {
     const src = String(source || '');
-    if (src.startsWith('LRCLIB')) return 100;
+    if (src.startsWith('LRCLIB')) return 90;
     if (src.startsWith('LyricsPlus')) return 90;
-    if (src.startsWith('Unison')) return 75;
-    if (src.startsWith('BiniLyrics')) return 65;
+    if (src.startsWith('Unison')) return 90;
+    if (src.startsWith('BiniLyrics')) return 90;
     if (src.startsWith('YouTube Captions')) return 50;
-    if (src.startsWith('Musixmatch')) return 40;
+    if (src.startsWith('Musixmatch')) return 80;
     return 10;
   }
 
@@ -1259,7 +1259,7 @@ class SyncedLyricsService {
     );
     const appleCoreTitleMatches = apple
       && SyncedLyricsService.normalizeComparable(SyncedLyricsService.getCoreTrackTitle(apple.title))
-        === SyncedLyricsService.normalizeComparable(SyncedLyricsService.getCoreTrackTitle(identity.title));
+      === SyncedLyricsService.normalizeComparable(SyncedLyricsService.getCoreTrackTitle(identity.title));
     const allAppleFeaturedArtistsConfirmed = appleFeaturedArtists.length > 0
       && confirmedFeaturedArtists.length === appleFeaturedArtists.length;
     const appleCollaborationConfirmed = apple
