@@ -151,6 +151,38 @@
         });
     }
 
+    // Thiết lập cấu hình Lời bài hát đồng bộ (lyrics-enabled-toggle)
+    const lyricsEnabledToggle = document.getElementById('lyrics-enabled-toggle');
+    if (lyricsEnabledToggle) {
+        const isLyricsEnabled = localStorage.getItem('dua_lyrics_enabled') !== 'false';
+        lyricsEnabledToggle.checked = isLyricsEnabled;
+
+        lyricsEnabledToggle.addEventListener('change', (e) => {
+            const isChecked = e.target.checked;
+            localStorage.setItem('dua_lyrics_enabled', isChecked ? 'true' : 'false');
+            publishMqtt('lyrics_config', { enabled: isChecked });
+            logSystem(`🔧 <strong>[Lời bài hát]</strong> Đã ${isChecked ? 'BẬT' : 'TẮT'} lời bài hát đồng bộ (Synced Lyrics).`, 'system');
+            showDashboardSystemAlert("Lời bài hát", `Đã ${isChecked ? 'bật' : 'tắt'} hiển thị lời bài hát.`);
+
+            if (!isChecked) {
+                if (typeof window.clearDashboardLyrics === 'function') {
+                    window.clearDashboardLyrics();
+                } else {
+                    const lyricsPanel = document.getElementById('dashboard-lyrics');
+                    if (lyricsPanel) lyricsPanel.hidden = true;
+                    const lyricsLines = document.getElementById('dashboard-lyrics-lines');
+                    if (lyricsLines) lyricsLines.replaceChildren();
+                }
+                const lyricsIconEl = document.getElementById('current-song-lyrics-icon');
+                if (lyricsIconEl) lyricsIconEl.style.display = 'none';
+            } else if (state?.currentSong) {
+                if (typeof window.loadSyncedLyricsForSong === 'function') {
+                    window.loadSyncedLyricsForSong(state.currentSong);
+                }
+            }
+        });
+    }
+
     // Khởi tạo hàm downloadYtDlp toàn cục để gọi từ button onclick
     window.downloadYtDlp = function() {
         if (!window.electronAPI || typeof window.electronAPI.downloadYtDlp !== 'function') return;

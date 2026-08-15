@@ -5544,7 +5544,8 @@
         function updateOverlayLyrics(song, currentTime = 0) {
             updateLyricsOverlayDetails(song);
             const lyrics = song?.lyrics;
-            const showOverlayLyrics = localStorage.getItem('dua_show_overlay_lyrics') !== 'false';
+            const lyricsEnabled = localStorage.getItem('dua_lyrics_enabled') !== 'false';
+            const showOverlayLyrics = lyricsEnabled && localStorage.getItem('dua_show_overlay_lyrics') !== 'false';
             const hasSyncedLyrics = Boolean(showOverlayLyrics && lyrics?.available && lyrics?.synced !== false
                 && Array.isArray(lyrics.lines) && lyrics.lines.length);
             const panelVisible = Boolean(overlayLyrics && overlayLyricsLines && overlayLyricsTimeline
@@ -5690,7 +5691,7 @@
         let destroyTimeout = null;
         let lastProgressPct = null;
         const REALTIME_PROGRESS_INTERVAL_MS = 250;
-        const LYRICS_TIMING_INTERVAL_MS = 5;
+        const LYRICS_TIMING_INTERVAL_MS = 20;
         const REALTIME_RECONNECT_DELAY_MS = 500;
         const OVERLAY_COLLAPSED_HEIGHT = 160;
         const OVERLAY_UP_NEXT_HEIGHT = 280;
@@ -10442,6 +10443,10 @@
         }
 
         function updateLyricsRealtimeSync() {
+            if (localStorage.getItem('dua_lyrics_enabled') === 'false') {
+                if (overlayLyrics && !overlayLyrics.hidden) overlayLyrics.hidden = true;
+                return;
+            }
             if (isPreview || isLuckyRolling) return;
             // Khi app đang pause/stop và browser media đang phát, loop 200ms của
             // updateOverlayUI đã gọi updateOverlayLyrics(null) để tắt lyrics.
@@ -10630,6 +10635,7 @@
                 if (config.emptyQueueMessage !== undefined) localStorage.setItem('dua_empty_queue_message', String(config.emptyQueueMessage));
                 if (config.hideEmptyOverlay !== undefined) localStorage.setItem('dua_hide_empty_overlay', config.hideEmptyOverlay ? 'true' : 'false');
                 if (config.showOverlayLyrics !== undefined) localStorage.setItem('dua_show_overlay_lyrics', config.showOverlayLyrics ? 'true' : 'false');
+                if (config.lyricsEnabled !== undefined) localStorage.setItem('dua_lyrics_enabled', config.lyricsEnabled ? 'true' : 'false');
                 if (config.focusMode !== undefined) localStorage.setItem('dua_focus_mode', config.focusMode ? 'true' : 'false');
                 if (config.focusModeMessage !== undefined) localStorage.setItem('dua_focus_mode_message', String(config.focusModeMessage));
                 if (config.directStreamFallbackEnabled !== undefined) {
@@ -10687,6 +10693,9 @@
                     updateOverlayUI();
                 } else if (payload.type === 'direct_stream_config') {
                     localStorage.setItem('dua_yt_bypass_enabled', payload.data?.enabled === false ? 'false' : 'true');
+                } else if (payload.type === 'lyrics_config') {
+                    localStorage.setItem('dua_lyrics_enabled', payload.data?.enabled === false ? 'false' : 'true');
+                    updateOverlayUI();
                 } else if (payload.type === 'queue.updated') {
                     const queue = Array.isArray(payload.data?.queue) ? payload.data.queue : [];
                     localStorage.setItem('dua_queue', JSON.stringify(queue));

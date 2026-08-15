@@ -600,7 +600,7 @@ function updateDashboardLyrics(lyrics, currentTime = 0) {
     const panel = document.getElementById('dashboard-lyrics');
     const container = document.getElementById('dashboard-lyrics-lines');
     const source = document.getElementById('dashboard-lyrics-source');
-    if (!panel || !container || !dashboardLyricsTimeline || !lyrics?.available || !Array.isArray(lyrics.lines) || !lyrics.lines.length) {
+    if (localStorage.getItem('dua_lyrics_enabled') === 'false' || !panel || !container || !dashboardLyricsTimeline || !lyrics?.available || !Array.isArray(lyrics.lines) || !lyrics.lines.length) {
         clearDashboardLyrics();
         return;
     }
@@ -704,6 +704,12 @@ function updateDashboardLyrics(lyrics, currentTime = 0) {
 }
 
 async function loadSyncedLyricsForSong(song) {
+    if (localStorage.getItem('dua_lyrics_enabled') === 'false') {
+        clearDashboardLyrics();
+        const lyricsIconEl = document.getElementById('current-song-lyrics-icon');
+        if (lyricsIconEl) lyricsIconEl.style.display = 'none';
+        return;
+    }
     if (!song || typeof window.electronAPI?.getSyncedLyrics !== 'function') {
         clearDashboardLyrics();
         return;
@@ -1741,6 +1747,7 @@ function publishRealtimeSnapshot() {
                 emptyQueueMessage: state.emptyQueueMessage,
                 hideEmptyOverlay: Boolean(state.hideEmptyOverlay),
                 showOverlayLyrics: state.showOverlayLyrics !== false,
+                lyricsEnabled: localStorage.getItem('dua_lyrics_enabled') !== 'false',
                 focusMode: Boolean(state.focusMode),
                 focusModeMessage: state.focusModeMessage,
                 volume: Math.max(0, Math.min(100, Number.isFinite(Number(state.volume)) ? Math.round(Number(state.volume)) : 80)),
@@ -7227,6 +7234,7 @@ function handleMqttMessage(topic, messageStrOrObj) {
             const canResume = state.currentSong && !document.getElementById('resume-playback-modal');
             sendControlCommand(canResume && state.isPlaying ? 'play' : canResume ? 'pause' : 'stop');
         } else if (payload.type === 'lyrics_timing') {
+            if (localStorage.getItem('dua_lyrics_enabled') === 'false') return;
             const data = payload.data || payload.state;
             if (!data || data.currentTime === undefined) return;
             if (data.songId != null
