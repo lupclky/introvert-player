@@ -147,6 +147,17 @@ class SyncedLyricsService {
     return lastTimestamp >= duration * 0.7 || duration - lastTimestamp <= 45;
   }
 
+  static getProviderPriority(source) {
+    const src = String(source || '');
+    if (src.startsWith('YouTube Captions')) return 100;
+    if (src.startsWith('LRCLIB')) return 90;
+    if (src.startsWith('LyricsPlus')) return 85;
+    if (src.startsWith('Unison')) return 70;
+    if (src.startsWith('BiniLyrics')) return 60;
+    if (src.startsWith('Musixmatch')) return 40;
+    return 10;
+  }
+
   static selectClosestDuration(records, identity) {
     return records.reduce((best, record) => {
       if (!best) return record;
@@ -154,6 +165,10 @@ class SyncedLyricsService {
       const bestDistance = SyncedLyricsService.getDurationDistance(best, identity);
       if (recordDistance !== bestDistance) return recordDistance < bestDistance ? record : best;
       if (record?.durationVerified === true && best?.durationVerified !== true) return record;
+      if (best?.durationVerified === true && record?.durationVerified !== true) return best;
+      const recordPriority = SyncedLyricsService.getProviderPriority(record?.source);
+      const bestPriority = SyncedLyricsService.getProviderPriority(best?.source);
+      if (recordPriority !== bestPriority) return recordPriority > bestPriority ? record : best;
       return best;
     }, null);
   }
@@ -1325,7 +1340,8 @@ class SyncedLyricsService {
     )).catch(() => null);
     if (firstSyncedRecord) {
       const firstDurationDistance = SyncedLyricsService.getDurationDistance(firstSyncedRecord, identity);
-      if (this.syncedRaceWindowMs > 0 && (firstSyncedRecord.durationVerified !== true || firstDurationDistance > 0)) {
+      const isMusixmatch = String(firstSyncedRecord.source || '').startsWith('Musixmatch');
+      if (this.syncedRaceWindowMs > 0 && (firstSyncedRecord.durationVerified !== true || firstDurationDistance > 0 || isMusixmatch)) {
         await new Promise(resolve => setTimeout(resolve, this.syncedRaceWindowMs));
       }
       const closestRecord = SyncedLyricsService.selectClosestDuration(syncedRecords, identity)
