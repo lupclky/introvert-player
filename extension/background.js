@@ -1,10 +1,87 @@
 let cachedPort = null;
 const mediaByTab = new Map();
+let appWs = null;
+let wsReconnectTimer = null;
+
+async function pauseAllBrowserMedia() {
+  try {
+    const tabs = await chrome.tabs.query({
+      url: [
+        '*://*.youtube.com/*',
+        '*://music.youtube.com/*',
+        '*://*.soundcloud.com/*'
+      ]
+    });
+    for (const tab of tabs) {
+      if (Number.isInteger(tab.id)) {
+        chrome.tabs.sendMessage(tab.id, { action: 'pause-media' }, () => {
+          void chrome.runtime.lastError;
+        });
+      }
+    }
+  } catch (e) {
+    console.warn('[Pineapple Remote] Không thể gửi lệnh dừng tới các tab:', e);
+  }
+}
+
+async function connectAppWebSocket() {
+  if (appWs && (appWs.readyState === WebSocket.OPEN || appWs.readyState === WebSocket.CONNECTING)) {
+    return;
+  }
+  try {
+    const port = await findAppPort();
+    appWs = new WebSocket(`ws://127.0.0.1:${port}`);
+
+    appWs.onopen = () => {
+      console.log(`[Pineapple Remote] WebSocket đã kết nối tới ứng dụng tại cổng ${port}`);
+    };
+
+    appWs.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data || '{}');
+        if (msg.type === 'app_playback_started' || (msg.type === 'player_state' && msg.isPlaying)) {
+          console.log('[Pineapple Remote] Ứng dụng phát nhạc, tiến hành tạm dừng media trên web...');
+          pauseAllBrowserMedia();
+        }
+      } catch (_) {}
+    };
+
+    appWs.onclose = () => {
+      appWs = null;
+      scheduleWsReconnect();
+    };
+
+    appWs.onerror = () => {
+      try { appWs.close(); } catch (_) {}
+      appWs = null;
+    };
+  } catch (_) {
+    scheduleWsReconnect();
+  }
+}
+
+function scheduleWsReconnect() {
+  clearTimeout(wsReconnectTimer);
+  wsReconnectTimer = setTimeout(connectAppWebSocket, 5000);
+}
+
+// Khởi động kết nối WebSocket nền tới ứng dụng
+connectAppWebSocket();
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'send-to-pineapple') {
+    if (request.playNow) {
+      pauseAllBrowserMedia();
+    }
     handleSendToPineapple(request.url, request.title || '', request.playNow)
       .then(sendResponse)
+      .catch(err => sendResponse({ success: false, error: err.message }));
+    return true;
+  }
+
+  if (request.action === 'pause-browser-media') {
+    pauseAllBrowserMedia()
+      .then(() => sendResponse({ success: true }))
       .catch(err => sendResponse({ success: false, error: err.message }));
     return true;
   }
@@ -85,6 +162,10 @@ async function publishSelectedMedia() {
     body: JSON.stringify(selectActiveMedia())
   });
   if (!response.ok) throw new Error('Ứng dụng từ chối trạng thái media trình duyệt.');
+  const resData = await response.json().catch(() => ({}));
+  if (resData && resData.shouldPause) {
+    pauseAllBrowserMedia();
+  }
   return { success: true, port };
 }
 
@@ -108,6 +189,9 @@ async function handleSendToPineapple(videoUrl, videoTitle, playNow) {
 
   const result = await response.json();
   if (!result.success) throw new Error(result.error || 'Không thể thêm nhạc.');
+  if (playNow) {
+    pauseAllBrowserMedia();
+  }
   return { success: true, port: activePort };
 }
 
@@ -136,3 +220,4 @@ async function resolveYouTubeMusicReleaseUrl(rawUrl) {
   }
   return `https://music.youtube.com/playlist?list=${encodeURIComponent(playlistId)}`;
 }
+

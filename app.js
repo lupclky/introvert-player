@@ -4006,6 +4006,11 @@ function promptResumePlayback(song, onResolve) {
 async function playSong(song) {
     if (!song) return;
 
+    // Thông báo cho Main process / Extension tạm dừng nhạc trên web ngay khi chuẩn bị phát
+    if (window.electronAPI && typeof window.electronAPI.notifyPlaybackState === 'function') {
+        window.electronAPI.notifyPlaybackState({ isPlaying: true, song });
+    }
+
     const requestSequence = ++playSongRequestSequence;
     const requestedSongId = String(song.id);
     const requestedVideoId = String(song.videoId || '');
@@ -4148,6 +4153,9 @@ async function playSong(song) {
 // Cập nhật trạng thái nút Tạm dừng/Tiếp tục của Dashboard
 function updatePlayPauseButtonUI(isPlaying) {
     getWindowsMediaService()?.updateMetadata?.(state.currentSong, isPlaying);
+    if (window.electronAPI && typeof window.electronAPI.notifyPlaybackState === 'function') {
+        window.electronAPI.notifyPlaybackState({ isPlaying: Boolean(isPlaying), song: state.currentSong });
+    }
     const waves = document.getElementById('music-waves');
     const playBtn = document.getElementById('btn-play-pause');
     if (isPlaying) {

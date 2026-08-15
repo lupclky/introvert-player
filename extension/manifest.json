@@ -4,13 +4,15 @@
   "version": "1.1.2",
   "description": "Đồng bộ media đang phát và gửi nhạc từ trình duyệt sang Pineapple Studio.",
   "permissions": [
-    "storage"
+    "storage",
+    "tabs"
   ],
   "host_permissions": [
     "https://www.youtube.com/*",
     "https://music.youtube.com/*",
     "https://soundcloud.com/*",
-    "http://127.0.0.1/*"
+    "http://127.0.0.1/*",
+    "ws://127.0.0.1/*"
   ],
   "background": {
     "service_worker": "background.js"

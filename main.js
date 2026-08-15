@@ -145,6 +145,25 @@ function broadcastBrowserMediaState(state) {
   }
 }
 
+function broadcastAppPlaybackState(isPlaying, song = null) {
+  browserMediaStateService.setAppPlaybackState(isPlaying, song);
+  const message = JSON.stringify({
+    type: isPlaying ? 'app_playback_started' : 'app_playback_paused',
+    isPlaying: Boolean(isPlaying),
+    song: song ? { id: song.id, title: song.title } : null,
+    timestamp: Date.now()
+  });
+  activeWsClients.forEach(client => {
+    if (client.readyState === WebSocket.OPEN) {
+      try { client.send(message); } catch (_) { }
+    }
+  });
+}
+
+ipcMain.on('notify-playback-state', (event, data = {}) => {
+  broadcastAppPlaybackState(data.isPlaying, data.song);
+});
+
 // Tắt sandbox để tránh crash khi chạy từ thư mục AppData (giữ GPU bật để tránh bug input focus)
 app.commandLine.appendSwitch('no-sandbox');
 app.commandLine.appendSwitch('disable-gpu-sandbox');
@@ -338,7 +357,21 @@ if (!gotTheLock) {
         res.writeHead(200, getCorsHeaders({
           'Content-Type': 'application/json'
         }));
-        res.end(JSON.stringify({ success: true, app: "pineapple-studio", version: app.getVersion() }));
+        res.end(JSON.stringify({
+          success: true,
+          app: "pineapple-studio",
+          version: app.getVersion(),
+          appPlaying: browserMediaStateService.appIsPlaying,
+          shouldPause: browserMediaStateService.shouldPauseBrowser()
+        }));
+        return;
+      }
+
+      // Xử lý API Tạm dừng media trình duyệt (POST /api/pause-browser-media)
+      if (req.url === '/api/pause-browser-media' && req.method === 'POST') {
+        broadcastAppPlaybackState(true);
+        res.writeHead(200, getCorsHeaders({ 'Content-Type': 'application/json' }));
+        res.end(JSON.stringify({ success: true, message: 'Pause signal broadcasted' }));
         return;
       }
 
@@ -354,7 +387,12 @@ if (!gotTheLock) {
             const state = browserMediaStateService.update(JSON.parse(body || '{}'));
             broadcastBrowserMediaState(state);
             res.writeHead(200, getCorsHeaders({ 'Content-Type': 'application/json' }));
-            res.end(JSON.stringify({ success: true, active: state.active }));
+            res.end(JSON.stringify({
+              success: true,
+              active: state.active,
+              shouldPause: browserMediaStateService.shouldPauseBrowser(),
+              appPlaying: browserMediaStateService.appIsPlaying
+            }));
           } catch (err) {
             res.writeHead(400, getCorsHeaders({ 'Content-Type': 'application/json' }));
             res.end(JSON.stringify({ success: false, error: err.message }));
