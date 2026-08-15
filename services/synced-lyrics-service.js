@@ -64,10 +64,11 @@ class SyncedLyricsService {
   static cleanTrackTitle(value) {
     return String(value || '')
       .replace(/^\s*\[[^\]]*karaoke[^\]]*\]\s*[-–—|:]?\s*/gi, '')
-      .replace(/^\s*karaoke\s*[-–—|:]\s*/gi, '')
+      .replace(/^\s*karaoke(?:\s*(?:song\s*ca|tone\s*(?:nam|nữ|chuẩn)|beat|beat\s*chuẩn|beat\s*gốc|nhạc\s*sống))?\s*[-–—|:]\s*/gi, '')
       .replace(/^\s*karaoke\s+beat\s*[-–—|:]?\s*/gi, '')
+      .replace(/\s*[-–—|]\s*["'“][^"'”]+["'”]\s*(?:album|ep|single|ost)?\s*$/gi, '')
+      .replace(/\s*[-–—|]\s*(?:tone\s*(?:nam|nữ|song\s*ca|chuẩn)|beat\s*chuẩn|beat\s*gốc|nhạc\s*sống|karaoke|official\s*beat).*$/gi, '')
       .replace(/\s*[\[(][^\])]*(?:karaoke|tone\s*(?:nam|nữ|song\s*ca|chuẩn)|hạ\s*tone|tăng\s*tone|beat\s*(?:chuẩn|gốc|nhạc\s*sống)|nhạc\s*sống)[^\])]*[\])]/gi, '')
-      .replace(/\s*[-–—|]\s*(?:tone\s*(?:nam|nữ|song\s*ca|chuẩn)|beat\s*chuẩn|beat\s*gốc|nhạc\s*sống|karaoke).*$/gi, '')
       .replace(/\s*[\[(](?:official\s*)?(?:music\s*)?(?:audio|video|lyric(?:s)?|visualizer|mv)[^\])]*[\])]/gi, '')
       .replace(/\s*[\[(](?:vietsub|lyrics?\s*video|audio\s*only)[^\])]*[\])]/gi, '')
       .replace(/\s*[-–—|]\s*(?:official\s*)?(?:audio|lyrics?|visualizer)\s*$/gi, '')
