@@ -124,55 +124,66 @@ style.textContent = `
     opacity: 0.7 !important;
   }
   .pineapple-ytmusic-add-btn {
-    cursor: pointer;
-    box-sizing: border-box;
-    min-width: 30px;
-    height: 30px;
-    padding: 0 9px;
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    border-radius: 15px;
-    background: rgba(255, 255, 255, 0.1);
-    color: var(--ytmusic-text-primary, #fff);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex: 0 0 auto;
-    font-family: Roboto, Arial, sans-serif;
-    font-size: 18px;
-    font-weight: 500;
-    line-height: 1;
-    transition: background-color .18s ease, border-color .18s ease, opacity .18s ease;
+    cursor: pointer !important;
+    position: relative !important;
+    z-index: 9999 !important;
+    pointer-events: auto !important;
+    box-sizing: border-box !important;
+    min-width: 32px !important;
+    height: 32px !important;
+    padding: 0 10px !important;
+    border: 1px solid rgba(255, 255, 255, 0.28) !important;
+    border-radius: 16px !important;
+    background: rgba(255, 255, 255, 0.12) !important;
+    color: var(--ytmusic-text-primary, #fff) !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex: 0 0 auto !important;
+    font-family: Roboto, Arial, sans-serif !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    line-height: 1 !important;
+    transition: background-color .18s ease, border-color .18s ease, transform .15s ease !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
   }
   .pineapple-ytmusic-add-btn:hover {
-    background: rgba(255, 255, 255, 0.2);
-    border-color: rgba(255, 255, 255, 0.32);
+    background: rgba(255, 255, 255, 0.28) !important;
+    border-color: rgba(255, 255, 255, 0.5) !important;
+    transform: scale(1.04) !important;
+  }
+  .pineapple-ytmusic-add-btn:active {
+    transform: scale(0.96) !important;
   }
   .pineapple-ytmusic-add-btn.loading {
-    cursor: wait;
-    opacity: .62;
+    cursor: wait !important;
+    opacity: .62 !important;
   }
   .pineapple-ytmusic-playlist-btn {
-    min-width: 42px;
-    padding-inline: 11px;
-    font-size: 14px;
-    letter-spacing: -.02em;
+    min-width: 52px !important;
+    padding-inline: 12px !important;
+    font-size: 13px !important;
   }
   ytmusic-responsive-list-item-renderer .pineapple-ytmusic-add-btn {
-    margin-right: 8px;
+    margin-right: 8px !important;
   }
   ytmusic-card-shelf-renderer .pineapple-ytmusic-add-btn {
-    margin-left: 10px;
+    margin-left: 10px !important;
   }
   ytmusic-two-row-item-renderer .pineapple-ytmusic-add-btn {
-    position: absolute;
-    right: 8px;
-    top: 8px;
-    z-index: 4;
-    background: rgba(20, 20, 20, .78);
-    backdrop-filter: blur(6px);
+    position: absolute !important;
+    right: 8px !important;
+    top: 8px !important;
+    z-index: 10 !important;
+    background: rgba(20, 20, 20, .85) !important;
+    backdrop-filter: blur(6px) !important;
   }
   ytmusic-two-row-item-renderer {
     position: relative !important;
+  }
+  ytmusic-responsive-list-item-renderer {
+    overflow: visible !important;
   }
 `;
 document.head.appendChild(style);
@@ -367,14 +378,25 @@ function createYouTubeMusicAddButton(card, url, title, options = {}) {
   const btn = document.createElement('button');
   btn.type = 'button';
   btn.className = `pineapple-ytmusic-add-btn${isPlaylist ? ' pineapple-ytmusic-playlist-btn' : ''}`;
-  btn.dataset.mediaUrl = url;
-  btn.dataset.mediaTitle = title;
+  btn.dataset.mediaUrl = url || '';
+  btn.dataset.mediaTitle = title || '';
   btn.dataset.mediaKind = isPlaylist ? 'playlist' : 'track';
   btn.textContent = idleText;
   btn.title = isPlaylist
     ? 'Thêm playlist này vào Pineapple Studio'
     : 'Thêm bài hát này vào hàng đợi Pineapple Studio';
   btn.setAttribute('aria-label', btn.title);
+
+  const stopProp = (e) => {
+    e.stopPropagation();
+    e.stopImmediatePropagation();
+  };
+
+  btn.addEventListener('pointerdown', stopProp);
+  btn.addEventListener('mousedown', stopProp);
+  btn.addEventListener('mouseup', stopProp);
+  btn.addEventListener('touchstart', stopProp, { passive: true });
+  btn.addEventListener('touchend', stopProp, { passive: true });
 
   btn.addEventListener('click', event => {
     event.preventDefault();
@@ -409,13 +431,14 @@ function createYouTubeMusicAddButton(card, url, title, options = {}) {
       btn.disabled = false;
       if (response?.success) {
         btn.textContent = '✓';
-        btn.style.setProperty('color', '#34d399');
-        btn.style.setProperty('border-color', 'rgba(52, 211, 153, .6)');
-        setTimeout(() => resetYouTubeMusicButton(btn, idleText), 2000);
+        btn.style.setProperty('color', '#34d399', 'important');
+        btn.style.setProperty('border-color', 'rgba(52, 211, 153, .8)', 'important');
+        showToast(`Đã thêm ${isPlaylist ? 'playlist' : 'bài hát'}: ${currentTitle}`);
+        setTimeout(() => resetYouTubeMusicButton(btn, idleText), 2500);
       } else {
         btn.textContent = '×';
-        btn.style.setProperty('color', '#f87171');
-        btn.style.setProperty('border-color', 'rgba(248, 113, 113, .6)');
+        btn.style.setProperty('color', '#f87171', 'important');
+        btn.style.setProperty('border-color', 'rgba(248, 113, 113, .8)', 'important');
         showToast(response?.error || 'Không thể thêm nhạc từ YouTube Music.', true);
         setTimeout(() => resetYouTubeMusicButton(btn, idleText), 3000);
       }
