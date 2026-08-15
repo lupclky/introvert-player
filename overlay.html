@@ -6028,7 +6028,7 @@
         // Biến quản lý phase ngăn kéo "Tiếp theo"
         let currentDrawerText = "";
 
-        const activeMarqueeElements = new Set();
+        window.activeMarqueeElements = window.activeMarqueeElements || new Set();
 
         function getRenderedTextWidth(text, textEl) {
             if (!text) return 0;
@@ -6073,12 +6073,12 @@
 
             // Kiểm tra xem container có đang bị ẩn hay có chiều rộng hợp lệ không
             const containerWidth = containerEl.clientWidth || containerEl.offsetWidth || 0;
-            const widget = document.getElementById('obs-player-widget');
-            const isWidgetHidden = widget && (
-                widget.classList.contains('alert-active') ||
-                widget.classList.contains('show-queue') ||
-                widget.classList.contains('next-fullscreen-active') ||
-                widget.classList.contains('phase-crossfade')
+            const widgetEl = document.getElementById('obs-player-widget');
+            const isWidgetHidden = widgetEl && (
+                widgetEl.classList.contains('alert-active') ||
+                widgetEl.classList.contains('show-queue') ||
+                widgetEl.classList.contains('next-fullscreen-active') ||
+                widgetEl.classList.contains('phase-crossfade')
             ) && !textEl.closest('.obs-alert-box') && !textEl.closest('.obs-next-song-drawer') && !textEl.closest('#obs-next-song-fullscreen');
 
             if (containerWidth <= 0 || isWidgetHidden) {
@@ -6132,9 +6132,10 @@
         }
 
         function refreshAllActiveMarquees(force = false) {
-            for (const textEl of activeMarqueeElements) {
-                if (!textEl.isConnected) {
-                    activeMarqueeElements.delete(textEl);
+            if (!window.activeMarqueeElements) return;
+            for (const textEl of window.activeMarqueeElements) {
+                if (!textEl || !textEl.isConnected) {
+                    window.activeMarqueeElements.delete(textEl);
                     continue;
                 }
                 refreshMarqueeElement(textEl, force);
@@ -6152,7 +6153,10 @@
             textEl._marqueeContainer = containerEl;
             textEl._marqueeText = text;
             textEl._marqueeSpeed = baseSpeed;
-            activeMarqueeElements.add(textEl);
+            if (!window.activeMarqueeElements) {
+                window.activeMarqueeElements = new Set();
+            }
+            window.activeMarqueeElements.add(textEl);
 
             refreshMarqueeElement(textEl, true);
 
