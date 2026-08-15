@@ -149,11 +149,11 @@ class SyncedLyricsService {
 
   static getProviderPriority(source) {
     const src = String(source || '');
-    if (src.startsWith('YouTube Captions')) return 100;
-    if (src.startsWith('LRCLIB')) return 90;
-    if (src.startsWith('LyricsPlus')) return 85;
-    if (src.startsWith('Unison')) return 70;
-    if (src.startsWith('BiniLyrics')) return 60;
+    if (src.startsWith('LRCLIB')) return 100;
+    if (src.startsWith('LyricsPlus')) return 90;
+    if (src.startsWith('Unison')) return 75;
+    if (src.startsWith('BiniLyrics')) return 65;
+    if (src.startsWith('YouTube Captions')) return 50;
     if (src.startsWith('Musixmatch')) return 40;
     return 10;
   }
