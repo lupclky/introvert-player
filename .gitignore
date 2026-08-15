@@ -9,6 +9,7 @@ dist-installer-new/
 dist_old/
 extracted_asar/
 app.asar
+*.zip
 
 # Log files
 *.log
