@@ -55,11 +55,22 @@ class SyncedLyricsService {
       .trim();
   }
 
+  static isKaraokeSource(title, artist) {
+    const combined = `${title || ''} ${artist || ''}`;
+    return /\bkaraoke\b/i.test(combined)
+      || /\[[^\]]*karaoke[^\]]*\]/i.test(combined);
+  }
+
   static cleanTrackTitle(value) {
     return String(value || '')
-      .replace(/\s*[\[(](official\s*)?(music\s*)?(audio|video|lyric(s)?|visualizer|mv)[^\])]*[\])]/gi, '')
-      .replace(/\s*[\[(](vietsub|lyrics?\s*video|audio\s*only)[^\])]*[\])]/gi, '')
-      .replace(/\s*[-–—|]\s*(official\s*)?(audio|lyrics?|visualizer)\s*$/gi, '')
+      .replace(/^\s*\[[^\]]*karaoke[^\]]*\]\s*[-–—|:]?\s*/gi, '')
+      .replace(/^\s*karaoke\s*[-–—|:]\s*/gi, '')
+      .replace(/^\s*karaoke\s+beat\s*[-–—|:]?\s*/gi, '')
+      .replace(/\s*[\[(][^\])]*(?:karaoke|tone\s*(?:nam|nữ|song\s*ca|chuẩn)|hạ\s*tone|tăng\s*tone|beat\s*(?:chuẩn|gốc|nhạc\s*sống)|nhạc\s*sống)[^\])]*[\])]/gi, '')
+      .replace(/\s*[-–—|]\s*(?:tone\s*(?:nam|nữ|song\s*ca|chuẩn)|beat\s*chuẩn|beat\s*gốc|nhạc\s*sống|karaoke).*$/gi, '')
+      .replace(/\s*[\[(](?:official\s*)?(?:music\s*)?(?:audio|video|lyric(?:s)?|visualizer|mv)[^\])]*[\])]/gi, '')
+      .replace(/\s*[\[(](?:vietsub|lyrics?\s*video|audio\s*only)[^\])]*[\])]/gi, '')
+      .replace(/\s*[-–—|]\s*(?:official\s*)?(?:audio|lyrics?|visualizer)\s*$/gi, '')
       .replace(/\s+/g, ' ')
       .trim();
   }
@@ -1353,18 +1364,31 @@ class SyncedLyricsService {
     }
     if (trace) trace.youtube = youtubeIdentity ? { ...youtubeIdentity } : null;
     const rawArtist = youtubeIdentity?.rawArtist || song.rawAuthor || song.author || song.channelName || '';
+    const rawTitle = youtubeIdentity?.title || song.title || '';
     const isTopic = youtubeWasTopic || SyncedLyricsService.isTopicChannel(rawArtist);
+    const isKaraoke = SyncedLyricsService.isKaraokeSource(rawTitle, rawArtist);
     // A music-looking title is not an authoritative release identity. Regular
     // YouTube uploads (MV, live, fan edit, compilation, etc.) can share a title
     // with a Topic track while using a different cut or arrangement. Only
-    // Topic, YouTube Music and Apple Music sources may auto-attach lyrics.
-    if (!isAppleSource && !isYouTubeMusicSource && !isTopic && !verifiedReleaseMetadata) {
+    // Topic, YouTube Music, Apple Music, and Karaoke sources may auto-attach lyrics.
+    if (!isAppleSource && !isYouTubeMusicSource && !isTopic && !verifiedReleaseMetadata && !isKaraoke) {
       return { available: false, eligible: false, reason: 'unsupported_source' };
     }
 
+    let cleanedTitle = SyncedLyricsService.cleanTrackTitle(rawTitle);
+    let cleanedArtist = SyncedLyricsService.cleanArtist(rawArtist);
+
+    if (isKaraoke) {
+      const parts = cleanedTitle.split(/\s*[-–—|]\s*/).filter(Boolean);
+      if (parts.length >= 2) {
+        cleanedTitle = parts[0].trim();
+        cleanedArtist = parts.slice(1).join(' - ').trim();
+      }
+    }
+
     const identity = {
-      title: SyncedLyricsService.cleanTrackTitle(youtubeIdentity?.title || song.title),
-      artist: SyncedLyricsService.cleanArtist(rawArtist),
+      title: cleanedTitle,
+      artist: cleanedArtist,
       album: String(song.albumName || song.album || youtubeIdentity?.album || '').trim(),
       // A Topic watch page is the authoritative identity for the exact
       // YouTube upload. This keeps the 100% duration rule while correcting
@@ -1408,7 +1432,9 @@ class SyncedLyricsService {
           ? 'youtube-music'
           : isTopic
             ? 'youtube-topic'
-            : 'youtube-topic'
+            : isKaraoke
+              ? 'youtube-karaoke'
+              : 'youtube-topic'
     };
     if (confirmedFeaturedArtists.length) canonical.requiredArtists = confirmedFeaturedArtists;
     if (!canonical.duration) canonical.duration = identity.duration;
