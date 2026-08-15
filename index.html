@@ -369,9 +369,14 @@
 
                         <!-- Countdown timer cho Live Stream trên Dashboard -->
                         <section id="dashboard-lyrics" class="dashboard-lyrics" hidden aria-label="Lời bài hát đồng bộ">
-                            <div class="dashboard-lyrics-header">
-                                <span>Lời bài hát</span>
-                                <span id="dashboard-lyrics-source" class="dashboard-lyrics-source">LRCLIB</span>
+                            <div class="dashboard-lyrics-header" onclick="toggleDashboardLyricsCollapse()" style="cursor: pointer; user-select: none;" title="Bấm để thu gọn/mở rộng lời bài hát">
+                                <div style="display: flex; align-items: center; gap: 0.4rem;">
+                                    <span>Lời bài hát</span>
+                                    <span id="dashboard-lyrics-source" class="dashboard-lyrics-source">LRCLIB</span>
+                                </div>
+                                <button type="button" id="btn-toggle-dashboard-lyrics" class="dashboard-lyrics-toggle-btn" aria-label="Thu gọn / mở rộng lời bài hát" title="Thu gọn / Mở rộng">
+                                    <i class="fa-solid fa-chevron-up"></i>
+                                </button>
                             </div>
                             <div id="dashboard-lyrics-lines" class="dashboard-lyrics-lines"></div>
                         </section>

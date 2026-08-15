@@ -482,7 +482,23 @@ let dashboardLyricsUserScrolling = false;
 let dashboardLyricsResyncTimer = null;
 let dashboardLyricsIgnoreScrollUntil = 0;
 
+function toggleDashboardLyricsCollapse(forceState = null) {
+    const panel = document.getElementById('dashboard-lyrics');
+    if (!panel) return;
+    const isCurrentlyCollapsed = panel.classList.contains('is-collapsed');
+    const shouldCollapse = forceState !== null ? Boolean(forceState) : !isCurrentlyCollapsed;
+    panel.classList.toggle('is-collapsed', shouldCollapse);
+    try {
+        localStorage.setItem('dua_dashboard_lyrics_collapsed', shouldCollapse ? 'true' : 'false');
+    } catch (_) {}
+    if (!shouldCollapse && dashboardLyricsActiveIndex >= 0) {
+        requestAnimationFrame(() => positionDashboardLyrics(dashboardLyricsActiveIndex, 'instant'));
+    }
+}
+
 function positionDashboardLyrics(activeIndex, behavior = 'smooth') {
+    const panel = document.getElementById('dashboard-lyrics');
+    if (panel?.classList.contains('is-collapsed')) return;
     const container = document.getElementById('dashboard-lyrics-lines');
     if (!container) return;
     const targetIndex = Math.max(0, Number(activeIndex) || 0);
@@ -598,6 +614,11 @@ function updateDashboardLyrics(lyrics, currentTime = 0) {
     const lastLine = normalizedLines[normalizedLines.length - 1];
     const renderKey = `${state.currentSong?.id || ''}:${isSynced ? 'synced' : 'plain'}:${normalizedLines.length}:${firstLine?.time || 0}:${lastLine?.time || 0}`;
     panel.hidden = false;
+    try {
+        if (localStorage.getItem('dua_dashboard_lyrics_collapsed') === 'true') {
+            panel.classList.add('is-collapsed');
+        }
+    } catch (_) {}
     if (source) source.textContent = `${lyrics.source || 'LRCLIB'}${isSynced ? '' : ' · Không đồng bộ'}`;
     container.classList.toggle('is-unsynced', !isSynced);
     if (isSynced) ensureDashboardLyricsInteractions(container);
