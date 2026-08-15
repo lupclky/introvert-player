@@ -30,19 +30,3 @@ test('từ chối URL lạ và tự tắt snapshot quá hạn', () => {
   now = 7000;
   assert.equal(service.getSnapshot().active, false);
 });
-
-test('theo dõi trạng thái phát của app để kích hoạt cờ tạm dừng trình duyệt', () => {
-  let now = 1000;
-  const service = new BrowserMediaStateService({ now: () => now });
-  assert.equal(service.shouldPauseBrowser(), false);
-
-  service.setAppPlaybackState(true, { id: 's1', title: 'Song 1' });
-  assert.equal(service.shouldPauseBrowser(), true);
-  assert.equal(service.appIsPlaying, true);
-  assert.equal(service.appCurrentSong.title, 'Song 1');
-
-  service.setAppPlaybackState(false);
-  assert.equal(service.shouldPauseBrowser(), false);
-  assert.equal(service.appIsPlaying, false);
-});
-

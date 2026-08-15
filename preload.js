@@ -60,7 +60,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // External Add Song (from browser extension)
     onAddSongExternal: (callback) => ipcRenderer.on('add-song-external', (event, data) => callback(data)),
     onBrowserMediaState: (callback) => ipcRenderer.on('browser-media-state', (event, data) => callback(data)),
-    notifyPlaybackState: (data) => ipcRenderer.send('notify-playback-state', data),
 
     // Custom Taskbar Notification
     showTaskbarNotification: (title, message, isDarkMode, duration) => ipcRenderer.send('show-taskbar-notification', { title, message, isDarkMode, duration }),

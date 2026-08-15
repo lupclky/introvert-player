@@ -290,68 +290,6 @@ function publishBrowserMediaState(force = false) {
   } catch (_) { }
 }
 
-// Lắng nghe lệnh tạm dừng media từ background extension / Pineapple Studio
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.action === 'pause-media') {
-    pauseMediaOnPage();
-    sendResponse({ success: true });
-    return true;
-  }
-});
-
-function pauseMediaOnPage() {
-  let pausedAny = false;
-
-  // 1. Tạm dừng tất cả các thẻ video và audio HTML5
-  const mediaElements = document.querySelectorAll('video, audio');
-  mediaElements.forEach(media => {
-    try {
-      if (!media.paused && !media.ended) {
-        media.pause();
-        pausedAny = true;
-      }
-    } catch (_) {}
-  });
-
-  // 2. Tạm dừng player YouTube chính
-  const ytPlayer = document.getElementById('movie_player');
-  if (ytPlayer && typeof ytPlayer.pauseVideo === 'function') {
-    try {
-      const state = ytPlayer.getPlayerState ? ytPlayer.getPlayerState() : -1;
-      if (state === 1 || state === 3) {
-        ytPlayer.pauseVideo();
-        pausedAny = true;
-      }
-    } catch (_) {}
-  }
-
-  // 3. Tạm dừng player bar trên YouTube Music
-  const ytMusicPlayPauseBtn = document.querySelector('ytmusic-player-bar #play-pause-button');
-  if (ytMusicPlayPauseBtn) {
-    const label = (ytMusicPlayPauseBtn.getAttribute('aria-label') || ytMusicPlayPauseBtn.getAttribute('title') || '').toLowerCase();
-    if (label.includes('pause') || label.includes('tạm dừng') || label.includes('dừng')) {
-      try {
-        ytMusicPlayPauseBtn.click();
-        pausedAny = true;
-      } catch (_) {}
-    }
-  }
-
-  // 4. Tạm dừng SoundCloud
-  const scPlayBtn = document.querySelector('.playControl.playing');
-  if (scPlayBtn) {
-    try {
-      scPlayBtn.click();
-      pausedAny = true;
-    } catch (_) {}
-  }
-
-  if (pausedAny) {
-    showToast('Đã tạm dừng phát trên web (Pineapple Studio đang phát nhạc)', false);
-    publishBrowserMediaState(true);
-  }
-}
-
 document.addEventListener('play', () => publishBrowserMediaState(true), true);
 document.addEventListener('pause', () => publishBrowserMediaState(true), true);
 document.addEventListener('ended', () => publishBrowserMediaState(true), true);
