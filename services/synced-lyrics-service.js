@@ -273,19 +273,20 @@ class SyncedLyricsService {
 [02:50.09] Như giọt lệ của em
 [02:52.01] Rơi rơi khi người đi
 [02:54.24] Tiếc thương chi thêm buồn
-[02:57.63] Cứ yêu thương người hết lòng
-[02:59.98] Say mê từng ngày bên anh
-[03:02.65] Trong lòng hoài không quen
-[03:04.59] Anh giờ đã khác
-[03:06.54] Dù xa anh như bao giấc mơ
-[03:09.69] Quên từng lời hứa xưa
-[03:11.67] Bao đêm mưa cùng ai
-[03:13.78] Ta nắm tay cho giọt nước mưa kia vương không ướt vai
-[03:18.68] Như giọt lệ của em
-[03:20.60] Rơi rơi khi người đi
-[03:22.83] Tiếc thương chi thêm buồn
-[03:28.60] Hah-ah-ah, ah ah ah
-[03:34.60] Hah-ah-ah, ah ah hah`
+[02:58.00] (Uh-oh, uh-oh, uh-oh...)
+[03:05.03] Cứ yêu thương người hết lòng
+[03:08.00] Say mê từng ngày bên anh
+[03:12.50] Trong lòng hoài không quen
+[03:14.80] Anh giờ đã khác
+[03:16.80] Dù xa anh như bao giấc mơ
+[03:20.00] Quên từng lời hứa xưa
+[03:22.00] Bao đêm mưa cùng ai
+[03:24.00] Ta nắm tay cho giọt nước mưa kia vương không ướt vai
+[03:29.00] Như giọt lệ của em
+[03:31.00] Rơi rơi khi người đi
+[03:33.00] Tiếc thương chi thêm buồn
+[03:37.50] Hah-ah-ah, ah ah ah
+[03:42.50] Hah-ah-ah, ah ah hah`
       };
     }
     return null;
