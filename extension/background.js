@@ -180,22 +180,28 @@ async function resolveYouTubeMusicReleaseUrl(rawUrl) {
   } catch (_) {
     return rawUrl;
   }
-  if (parsed.hostname !== 'music.youtube.com' || !/^\/browse\/MPRE[A-Za-z0-9_-]+$/i.test(parsed.pathname)) {
+  if (!parsed.hostname.includes('youtube.com') || !/^\/browse\/[A-Za-z0-9_-]+/i.test(parsed.pathname)) {
     return rawUrl;
   }
 
-  const response = await fetch(parsed.toString(), { credentials: 'omit' });
-  if (!response.ok) throw new Error('Không thể đọc đĩa nhạc từ YouTube Music.');
-  const html = await response.text();
-  const normalized = html
-    .replace(/\\u0026/gi, '&')
-    .replace(/\\u003d/gi, '=')
-    .replace(/&amp;/gi, '&');
-  const playlistId = normalized.match(/"playlistId"\s*:\s*"(OLAK5uy_[A-Za-z0-9_-]+)"/i)?.[1]
-    || normalized.match(/[?&]list=(OLAK5uy_[A-Za-z0-9_-]+)/i)?.[1];
-  if (!playlistId) {
-    throw new Error('Không tìm thấy playlist phát của đĩa nhạc YouTube Music.');
+  try {
+    const response = await fetch(parsed.toString(), { credentials: 'omit' });
+    if (!response.ok) return rawUrl;
+    const html = await response.text();
+    const normalized = html
+      .replace(/\\u0026/gi, '&')
+      .replace(/\\u003d/gi, '=')
+      .replace(/&amp;/gi, '&');
+    const playlistId = normalized.match(/"playlistId"\s*:\s*"(OLAK5uy_[A-Za-z0-9_-]+)"/i)?.[1]
+      || normalized.match(/[?&]list=(OLAK5uy_[A-Za-z0-9_-]+)/i)?.[1]
+      || normalized.match(/"playlistId"\s*:\s*"(PL[A-Za-z0-9_-]+|RD[A-Za-z0-9_-]+|[A-Za-z0-9_-]{16,})"/i)?.[1]
+      || normalized.match(/[?&]list=(PL[A-Za-z0-9_-]+|RD[A-Za-z0-9_-]+|[A-Za-z0-9_-]{16,})/i)?.[1];
+    if (playlistId) {
+      return `https://music.youtube.com/playlist?list=${encodeURIComponent(playlistId)}`;
+    }
+  } catch (err) {
+    console.warn('[Extension] Không thể phân giải URL đĩa nhạc YouTube Music:', err);
   }
-  return `https://music.youtube.com/playlist?list=${encodeURIComponent(playlistId)}`;
+  return rawUrl;
 }
 

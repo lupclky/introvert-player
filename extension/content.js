@@ -364,20 +364,28 @@ function checkRoute() {
 }
 
 function normalizeYouTubeMusicUrl(rawHref, kind = 'track') {
+  if (!rawHref) return '';
+  let href = String(rawHref).trim();
+  if (!href.startsWith('http://') && !href.startsWith('https://')) {
+    if (!href.startsWith('/')) href = '/' + href;
+    href = 'https://music.youtube.com' + href;
+  }
   try {
-    const parsed = new URL(rawHref, 'https://music.youtube.com');
+    const parsed = new URL(href);
     parsed.protocol = 'https:';
     parsed.hostname = 'music.youtube.com';
     parsed.hash = '';
+
     if (kind === 'track') {
       const videoId = parsed.searchParams.get('v');
       return videoId ? `https://music.youtube.com/watch?v=${encodeURIComponent(videoId)}` : '';
     }
+
     const playlistId = parsed.searchParams.get('list');
     if (playlistId) return `https://music.youtube.com/playlist?list=${encodeURIComponent(playlistId)}`;
-    // Album/EP/Single cards use a browse/MPRE... URL and only expose their
-    // playable OLAK playlist after the release page is resolved by background.
-    if (/^\/browse\/MPRE[A-Za-z0-9_-]+$/i.test(parsed.pathname)) {
+
+    // Album/EP/Single/Release browse URLs: e.g. /browse/MPRE..., /browse/VL..., /browse/FEmusic...
+    if (/^\/browse\/[A-Za-z0-9_-]+/i.test(parsed.pathname)) {
       return `https://music.youtube.com${parsed.pathname}`;
     }
     return '';
@@ -389,7 +397,7 @@ function normalizeYouTubeMusicUrl(rawHref, kind = 'track') {
 function readYouTubeMusicCardTitle(card, anchor) {
   return (anchor?.getAttribute('title')
     || anchor?.getAttribute('aria-label')
-    || card.querySelector('.title-column yt-formatted-string, yt-formatted-string.title, .title a, #title')?.textContent
+    || card.querySelector('.title-column yt-formatted-string, yt-formatted-string.title, .title a, #title, a.yt-simple-endpoint')?.textContent
     || anchor?.textContent
     || '').trim();
 }
@@ -423,12 +431,19 @@ function createYouTubeMusicAddButton(card, url, title, options = {}) {
     event.stopImmediatePropagation();
     if (btn.classList.contains('loading')) return;
 
-    const currentAnchor = card.querySelector(isPlaylist
-      ? 'a[href*="playlist?list="], a[href*="browse/MPRE"], a[href*="watch?"][href*="list="]'
-      : 'a[href*="watch?v="]');
-    const currentUrl = normalizeYouTubeMusicUrl(currentAnchor?.getAttribute('href') || btn.dataset.mediaUrl, isPlaylist ? 'playlist' : 'track');
-    const currentTitle = readYouTubeMusicCardTitle(card, currentAnchor) || btn.dataset.mediaTitle;
-    if (!currentUrl) return;
+    const currentAnchor = isPlaylist
+      ? (getYouTubeMusicPrimaryAnchor(card) || card.querySelector('a[href*="playlist?list="], a[href*="browse/"], a[href*="watch?"][href*="list="]'))
+      : card.querySelector('a[href*="watch?v="]');
+    
+    let currentUrl = normalizeYouTubeMusicUrl(currentAnchor?.getAttribute('href') || btn.dataset.mediaUrl, isPlaylist ? 'playlist' : 'track');
+    if (!currentUrl && btn.dataset.mediaUrl) {
+      currentUrl = normalizeYouTubeMusicUrl(btn.dataset.mediaUrl, isPlaylist ? 'playlist' : 'track') || btn.dataset.mediaUrl;
+    }
+    const currentTitle = readYouTubeMusicCardTitle(card, currentAnchor) || btn.dataset.mediaTitle || 'YouTube Music';
+    if (!currentUrl) {
+      showToast('Không tìm thấy đường dẫn đĩa nhạc / bài hát.', true);
+      return;
+    }
 
     btn.classList.add('loading');
     btn.disabled = true;
@@ -495,13 +510,15 @@ function getYouTubeMusicPrimaryAnchor(card) {
     'yt-formatted-string.title a[href]',
     '.title a[href]',
     'a#title[href]',
-    '#title a[href]'
+    '#title a[href]',
+    'a.yt-simple-endpoint[href*="browse/"]',
+    'a.yt-simple-endpoint[href*="playlist?list="]'
   ];
   for (const selector of titleSelectors) {
     const anchor = card.querySelector(selector);
     if (anchor) return anchor;
   }
-  return card.querySelector('a[href*="watch?v="], a[href*="browse/MPRE"], a[href*="playlist?list="]');
+  return card.querySelector('a[href*="browse/"], a[href*="playlist?list="], a[href*="watch?v="]');
 }
 
 function isYouTubeMusicReleaseCard(card) {
@@ -510,18 +527,19 @@ function isYouTubeMusicReleaseCard(card) {
   // Song rows can contain a secondary album link. The title destination is
   // authoritative, otherwise an individual track is mislabeled as playlist.
   if (primaryHref.includes('/watch?') && new URL(primaryHref, 'https://music.youtube.com').searchParams.get('v')) return false;
-  if (/\/browse\/MPRE[A-Za-z0-9_-]+/i.test(primaryHref)) return true;
+  if (/browse\/[A-Za-z0-9_-]+/i.test(primaryHref)) return true;
+  if (/playlist\?list=/i.test(primaryHref)) return true;
   const text = String(card.textContent || '').toLowerCase();
-  return /(?:^|[·\s])(album|đĩa nhạc|single|ep)(?:$|[·\s])/i.test(text)
-    && Boolean(card.querySelector('a[href*="watch?"][href*="list="], a[href*="playlist?list="]'));
+  return /(?:^|[·\s•()\[\]])(album|đĩa nhạc|đĩa đơn|single|ep|playlist|danh sách phát)(?:$|[·\s•()\[\]])/i.test(text)
+    && Boolean(card.querySelector('a[href*="watch?"][href*="list="], a[href*="playlist?list="], a[href*="browse/"]'));
 }
 
 function injectYouTubeMusicPlaylistButton(card) {
   const isRelease = isYouTubeMusicReleaseCard(card);
   if (!isRelease && card.querySelector('a[href*="watch?v="]')) return false;
   const anchor = card.querySelector(
-    'a[href*="playlist?list="], a[href*="browse/MPRE"], a[href*="watch?"][href*="list="]'
-  );
+    'a[href*="playlist?list="], a[href*="browse/"], a[href*="watch?"][href*="list="]'
+  ) || getYouTubeMusicPrimaryAnchor(card);
   if (!anchor) return false;
   const url = normalizeYouTubeMusicUrl(anchor.getAttribute('href'), 'playlist');
   const title = readYouTubeMusicCardTitle(card, anchor);
