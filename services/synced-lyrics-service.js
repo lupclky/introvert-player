@@ -1359,10 +1359,7 @@ class SyncedLyricsService {
   }
 
   async createResolvedResult(record, canonical) {
-    const koreanLyrics = SyncedLyricsService.preferKoreanRomanization(record.lines || []);
-    const preferredLyrics = koreanLyrics.romanized
-      ? { ...koreanLyrics, language: 'ko' }
-      : await this.lyricsRomanizationService.romanizeLines(record.lines || []);
+    const preferredLyrics = await this.lyricsRomanizationService.romanizeLines(record.lines || []);
     return {
       available: true,
       eligible: true,

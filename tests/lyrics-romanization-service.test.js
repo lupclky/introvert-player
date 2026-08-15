@@ -39,13 +39,37 @@ test('phiên âm cả Kanji bằng Kuroshiro và tái sử dụng tokenizer', as
   assert.equal(initializeCount, 1);
 });
 
-test('phiên âm chữ Hán sang Pinyin có dấu thanh', async () => {
+test('phiên âm chữ Hán sang Pinyin có dấu thanh và giữ nguyên từ tiếng Anh', async () => {
   const { service } = createService();
-  const result = await service.romanizeLines([{ time: 1, text: '你好世界' }]);
+  const result = await service.romanizeLines([
+    { time: 1, text: '你好世界' },
+    { time: 2, text: '完全 Good' }
+  ]);
   assert.equal(result.language, 'zh');
   assert.equal(result.romanized, true);
   assert.equal(result.lines[0].text, 'nǐ hǎo shì jiè');
   assert.equal(result.lines[0].originalText, '你好世界');
+  assert.equal(result.lines[1].text, 'wán quán Good');
+  assert.equal(result.lines[1].originalText, '完全 Good');
+});
+
+test('phiên âm cả tiếng Trung và tiếng Hàn khi xuất hiện chung một bài lyrics', async () => {
+  const { service } = createService();
+  const result = await service.romanizeLines([
+    { time: 1, text: 'Da, da-ra-da-da, baby, baby' },
+    { time: 2, text: '你别看 我平常 多乖乖猫' },
+    { time: 3, text: '사랑해 baby' },
+    { time: 4, text: '你别看 사랑해' }
+  ]);
+  assert.equal(result.romanized, true);
+  assert.equal(result.lines[0].text, 'Da, da-ra-da-da, baby, baby');
+  assert.equal(result.lines[0].originalText, undefined);
+  assert.equal(result.lines[1].text, 'nǐ bié kàn wǒ píng cháng duō guāi guāi māo');
+  assert.equal(result.lines[1].originalText, '你别看 我平常 多乖乖猫');
+  assert.equal(result.lines[2].text, 'saranghae baby');
+  assert.equal(result.lines[2].originalText, '사랑해 baby');
+  assert.equal(result.lines[3].text, 'nǐ bié kàn saranghae');
+  assert.equal(result.lines[3].originalText, '你别看 사랑해');
 });
 
 test('không sửa lời Latin và trả lời gốc nếu bộ phiên âm lỗi', async () => {
