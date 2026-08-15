@@ -5,6 +5,25 @@ class BrowserMediaStateService {
     this.now = options.now || Date.now;
     this.staleAfterMs = Number(options.staleAfterMs) || 10000;
     this.state = null;
+    this.appIsPlaying = false;
+    this.appLastPlayedAt = 0;
+    this.appCurrentSong = null;
+  }
+
+  setAppPlaybackState(isPlaying, song = null) {
+    this.appIsPlaying = Boolean(isPlaying);
+    if (this.appIsPlaying) {
+      this.appLastPlayedAt = this.now();
+      this.appCurrentSong = song;
+    }
+    return {
+      appIsPlaying: this.appIsPlaying,
+      lastPlayedAt: this.appLastPlayedAt
+    };
+  }
+
+  shouldPauseBrowser() {
+    return Boolean(this.appIsPlaying && (this.now() - this.appLastPlayedAt < 600000));
   }
 
   normalize(payload = {}) {
