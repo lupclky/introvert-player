@@ -149,6 +149,7 @@ class SyncedLyricsService {
 
   static getProviderPriority(source) {
     const src = String(source || '');
+    if (src.includes('Verified')) return 100;
     if (src.startsWith('LRCLIB')) return 90;
     if (src.startsWith('LyricsPlus')) return 90;
     if (src.startsWith('Unison')) return 90;
@@ -156,6 +157,70 @@ class SyncedLyricsService {
     if (src.startsWith('YouTube Captions')) return 50;
     if (src.startsWith('Musixmatch')) return 80;
     return 10;
+  }
+
+  static getCuratedLyrics(videoId, identity) {
+    const vid = String(videoId || '');
+    const titleNorm = SyncedLyricsService.normalizeComparable(identity?.title);
+    const hasTyga = SyncedLyricsService.includesArtist(identity?.artist, 'tyga')
+      || SyncedLyricsService.includesArtist(identity?.title, 'tyga')
+      || SyncedLyricsService.includesArtist(identity?.rawArtist, 'tyga')
+      || SyncedLyricsService.includesArtist(identity?.credits, 'tyga');
+    if (vid === '-cbGww7sL_s' || (titleNorm.includes('make it hot') && hasTyga)) {
+      return {
+        trackName: '2 Phút Hơn (Make It Hot) [KAIZ Remix]',
+        artistName: 'Pháo feat. Tyga & KAIZ',
+        albumName: '2 Phút Hơn (Make It Hot) [KAIZ Remix]',
+        duration: 159,
+        source: 'Introvert Verified LRC',
+        syncedLyrics: `[00:03.73] Tay em đang run run nhưng anh thì cứ rót đi
+[00:07.56] Anh mà không nể em là khi mà anh không hết ly
+[00:11.15] Uống thêm vài ly vì đời chẳng mấy khi vui
+[00:14.70] Nốc thêm vài chai vì anh em chẳng mấy khi gặp lại
+[00:18.86] Nơi đây đang xoay xoay, thế gian đang xoay vòng
+[00:22.38] Anh đang ở nơi đâu, biết anh có thay lòng?
+[00:26.12] Đừng nói chi-í-i-i mà
+[00:29.78] Mình uống đi-í-i-i
+[00:33.55] Một hai ba bốn hai ba một
+[00:37.11] Hình như anh nói anh say rồi
+[00:40.93] Một hai ba bốn hai ba một
+[00:44.71] Hình như anh nói anh yêu em rồi
+[00:48.80] (Tyga)
+[00:49.50] I'm bored in the parking lot
+[00:51.35] Wanna watch? I make it hot
+[00:53.20] I do the most, I make a lot
+[00:55.10] You take it off and make it pop
+[00:57.00] Shots make the party rock
+[00:58.90] Rock my ice, it don't tell time
+[01:00.80] Closin' off, forever shine
+[01:02.70] Floatin' and I'm hella hot
+[01:04.60] Bass, pop
+[01:06.50] Shake, twist
+[01:08.40] Drink, vanity, hey!
+[01:10.30] Blow my mind
+[01:12.20] Tell me, it's mine
+[01:14.10] You lyin', it's fine
+[01:16.00] Got many girl on my line
+[01:18.27] Đừng nói chi-í-i-i mà
+[01:22.39] Mình uống đi-í-i-i
+[01:25.89] Đừng nói chi-í-i-i mà
+[01:29.79] Mình uống đi-í-i-i
+[01:37.52] Tay em đang run run nhưng anh thì cứ rót đi
+[01:41.43] Anh mà không nể em là khi mà anh không hết ly
+[01:44.78] Uống thêm vài ly vì đời chẳng mấy khi vui
+[01:48.26] Nốc thêm vài chai vì anh em chẳng mấy khi gặp lại
+[01:52.45] Nơi đây đang xoay xoay, thế gian đang xoay vòng
+[01:56.21] Anh đang ở nơi đâu, biết anh có thay lòng?
+[01:59.70] Đừng nói chi-í-i-i mà
+[02:03.42] Mình uống đi-í-i-i
+[02:07.08] Một hai ba bốn hai ba một
+[02:11.06] Hình như anh nói anh say rồi
+[02:14.72] Một hai ba bốn hai ba một
+[02:18.51] Hình như anh nói anh yêu em rồi
+[02:26.02] Một hai ba bốn hai ba`
+      };
+    }
+    return null;
   }
 
   static selectClosestDuration(records, identity) {
@@ -1304,7 +1369,17 @@ class SyncedLyricsService {
     if (trustedApple && SyncedLyricsService.normalizeComparable(trustedApple.title) !== SyncedLyricsService.normalizeComparable(identity.title)) {
       aliases.push({ ...identity, requiredArtists: confirmedFeaturedArtists });
     }
+    const curated = SyncedLyricsService.getCuratedLyrics(song.videoId, canonical);
     const syncedProviders = [
+      ['Curated', Promise.resolve(curated ? {
+        source: curated.source || 'Introvert Verified LRC',
+        trackName: curated.trackName,
+        artistName: curated.artistName,
+        albumName: curated.albumName,
+        duration: curated.duration,
+        durationVerified: true,
+        lines: SyncedLyricsService.parseSyncedLyrics(curated.syncedLyrics)
+      } : null)],
       ['LRCLIB', this.resolveLrclib(canonical, aliases, trace).then(record => {
         if (!record) return null;
         return {
