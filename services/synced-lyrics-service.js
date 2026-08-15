@@ -220,6 +220,74 @@ class SyncedLyricsService {
 [02:26.02] Một hai ba bốn hai ba`
       };
     }
+    if (vid === 'sHxWsIfOsm0' || (titleNorm.includes('mua doi cho') && SyncedLyricsService.includesArtist(identity?.artist || identity?.rawArtist, 'miu le'))) {
+      return {
+        trackName: 'Mưa Đợi Chờ',
+        artistName: 'Miu Lê',
+        albumName: 'Mưa Đợi Chờ/Không Còn Nhau',
+        duration: 238,
+        source: 'Introvert Verified LRC',
+        syncedLyrics: `[00:20.12] Đêm nay mưa cứ rơi rơi làm tôi nhớ về
+[00:24.91] Mong cho cơn mưa đừng xóa vội đi tình yêu
+[00:29.01] Tình yêu chỉ tôi đợi chờ
+[00:31.14] Mà lòng anh cứ luôn hững hờ
+[00:33.96] Những phút giây trong lòng nhói đau
+[00:38.12] Bỗng tiếng nói như bên tai dịu êm
+[00:42.82] Anh nơi đâu anh đừng bước vội đi thật nhanh
+[00:47.03] Ngoài kia có mưa đang rơi rơi rơi
+[00:50.01] Đừng xa em người hỡi
+[00:56.97] Lúc khi yêu người nói rằng
+[00:59.02] Bên nhau một đời không phai
+[01:01.93] Trong lòng hoài mãi mãi em khó hoài nghi
+[01:06.03] Cứ yêu thương người hết lòng
+[01:08.38] Say mê từng ngày bên anh
+[01:11.05] Trong lòng hoài không quen
+[01:12.99] Anh giờ đã khác
+[01:14.94] Dù xa anh như bao giấc mơ
+[01:18.09] Quên từng lời hứa xưa
+[01:20.07] Bao đêm mưa cùng ai
+[01:22.18] Ta nắm tay cho giọt nước mưa kia vương không ướt vai
+[01:27.08] Như giọt lệ của em
+[01:29.00] Rơi rơi khi người đi
+[01:31.23] Tiếc thương chi thêm buồn
+[01:53.00] Đêm nay mưa cứ rơi rơi làm tôi nhớ về
+[01:57.80] Mong cho cơn mưa đừng xóa vội đi tình yêu
+[02:01.90] Tình yêu chỉ tôi đợi chờ
+[02:04.05] Mà lòng anh cứ luôn hững hờ
+[02:06.85] Những phút giây trong lòng nhói đau
+[02:11.00] Bỗng tiếng nói như bên tai dịu êm
+[02:15.70] Anh nơi đâu anh đừng bước vội đi thật nhanh
+[02:19.90] Ngoài kia có mưa đang rơi rơi rơi
+[02:22.90] Đừng xa em người hỡi
+[02:29.80] Lúc khi yêu người nói rằng
+[02:31.85] Bên nhau một đời không phai
+[02:34.75] Trong lòng hoài mãi mãi em khó hoài nghi
+[02:38.85] Cứ yêu thương người hết lòng
+[02:41.20] Say mê từng ngày bên anh
+[02:43.85] Trong lòng hoài không quen
+[02:45.80] Anh giờ đã khác
+[02:47.75] Dù xa anh như bao giấc mơ
+[02:50.90] Quên từng lời hứa xưa
+[02:52.90] Bao đêm mưa cùng ai
+[02:55.00] Ta nắm tay cho giọt nước mưa kia vương không ướt vai
+[02:59.90] Như giọt lệ của em
+[03:01.80] Rơi rơi khi người đi
+[03:04.00] Tiếc thương chi thêm buồn
+[03:11.50] Cứ yêu thương người hết lòng
+[03:13.90] Say mê từng ngày bên anh
+[03:16.60] Trong lòng hoài không quen
+[03:18.55] Anh giờ đã khác
+[03:20.50] Dù xa anh như bao giấc mơ
+[03:23.65] Quên từng lời hứa xưa
+[03:25.65] Bao đêm mưa cùng ai
+[03:27.75] Ta nắm tay cho giọt nước mưa kia vương không ướt vai
+[03:32.65] Như giọt lệ của em
+[03:34.55] Rơi rơi khi người đi
+[03:36.75] Tiếc thương chi thêm buồn
+[03:41.00] Hah-ah-ah, ah ah ah
+[03:46.00] Hah-ah-ah, ah ah hah`
+      };
+    }
     return null;
   }
 

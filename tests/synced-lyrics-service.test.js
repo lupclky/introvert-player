@@ -768,8 +768,8 @@ test('ten phien ban Ver khong bi nham thanh credit cua remixer', async () => {
 test('loai lyrics co duration dung metadata nhung timeline bi cat truoc nua bai', async () => {
   const truncatedLyrics = {
     id: 23866170,
-    trackName: 'Mưa Đợi Chờ',
-    artistName: 'Miu Lê',
+    trackName: 'Bài Hát Bị Cắt Dòng',
+    artistName: 'Ca Sĩ Thử Nghiệm',
     duration: 238,
     syncedLyrics: Array.from({ length: 23 }, (_, index) => {
       const seconds = 20 + index * 3.35;
@@ -781,7 +781,7 @@ test('loai lyrics co duration dung metadata nhung timeline bi cat truoc nua bai'
   const { service } = createService({
     fetchImpl: async url => {
       const value = String(url);
-      if (value.includes('youtube.com/oembed')) return response(200, { title: 'Mưa Đợi Chờ', author_name: 'Miu Lê - Topic' });
+      if (value.includes('youtube.com/oembed')) return response(200, { title: 'Bài Hát Bị Cắt Dòng', author_name: 'Ca Sĩ Thử Nghiệm - Topic' });
       if (value.includes('youtube.com/watch')) return response(200, '<script>"lengthSeconds":"238"</script>');
       if (value.includes('itunes.apple.com/search')) return response(200, { results: [] });
       if (value.includes('lrclib.net/api/get')) return response(200, truncatedLyrics);
@@ -791,12 +791,34 @@ test('loai lyrics co duration dung metadata nhung timeline bi cat truoc nua bai'
   });
 
   const result = await service.resolve({
-    videoId: 'sHxWsIfOsm0', title: 'Mưa Đợi Chờ', author: 'Miu Lê', duration: 238,
-    sourceUrl: 'https://www.youtube.com/watch?v=sHxWsIfOsm0'
+    videoId: 'sHxWsIfOsm9', title: 'Bài Hát Bị Cắt Dòng', author: 'Ca Sĩ Thử Nghiệm', duration: 238,
+    sourceUrl: 'https://www.youtube.com/watch?v=sHxWsIfOsm9'
   });
 
   assert.equal(result.available, false);
   assert.equal(result.reason, 'not_found');
+});
+
+test('link Mua Doi Cho sHxWsIfOsm0 tra ve bo loi verified 3 phut 58 giay day du', async () => {
+  const { service } = createService({
+    fetchImpl: async url => {
+      const value = String(url);
+      if (value.includes('youtube.com/oembed')) return response(200, { title: 'Mưa Đợi Chờ', author_name: 'Miu Lê - Topic' });
+      if (value.includes('youtube.com/watch')) return response(200, '<script>"lengthSeconds":"238"</script>');
+      if (value.includes('itunes.apple.com/search')) return response(200, { results: [] });
+      return response(404, {});
+    }
+  });
+
+  const result = await service.resolve({
+    videoId: 'sHxWsIfOsm0', sourceUrl: 'https://music.youtube.com/watch?v=sHxWsIfOsm0'
+  });
+
+  assert.equal(result.available, true);
+  assert.equal(result.synced, true);
+  assert.equal(result.duration, 238);
+  assert.equal(result.source, 'Introvert Verified LRC');
+  assert.ok(result.lines.length >= 40);
 });
 
 test('loai timeline LRCLIB cua SOLO dung duration nhung thieu hon mot phut cuoi', async () => {
