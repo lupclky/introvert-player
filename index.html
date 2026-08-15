@@ -806,13 +806,30 @@
                                         <div style="font-weight: 750; font-size: 0.9rem; color: var(--pineapple-text);">
                                             Âm lượng thích ứng (Adaptive Volume)</div>
                                         <div
-                                            style="font-size: 0.78rem; font-weight: 600; color: #6B7280; margin-top: 0.15rem; line-height: 1.35;">
+                                             style="font-size: 0.78rem; font-weight: 600; color: #6B7280; margin-top: 0.15rem; line-height: 1.35;">
                                             Tự động điều chỉnh âm lượng dựa trên độ lớn (dB) của từng video YouTube để
                                             tránh bài quá to hoặc quá nhỏ so với mức âm lượng hiện tại.</div>
                                     </div>
                                     <div class="theme-switch-wrapper" style="-webkit-app-region: no-drag;">
                                         <label class="theme-switch">
                                             <input type="checkbox" id="adaptive-volume-toggle">
+                                            <span class="slider-round"></span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div
+                                    style="border-top: 2px dashed var(--pineapple-border-color); padding-top: 0.8rem; display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 1rem; flex-wrap: wrap;">
+                                    <div style="flex-grow: 1; min-width: 250px;">
+                                        <div style="font-weight: 750; font-size: 0.9rem; color: var(--pineapple-text);">
+                                            Lời bài hát đồng bộ (Synced Lyrics)</div>
+                                        <div
+                                            style="font-size: 0.78rem; font-weight: 600; color: #6B7280; margin-top: 0.15rem; line-height: 1.35;">
+                                            Tự động tìm kiếm, phiên âm và đồng bộ lời bài hát trên Dashboard và OBS Overlay. Tắt tùy chọn này sẽ ngắt toàn bộ tìm kiếm, phiên âm và đồng bộ để tiết kiệm tối đa CPU.</div>
+                                    </div>
+                                    <div class="theme-switch-wrapper" style="-webkit-app-region: no-drag;">
+                                        <label class="theme-switch">
+                                            <input type="checkbox" id="lyrics-enabled-toggle" checked>
                                             <span class="slider-round"></span>
                                         </label>
                                     </div>
