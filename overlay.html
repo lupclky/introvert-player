@@ -5466,6 +5466,10 @@
                 localStorage.setItem('dua_theme', normalizedTheme);
             }
 
+            if (typeof refreshAllActiveMarquees === 'function') {
+                refreshAllActiveMarquees(true);
+            }
+
             return normalizedTheme;
         }
         function applyOpacity(opacityVal) {
@@ -5820,6 +5824,10 @@
                 widget.classList.remove('show-queue', 'next-fullscreen-active', 'phase-crossfade');
                 widget.style.removeProperty('--obs-overlay-expanded-height');
                 syncSpecialLyricsLayout();
+                if (typeof refreshAllActiveMarquees === 'function') {
+                    refreshAllActiveMarquees(true);
+                    setTimeout(() => refreshAllActiveMarquees(true), 350);
+                }
             });
         }
 
@@ -6020,6 +6028,119 @@
         // Biến quản lý phase ngăn kéo "Tiếp theo"
         let currentDrawerText = "";
 
+        const activeMarqueeElements = new Set();
+
+        function getRenderedTextWidth(text, textEl) {
+            if (!text) return 0;
+            if (!window._marqueeMeasureEl) {
+                const measure = document.createElement('span');
+                measure.style.position = 'absolute';
+                measure.style.visibility = 'hidden';
+                measure.style.whiteSpace = 'nowrap';
+                measure.style.top = '-9999px';
+                measure.style.left = '-9999px';
+                measure.style.pointerEvents = 'none';
+                measure.style.height = 'auto';
+                measure.style.width = 'auto';
+                document.body.appendChild(measure);
+                window._marqueeMeasureEl = measure;
+            }
+            const measure = window._marqueeMeasureEl;
+            const computed = window.getComputedStyle(textEl);
+            measure.style.fontFamily = computed.fontFamily;
+            measure.style.fontSize = computed.fontSize;
+            measure.style.fontWeight = computed.fontWeight;
+            measure.style.letterSpacing = computed.letterSpacing;
+            measure.style.textTransform = computed.textTransform;
+            measure.textContent = text;
+            return measure.getBoundingClientRect().width;
+        }
+
+        function refreshMarqueeElement(textEl, force = false) {
+            if (!textEl || !textEl._marqueeContainer || !textEl._marqueeContainer.isConnected) return;
+            const containerEl = textEl._marqueeContainer;
+            const text = textEl._marqueeText || '';
+            const speed = textEl._marqueeSpeed || 40;
+
+            if (!text) {
+                textEl.textContent = '';
+                textEl.classList.remove('marquee');
+                textEl.style.animation = 'none';
+                textEl._appliedMarqueeText = '';
+                textEl._appliedDuration = null;
+                return;
+            }
+
+            // Kiểm tra xem container có đang bị ẩn hay có chiều rộng hợp lệ không
+            const containerWidth = containerEl.clientWidth || containerEl.offsetWidth || 0;
+            const widget = document.getElementById('obs-player-widget');
+            const isWidgetHidden = widget && (
+                widget.classList.contains('alert-active') ||
+                widget.classList.contains('show-queue') ||
+                widget.classList.contains('next-fullscreen-active') ||
+                widget.classList.contains('phase-crossfade')
+            ) && !textEl.closest('.obs-alert-box') && !textEl.closest('.obs-next-song-drawer') && !textEl.closest('#obs-next-song-fullscreen');
+
+            if (containerWidth <= 0 || isWidgetHidden) {
+                textEl._marqueePending = true;
+                return;
+            }
+
+            textEl._marqueePending = false;
+            const textWidth = getRenderedTextWidth(text, textEl);
+
+            if (textWidth > containerWidth + 2) {
+                let rootFontSize = 16;
+                try {
+                    rootFontSize = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+                } catch (e) {}
+                const gap = 2.5 * rootFontSize;
+                const distance = textWidth + gap;
+                const duration = distance / speed;
+                const durationStr = `${duration.toFixed(3)}s`;
+
+                const isCurrentlyMarquee = textEl.classList.contains('marquee');
+                const isSameText = textEl._appliedMarqueeText === text;
+                const isSameDuration = textEl._appliedDuration === durationStr;
+
+                if (!isCurrentlyMarquee || !isSameText || !isSameDuration || force) {
+                    textEl.innerHTML = `<span style="display: inline-block; padding-right: 2.5rem; white-space: nowrap;">${text}</span><span style="display: inline-block; padding-right: 2.5rem; white-space: nowrap;">${text}</span>`;
+                    textEl.classList.add('marquee');
+                    textEl.style.display = 'inline-block';
+                    textEl.style.whiteSpace = 'nowrap';
+                    textEl.style.overflow = 'visible';
+                    textEl.style.animation = 'none';
+                    void textEl.offsetWidth; // Ép reflow để animation kích hoạt mượt mà
+                    textEl.style.animation = `obs-marquee ${durationStr} linear infinite`;
+                    textEl._appliedMarqueeText = text;
+                    textEl._appliedDuration = durationStr;
+                    textEl._appliedContainerWidth = containerWidth;
+                }
+            } else {
+                if (textEl.classList.contains('marquee') || textEl._appliedMarqueeText !== text || force) {
+                    textEl.textContent = text;
+                    textEl.classList.remove('marquee');
+                    textEl.style.display = 'inline-block';
+                    textEl.style.whiteSpace = 'nowrap';
+                    textEl.style.overflow = 'hidden';
+                    textEl.style.animation = 'none';
+                    textEl._appliedMarqueeText = text;
+                    textEl._appliedDuration = null;
+                    textEl._appliedContainerWidth = containerWidth;
+                }
+            }
+        }
+
+        function refreshAllActiveMarquees(force = false) {
+            for (const textEl of activeMarqueeElements) {
+                if (!textEl.isConnected) {
+                    activeMarqueeElements.delete(textEl);
+                    continue;
+                }
+                refreshMarqueeElement(textEl, force);
+            }
+        }
+
         function applyMarquee(containerEl, textEl, text, baseSpeed = 40) {
             if (!containerEl || !textEl) return;
 
@@ -6028,48 +6149,16 @@
                 textEl._marqueeTimeout = null;
             }
 
-            textEl.classList.remove('marquee');
-            textEl.style.animation = 'none';
-            textEl.style.display = 'inline-block';
-            textEl.style.whiteSpace = 'nowrap';
-            textEl.style.overflow = 'hidden';
-            textEl.textContent = text;
+            textEl._marqueeContainer = containerEl;
+            textEl._marqueeText = text;
+            textEl._marqueeSpeed = baseSpeed;
+            activeMarqueeElements.add(textEl);
 
-            const speed = baseSpeed;
+            refreshMarqueeElement(textEl, true);
 
             textEl._marqueeTimeout = setTimeout(() => {
                 textEl._marqueeTimeout = null;
-                if (!containerEl || !textEl) return;
-                const containerWidth = containerEl.clientWidth || containerEl.offsetWidth;
-                const textWidth = textEl.scrollWidth;
-                
-                if (textWidth > containerWidth + 2) {
-                    textEl.innerHTML = `<span style="display: inline-block; padding-right: 2.5rem; white-space: nowrap;">${text}</span><span style="display: inline-block; padding-right: 2.5rem; white-space: nowrap;">${text}</span>`;
-                    
-                    // padding-right: 2.5rem. Lấy chính xác kích thước root font size để tính khoảng cách
-                    let rootFontSize = 16;
-                    try {
-                        rootFontSize = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
-                    } catch (e) {}
-                    const gap = 2.5 * rootFontSize;
-                    
-                    // Quãng đường di chuyển thực tế của animation (-50%) chính là chiều dài của 1 block (textWidth + gap).
-                    const distance = textWidth + gap;
-                    const duration = distance / speed;
-                    
-                    textEl.classList.add('marquee');
-                    textEl.style.display = 'inline-block';
-                    textEl.style.whiteSpace = 'nowrap';
-                    textEl.style.animation = `obs-marquee ${duration.toFixed(3)}s linear infinite`;
-                    textEl.style.overflow = 'visible';
-                } else {
-                    textEl.textContent = text;
-                    textEl.classList.remove('marquee');
-                    textEl.style.display = 'inline-block';
-                    textEl.style.whiteSpace = 'nowrap';
-                    textEl.style.overflow = 'hidden';
-                    textEl.style.animation = 'none';
-                }
+                refreshMarqueeElement(textEl);
             }, 60);
         }
 
@@ -6610,7 +6699,10 @@
             ownerAddToastTimeout = setTimeout(() => {
                 toast.classList.remove('show');
                 toast.classList.add('hide');
-                setTimeout(() => toast.classList.remove('hide'), 350);
+                setTimeout(() => {
+                    toast.classList.remove('hide');
+                    if (typeof refreshAllActiveMarquees === 'function') refreshAllActiveMarquees();
+                }, 350);
             }, 5000);
         }
 
@@ -10294,8 +10386,9 @@
                 if (!widget.classList.contains('active')) {
                     widget.classList.add('active');
                 }
-                if (widget.style.display !== '') {
-                    widget.style.display = '';
+                // Tự động kiểm tra và phục hồi marquee nếu có phần tử đang chờ hoặc kích thước thay đổi
+                if (typeof refreshAllActiveMarquees === 'function') {
+                    refreshAllActiveMarquees();
                 }
 
             } catch (err) {
@@ -10433,6 +10526,10 @@
                             widget.classList.remove('alert-active');
                             syncSpecialLyricsLayout();
                             transitionOverlayWidgetHeight(getOverlayRestingHeight());
+                            if (typeof refreshAllActiveMarquees === 'function') {
+                                refreshAllActiveMarquees(true);
+                                setTimeout(() => refreshAllActiveMarquees(true), 350);
+                            }
                         }
                     }, 320);
                 }, 6000);
@@ -10900,6 +10997,16 @@
                 try { soundCloudWidget.play(); } catch (e) { }
             }
         });
+
+        // Lắng nghe sự kiện resize cửa sổ hoặc khi font chữ tải xong để tính toán lại marquee chính xác
+        window.addEventListener('resize', () => {
+            if (typeof refreshAllActiveMarquees === 'function') refreshAllActiveMarquees(true);
+        });
+        if (document.fonts && document.fonts.ready) {
+            document.fonts.ready.then(() => {
+                if (typeof refreshAllActiveMarquees === 'function') refreshAllActiveMarquees(true);
+            }).catch(() => {});
+        }
 
         // Chạy kiểm tra ngay khi load
         updateOverlayUI();
