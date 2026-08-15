@@ -2374,6 +2374,10 @@
             line-height: 1.25 !important;
         }
 
+        .obs-alert-box .next-fullscreen-title:not(.marquee) {
+            width: 100% !important;
+        }
+
         .obs-alert-box .next-fullscreen-donor-row {
             font-size: 1.05rem !important;
             margin-top: 1px !important;
@@ -8854,7 +8858,7 @@
             if (promoTitleEl) promoTitleEl.textContent = "Không Thời Gian - Dương Domic";
             if (donorContainer) donorContainer.style.display = 'flex';
             if (donorName) {
-                donorName.textContent = "Em Dứa";
+                donorName.textContent = "mèo 3k";
                 donorName.style.removeProperty('max-width');
                 donorName.style.removeProperty('white-space');
             }
@@ -8972,7 +8976,8 @@
             const total = Number(songData.playlistTotalTracks || activePlaylist.totalTracks || 1);
 
             if (meta) {
-                meta.textContent = `${position}/${total}`;
+                const playlistName = songData.playlistName || activePlaylist.name || '';
+                meta.textContent = playlistName ? `${position}/${total} ${playlistName}` : `${position}/${total}`;
                 meta.hidden = false;
             }
         }
@@ -10127,7 +10132,7 @@
 
                 // Title with marquee
                 if (alertModernSong && alertModernSongContainer) {
-                    applyMarquee(alertModernSongContainer, alertModernSong, songTitle, 30);
+                    applyMarquee(alertModernSongContainer, alertModernSong, songTitle, 55);
                 }
 
                 // Donor Name and Amount

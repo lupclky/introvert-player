@@ -13,7 +13,7 @@
 
 <body class="app-dashboard dark-mode">
     <script>
-        // Khởi tạo trạng thái Dark/Light mode ngay lập tức trước khi parse body để tránh giật/nháy màu nền
+        // Khá»Ÿi táº¡o tráº¡ng thÃ¡i Dark/Light mode ngay láº­p tá»©c trÆ°á»›c khi parse body Ä‘á»ƒ trÃ¡nh giáº­t/nhÃ¡y mÃ u ná»n
         (function () {
             const setting = localStorage.getItem('dua_dark_mode') || 'dark';
             let isDark = true;
@@ -30,7 +30,7 @@
         })();
     </script>
 
-    <!-- Màn hình khởi động (Splash Screen) -->
+    <!-- MÃ n hÃ¬nh khá»Ÿi Ä‘á»™ng (Splash Screen) -->
     <div id="app-loading-screen" class="app-loading-screen">
         <div class="loading-overlay"
             style="display: flex; flex-direction: column; justify-content: space-between; align-items: center; height: 100%; box-sizing: border-box; padding: 4rem 2rem 3.5rem 2rem; z-index: 3;">
@@ -57,11 +57,11 @@
                         <circle cx="12" cy="12" r="9.5" fill="none"></circle>
                     </svg>
                     <span class="splash-loading-text"
-                        style="font-family: var(--font-title); font-size: 0.95rem; font-weight: 600; letter-spacing: 0.03em;">Đang
-                        khởi chạy..</span>
+                        style="font-family: var(--font-title); font-size: 0.95rem; font-weight: 600; letter-spacing: 0.03em;">Äang
+                        khá»Ÿi cháº¡y..</span>
                 </div>
                 <div class="splash-credit">
-                    Phát triển bởi Pineapple Team
+                    PhÃ¡t triá»ƒn bá»Ÿi Pineapple Team
                 </div>
             </div>
         </div>
@@ -73,23 +73,23 @@
             style="display: flex; align-items: center; gap: 1.5rem; -webkit-app-region: no-drag;">
             <img src="build/icon.ico" class="titlebar-logo" onclick="window.electronAPI.showSystemMenu()"
                 style="width: 18px; height: 18px; cursor: pointer; object-fit: contain; margin-left: 0.5rem; margin-right: -0.5rem; user-select: none;"
-                title="Menu hệ thống">
+                title="Menu há»‡ thá»‘ng">
             <!-- Titlebar Navigation Menu -->
             <div class="titlebar-menu">
                 <button id="menu-btn-player" class="titlebar-menu-btn active" onclick="switchTab('player')"
-                    title="Bàn điều khiển">
+                    title="BÃ n Ä‘iá»u khiá»ƒn">
                     <i class="fa-solid fa-play"></i>
-                    <span class="menu-btn-text">Trình phát</span>
+                    <span class="menu-btn-text">TrÃ¬nh phÃ¡t</span>
                 </button>
                 <button id="menu-btn-donations" class="titlebar-menu-btn" onclick="switchTab('donations')"
-                    title="Lịch sử donate">
+                    title="Lá»‹ch sá»­ donate">
                     <i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i>
-                    <span class="menu-btn-text">Lịch sử</span>
+                    <span class="menu-btn-text">Lá»‹ch sá»­</span>
                 </button>
                 <button id="menu-btn-settings" class="titlebar-menu-btn" onclick="switchTab('settings')"
-                    title="Cấu hình">
+                    title="Cáº¥u hÃ¬nh">
                     <i class="fa-solid fa-gear"></i>
-                    <span class="menu-btn-text">Cài đặt</span>
+                    <span class="menu-btn-text">CÃ i Ä‘áº·t</span>
                 </button>
             </div>
         </div>
@@ -97,11 +97,11 @@
             style="-webkit-app-region: no-drag;">
             <div class="search-input-wrapper">
                 <i class="fa-solid fa-magnifying-glass search-icon"></i>
-                <input id="donor-url" class="titlebar-search-input" type="text" placeholder="Thêm nhạc nhanh..."
+                <input id="donor-url" class="titlebar-search-input" type="text" placeholder="ThÃªm nháº¡c nhanh..."
                     required autocomplete="off">
                 <i class="fa-solid fa-circle-xmark search-clear-btn" id="search-clear-btn"
                     style="display: none; cursor: pointer; color: #9CA3AF; font-size: 1.1rem; margin-left: 0.5rem; transition: color 0.15s;"
-                    title="Xóa tìm kiếm"></i>
+                    title="XÃ³a tÃ¬m kiáº¿m"></i>
             </div>
 
             <!-- Popover settings and search suggestions -->
@@ -109,18 +109,18 @@
                 <div class="popover-donor-settings">
                     <div class="popover-row">
                         <input id="quick-donor-name" class="dua-input popover-input" type="text"
-                            placeholder="Tên người gửi (Em Dứa)...">
+                            placeholder="TÃªn ngÆ°á»i gá»­i (mÃ¨o 3k)...">
                         <input id="quick-donor-amount" class="dua-input popover-input" type="number"
-                            placeholder="Số tiền VNĐ (mặc định: 100M)..." min="0">
+                            placeholder="Sá»‘ tiá»n VNÄ (máº·c Ä‘á»‹nh: 100M)..." min="0">
                     </div>
                     <div class="popover-row-footer">
                         <label class="sb-checkbox-label"
                             style="font-size: 0.8rem; cursor: pointer; display: inline-flex; align-items: center; gap: 0.25rem;">
                             <input type="checkbox" class="sb-checkbox" id="quick-owner-add">
-                            <span>Chủ kênh thêm nhạc</span>
+                            <span>Chá»§ kÃªnh thÃªm nháº¡c</span>
                         </label>
                         <button type="submit" class="dua-btn dua-btn-primary popover-submit-btn">
-                            <i class="fa-solid fa-play"></i> Thêm & Phát
+                            <i class="fa-solid fa-play"></i> ThÃªm & PhÃ¡t
                         </button>
                     </div>
                 </div>
@@ -133,34 +133,34 @@
         <div class="titlebar-right-container" style="display: flex; align-items: center; gap: 0.6rem;">
             <!-- What's New Walkthrough -->
             <button id="btn-whats-new" class="titlebar-menu-btn" onclick="openWhatsNewWalkthrough(event)"
-                title="Có gì mới?"
+                title="CÃ³ gÃ¬ má»›i?"
                 style="-webkit-app-region: no-drag; display: flex; align-items: center; gap: 0.3rem;">
                 <i class="fa-solid fa-wand-magic-sparkles"></i>
-                <span class="menu-btn-text">Có gì mới?</span>
+                <span class="menu-btn-text">CÃ³ gÃ¬ má»›i?</span>
             </button>
 
             <!-- Notification Center -->
             <div class="notification-center-wrapper"
                 style="-webkit-app-region: no-drag; position: relative; display: flex; align-items: center;">
                 <button id="notification-center-btn" class="titlebar-menu-btn" onclick="toggleNotificationCenter(event)"
-                    title="Lịch sử thông báo" style="position: relative;">
+                    title="Lá»‹ch sá»­ thÃ´ng bÃ¡o" style="position: relative;">
                     <i class="fa-solid fa-bell"></i>
                     <span id="notification-badge" class="notification-badge" style="display: none;">0</span>
                 </button>
                 <div id="notification-center-dropdown" class="notification-dropdown">
                     <div class="notification-dropdown-header">
-                        <span>Lịch sử thông báo</span>
-                        <button onclick="clearNotificationHistory(event)" class="clear-notif-btn">Xóa hết</button>
+                        <span>Lá»‹ch sá»­ thÃ´ng bÃ¡o</span>
+                        <button onclick="clearNotificationHistory(event)" class="clear-notif-btn">XÃ³a háº¿t</button>
                     </div>
                     <div id="notification-dropdown-list" class="notification-dropdown-list">
-                        <div class="notification-empty-state">Không có thông báo nào</div>
+                        <div class="notification-empty-state">KhÃ´ng cÃ³ thÃ´ng bÃ¡o nÃ o</div>
                     </div>
                 </div>
             </div>
             <!-- Update Info Widget / Version Display -->
-            <div id="app-update-widget" title="Bấm để tải bản cập nhật mới nhất từ GitHub Release">
+            <div id="app-update-widget" title="Báº¥m Ä‘á»ƒ táº£i báº£n cáº­p nháº­t má»›i nháº¥t tá»« GitHub Release">
                 <i class="fa-solid fa-circle-down"></i>
-                <span id="app-update-text">Đã có phiên bản mới</span>
+                <span id="app-update-text">ÄÃ£ cÃ³ phiÃªn báº£n má»›i</span>
             </div>
             <!-- Window Controls -->
             <div class="titlebar-controls">
@@ -174,19 +174,19 @@
         </div>
     </div>
 
-    <!-- 1. GIAO DIỆN CHÍNH (STREAMER DASHBOARD) -->
+    <!-- 1. GIAO DIá»†N CHÃNH (STREAMER DASHBOARD) -->
     <div class="app-layout">
 
         <!-- Main Content Area -->
         <main class="app-content">
-            <!-- Tab 1: Bàn điều khiển (Dashboard) -->
+            <!-- Tab 1: BÃ n Ä‘iá»u khiá»ƒn (Dashboard) -->
             <div id="tab-player" class="tab-content active">
                 <div class="left-column">
                     <section id="browser-media-monitor" class="browser-media-monitor" hidden
-                        aria-label="Media đang phát trên trình duyệt">
+                        aria-label="Media Ä‘ang phÃ¡t trÃªn trÃ¬nh duyá»‡t">
                         <div class="browser-media-monitor-header">
                             <i class="fa-solid fa-window-maximize"></i>
-                            <span>Từ trình duyệt</span>
+                            <span>Tá»« trÃ¬nh duyá»‡t</span>
                         </div>
                         <div class="browser-media-monitor-body">
                             <img id="browser-media-monitor-thumb" class="browser-media-monitor-thumb" src="" alt="">
@@ -197,11 +197,11 @@
                         </div>
                     </section>
 
-                    <!-- Card 2: Trình phát hiện tại (Now Playing Widget) -->
+                    <!-- Card 2: TrÃ¬nh phÃ¡t hiá»‡n táº¡i (Now Playing Widget) -->
                     <div class="player-widget">
                         <div class="player-header">
                             <span class="dua-card-title" style="border-bottom: none; padding-bottom: 0;">
-                                <i class="fa-solid fa-compact-disc"></i> Đang Phát
+                                <i class="fa-solid fa-compact-disc"></i> Äang PhÃ¡t
                             </span>
                             <div style="display: flex; align-items: center; gap: 0.5rem;">
                                 <div id="dashboard-video-loading" class="dashboard-video-loading" hidden
@@ -209,12 +209,12 @@
                                     <svg class="m3-spinner" viewBox="0 0 24 24" aria-hidden="true">
                                         <circle cx="12" cy="12" r="9.5" fill="none"></circle>
                                     </svg>
-                                    <span>Đang tải video...</span>
+                                    <span>Äang táº£i video...</span>
                                 </div>
                                 <!-- Dolby Atmos Badge -->
                                 <div id="dolby-atmos-badge" class="dolby-atmos-badge active"
                                     onclick="toggleDolbyAtmosSpatialAudio()"
-                                    title="Âm thanh vòm Dolby Atmos Spatial Audio (Click để Bật/Tắt)"
+                                    title="Ã‚m thanh vÃ²m Dolby Atmos Spatial Audio (Click Ä‘á»ƒ Báº­t/Táº¯t)"
                                     style="cursor: pointer;">
                                     <img src="asset/Dolby_Atmos.png" class="dolby-atmos-img" alt="Dolby Atmos">
                                 </div>
@@ -243,21 +243,21 @@
                                             <path d="M12 18H3"></path>
                                         </svg>
                                     </span>
-                                    <h2 id="current-song-title" class="song-title" style="margin-right: 0.25rem;">Chưa
-                                        có bài hát nào</h2>
+                                    <h2 id="current-song-title" class="song-title" style="margin-right: 0.25rem;">ChÆ°a
+                                        cÃ³ bÃ i hÃ¡t nÃ o</h2>
                                     <button id="btn-player-favorite" class="player-favorite-btn"
-                                        title="Yêu thích bài hát này"
+                                        title="YÃªu thÃ­ch bÃ i hÃ¡t nÃ y"
                                         style="display: none; background: none; border: none; cursor: pointer; padding: 0.25rem; font-size: 1.15rem; color: var(--pineapple-text); transition: color 0.15s; outline: none;">
                                         <i class="fa-regular fa-heart"></i>
                                     </button>
                                 </div>
                                 <div id="current-song-channel" class="song-channel-name" style="display: none;"></div>
                                 <div id="current-song-donor" class="song-donor" style="display: none;">
-                                    <span id="current-donor-name">Khách</span>
-                                    <span id="current-donor-amount">0 VNĐ</span>
+                                    <span id="current-donor-name">KhÃ¡ch</span>
+                                    <span id="current-donor-amount">0 VNÄ</span>
                                 </div>
                                 <div id="current-song-message" class="song-message" style="display: none;">
-                                    Không có tin nhắn.
+                                    KhÃ´ng cÃ³ tin nháº¯n.
                                 </div>
                                 <div id="current-song-extension-info" class="song-extension-info"
                                     style="display: none;">
@@ -266,14 +266,14 @@
                                     style="display: none;">
                                     <span class="adaptive-badge-pill">
                                         <i class="fa-solid fa-wand-magic-sparkles"></i>
-                                        <span>Thích ứng: </span>
-                                        <strong id="player-adaptive-vol-text">80% ➜ 64% (-5.7 dB)</strong>
+                                        <span>ThÃ­ch á»©ng: </span>
+                                        <strong id="player-adaptive-vol-text">80% âžœ 64% (-5.7 dB)</strong>
                                     </span>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Thanh tiến trình phát nhạc -->
+                        <!-- Thanh tiáº¿n trÃ¬nh phÃ¡t nháº¡c -->
                         <div class="player-controls">
                             <div class="progress-container">
                                 <span id="current-time-display" class="progress-time">0:00</span>
@@ -285,45 +285,45 @@
                                 <span id="total-time-display" class="progress-time">0:00</span>
                             </div>
 
-                            <!-- Widget Giới hạn Thao tác đã chuyển lên góc phải trên của Player Header -->
+                            <!-- Widget Giá»›i háº¡n Thao tÃ¡c Ä‘Ã£ chuyá»ƒn lÃªn gÃ³c pháº£i trÃªn cá»§a Player Header -->
 
                             <div class="control-buttons-row"
                                 style="flex-direction: column; align-items: stretch; gap: 0.6rem;">
-                                <!-- Hàng 1: Điều khiển phát nhạc & Âm lượng -->
+                                <!-- HÃ ng 1: Äiá»u khiá»ƒn phÃ¡t nháº¡c & Ã‚m lÆ°á»£ng -->
                                 <div class="control-main-row"
                                     style="display: flex; justify-content: space-between; align-items: center; width: 100%; flex-wrap: wrap; gap: 1rem;">
                                     <div class="control-playback"
                                         style="display: flex; align-items: center; gap: 0.75rem;">
                                         <button id="btn-play-pause" class="dua-btn dua-btn-primary"
-                                            onclick="togglePlayPause()" title="Phát/Tạm dừng">
+                                            onclick="togglePlayPause()" title="PhÃ¡t/Táº¡m dá»«ng">
                                             <i class="fa-solid fa-play"></i>
                                         </button>
                                         <button id="btn-skip" class="dua-btn dua-btn-secondary" onclick="skipSong()"
-                                            title="Bỏ qua">
+                                            title="Bá» qua">
                                             <i class="fa-solid fa-forward"></i>
                                         </button>
                                     </div>
 
-                                    <!-- Sóng nhạc và âm lượng -->
+                                    <!-- SÃ³ng nháº¡c vÃ  Ã¢m lÆ°á»£ng -->
                                     <div class="control-volume">
                                         <i id="mute-btn" class="fa-solid fa-volume-high" onclick="toggleMute()"
-                                            title="Tắt/Bật tiếng"
+                                            title="Táº¯t/Báº­t tiáº¿ng"
                                             style="cursor: pointer; transition: transform 0.1s; min-width: 20px; text-align: center;"></i>
                                         <input id="volume-slider" class="volume-slider" type="range" min="0" max="100"
                                             value="80" oninput="onVolumeChange(this.value)">
                                         <span id="volume-val-display" style="min-width: 30px;">80%</span>
                                         <span id="adaptive-volume-badge" class="adaptive-volume-badge"
-                                            style="display: none;" title="Âm lượng thích ứng đang hoạt động">
+                                            style="display: none;" title="Ã‚m lÆ°á»£ng thÃ­ch á»©ng Ä‘ang hoáº¡t Ä‘á»™ng">
                                             <i class="fa-solid fa-wand-magic-sparkles"></i>
                                             <span id="adaptive-volume-info"></span>
                                         </span>
                                     </div>
 
-                                    <!-- Công tắc Tập trung đặt cùng hàng điều khiển chính -->
+                                    <!-- CÃ´ng táº¯c Táº­p trung Ä‘áº·t cÃ¹ng hÃ ng Ä‘iá»u khiá»ƒn chÃ­nh -->
                                     <div class="theme-switch-wrapper focus-wrapper"
-                                        title="Tạm ngưng tự động chuyển bài mới để tập trung"
+                                        title="Táº¡m ngÆ°ng tá»± Ä‘á»™ng chuyá»ƒn bÃ i má»›i Ä‘á»ƒ táº­p trung"
                                         style="font-size: 0.85rem; font-weight: 500; color: var(--pineapple-text); display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.3rem 0.6rem; background: transparent; border: 1px solid var(--pineapple-border-color); border-radius: 10px; box-sizing: border-box; cursor: default;">
-                                        <span>Tập trung</span>
+                                        <span>Táº­p trung</span>
                                         <label class="theme-switch" style="margin: 0;">
                                             <input type="checkbox" id="focus-mode-toggle-switch"
                                                 onchange="toggleFocusMode(this.checked)">
@@ -332,29 +332,29 @@
                                     </div>
                                 </div>
 
-                                <!-- Hàng 2: Các tính năng mở rộng -->
+                                <!-- HÃ ng 2: CÃ¡c tÃ­nh nÄƒng má»Ÿ rá»™ng -->
                                 <div id="control-features-row" class="control-features"
                                     style="display: flex; gap: 0.75rem; width: 100%; flex-wrap: wrap; margin-top: 0.5rem; border-top: 1.5px dashed var(--pineapple-border-color); padding-top: 0.6rem; align-items: center;">
-                                    <!-- Nút Vô Cùng (Bypass Limit) -->
+                                    <!-- NÃºt VÃ´ CÃ¹ng (Bypass Limit) -->
                                     <button id="btn-bypass-limit" class="dua-btn dua-btn-secondary"
                                         onclick="bypassCurrentSongLimit()"
-                                        title="Phát hết bài hát này (bỏ qua giới hạn thời gian)" style="display: none;">
-                                        Phát hết bài
+                                        title="PhÃ¡t háº¿t bÃ i hÃ¡t nÃ y (bá» qua giá»›i háº¡n thá»i gian)" style="display: none;">
+                                        PhÃ¡t háº¿t bÃ i
                                     </button>
-                                    <!-- Nút Gia hạn (Force Show Extension) -->
+                                    <!-- NÃºt Gia háº¡n (Force Show Extension) -->
                                     <button id="btn-force-extension" class="dua-btn dua-btn-secondary"
-                                        onclick="toggleForceExtension()" title="Hiện mã gia hạn trên Overlay"
+                                        onclick="toggleForceExtension()" title="Hiá»‡n mÃ£ gia háº¡n trÃªn Overlay"
                                         style="display: none;">
-                                        Hiện gia hạn
+                                        Hiá»‡n gia háº¡n
                                     </button>
-                                    <!-- Nút Vote Skip (Mở/Tắt Vote Skip cho bài hiện tại) -->
+                                    <!-- NÃºt Vote Skip (Má»Ÿ/Táº¯t Vote Skip cho bÃ i hiá»‡n táº¡i) -->
                                     <button id="btn-vote-skip" class="dua-btn dua-btn-secondary"
-                                        onclick="toggleVoteSkip()" title="Mở bầu chọn bỏ qua bài hát này"
+                                        onclick="toggleVoteSkip()" title="Má»Ÿ báº§u chá»n bá» qua bÃ i hÃ¡t nÃ y"
                                         style="display: none;">
-                                        Mở Vote skip
+                                        Má»Ÿ Vote skip
                                     </button>
                                     <button id="btn-vote-skip-playlist" class="dua-btn dua-btn-secondary"
-                                        onclick="togglePlaylistVoteSkip()" title="Góp tiền để rút ngắn 50% playlist còn lại"
+                                        onclick="togglePlaylistVoteSkip()" title="GÃ³p tiá»n Ä‘á»ƒ rÃºt ngáº¯n 50% playlist cÃ²n láº¡i"
                                         style="display: none;">
                                         Vote skip Playlist 50% <span class="feature-beta-badge">Beta</span>
                                     </button>
@@ -362,10 +362,10 @@
                             </div>
                         </div>
 
-                        <!-- Countdown timer cho Live Stream trên Dashboard -->
-                        <section id="dashboard-lyrics" class="dashboard-lyrics" hidden aria-label="Lời bài hát đồng bộ">
+                        <!-- Countdown timer cho Live Stream trÃªn Dashboard -->
+                        <section id="dashboard-lyrics" class="dashboard-lyrics" hidden aria-label="Lá»i bÃ i hÃ¡t Ä‘á»“ng bá»™">
                             <div class="dashboard-lyrics-header">
-                                <span>Lời bài hát</span>
+                                <span>Lá»i bÃ i hÃ¡t</span>
                                 <span id="dashboard-lyrics-source" class="dashboard-lyrics-source">LRCLIB</span>
                             </div>
                             <div id="dashboard-lyrics-lines" class="dashboard-lyrics-lines"></div>
@@ -373,22 +373,22 @@
 
                         <div id="dash-live-countdown" class="dash-live-countdown">
                             <span class="dash-cd-dot"></span>
-                            <span class="dash-cd-label">KẾT THÚC SAU</span>
+                            <span class="dash-cd-label">Káº¾T THÃšC SAU</span>
                             <span id="dash-cd-time" class="dash-cd-time">0:00</span>
                         </div>
 
-                        <!-- Tiến trình Vote skip trên Dashboard -->
+                        <!-- Tiáº¿n trÃ¬nh Vote skip trÃªn Dashboard -->
                         <div id="dash-vote-skip-bar" class="vote-skip-bar">
                             <div class="vote-skip-bar-label">
                                 <i class="fa-solid fa-vote-yea"></i>
-                                <span>Tiến trình Vote skip:</span>
-                                <span id="dash-vote-skip-progress-text">0 / 20.000 VNĐ</span>
+                                <span>Tiáº¿n trÃ¬nh Vote skip:</span>
+                                <span id="dash-vote-skip-progress-text">0 / 20.000 VNÄ</span>
                             </div>
                             <div class="vote-skip-bar-track">
                                 <div id="dash-vote-skip-fill" class="vote-skip-bar-fill" style="width: 0%;"></div>
                             </div>
                             <div id="dash-vote-skip-contributors" class="vote-skip-contributors" style="display: none;">
-                                <strong>Người góp phần:</strong> <span id="dash-vote-skip-contributors-list"></span>
+                                <strong>NgÆ°á»i gÃ³p pháº§n:</strong> <span id="dash-vote-skip-contributors-list"></span>
                             </div>
                         </div>
 
@@ -396,36 +396,36 @@
                         <div style="border-top: 2px dashed var(--pineapple-border-color); margin: 0.5rem 0 0.2rem 0;">
                         </div>
 
-                        <!-- Card 3: Danh sách hàng đợi phát nhạc (Queue) inside Player Widget -->
+                        <!-- Card 3: Danh sÃ¡ch hÃ ng Ä‘á»£i phÃ¡t nháº¡c (Queue) inside Player Widget -->
                         <div id="card-queue" style="display: flex; flex-direction: column; gap: 0.8rem;">
                             <div class="queue-header-actions"
                                 style="margin-top: 0.2rem; display: flex; justify-content: space-between; align-items: center; width: 100%;">
                                 <span class="dua-card-title"
                                     style="border-bottom: none; padding-bottom: 0; white-space: nowrap;">
-                                    <i class="fa-solid fa-list-ol"></i> Hàng đợi (<span id="queue-count">0</span>)
+                                    <i class="fa-solid fa-list-ol"></i> HÃ ng Ä‘á»£i (<span id="queue-count">0</span>)
                                 </span>
                                 <button id="btn-queue-tools" class="dua-btn btn-icon"
                                     onclick="showQueueToolsMenu(event)"
-                                    title="Công cụ hàng đợi (Click hoặc Click chuột phải vào đây)"
+                                    title="CÃ´ng cá»¥ hÃ ng Ä‘á»£i (Click hoáº·c Click chuá»™t pháº£i vÃ o Ä‘Ã¢y)"
                                     style="padding: 4px 8px; font-size: 0.95rem; background: transparent; border: none; color: var(--pineapple-text); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; transition: background-color 0.2s ease;">
                                     <i class="fa-solid fa-ellipsis-vertical"></i>
                                 </button>
                             </div>
 
-                            <!-- Thanh điều khiển hàng đợi gọn gàng, đồng bộ -->
+                            <!-- Thanh Ä‘iá»u khiá»ƒn hÃ ng Ä‘á»£i gá»n gÃ ng, Ä‘á»“ng bá»™ -->
                             <div class="queue-control-toolbar">
                                 <div class="toolbar-group">
                                     <button id="btn-manual-sync" class="dua-btn" onclick="triggerManualZyPageSync()"
-                                        title="Đồng bộ thủ công từ ZyPage">
+                                        title="Äá»“ng bá»™ thá»§ cÃ´ng tá»« ZyPage">
                                         <i class="fa-solid fa-arrows-rotate"></i>
-                                        <span>Đồng bộ ZyPage</span>
+                                        <span>Äá»“ng bá»™ ZyPage</span>
                                     </button>
                                 </div>
 
                                 <div class="toolbar-group">
-                                    <!-- Công tắc Lucky -->
+                                    <!-- CÃ´ng táº¯c Lucky -->
                                     <div class="toolbar-item lucky-wrapper"
-                                        title="Quay ngẫu nhiên bài tiếp theo khi hết nhạc và đếm ngược 30s">
+                                        title="Quay ngáº«u nhiÃªn bÃ i tiáº¿p theo khi háº¿t nháº¡c vÃ  Ä‘áº¿m ngÆ°á»£c 30s">
                                         <span class="toolbar-label">Lucky</span>
                                         <label class="theme-switch" style="margin: 0;">
                                             <input type="checkbox" id="lucky-mode-toggle-switch"
@@ -433,16 +433,16 @@
                                             <span class="slider-round"></span>
                                         </label>
                                     </div>
-                                    <!-- Dropdown Sắp xếp -->
+                                    <!-- Dropdown Sáº¯p xáº¿p -->
                                     <div class="toolbar-item sort-wrapper">
                                         <label for="queue-sort-select" class="toolbar-label">
                                             <i class="fa-solid fa-sort"></i>
-                                            <span>Ưu tiên:</span>
+                                            <span>Æ¯u tiÃªn:</span>
                                         </label>
                                         <select id="queue-sort-select" class="dua-select"
                                             onchange="onSortConfigChange(this.value)">
-                                            <option value="time">Thời gian</option>
-                                            <option value="amount">Số tiền</option>
+                                            <option value="time">Thá»i gian</option>
+                                            <option value="amount">Sá»‘ tiá»n</option>
                                         </select>
                                     </div>
                                 </div>
@@ -451,9 +451,9 @@
                             <div id="playlist-processing-status" class="playlist-processing-status" hidden></div>
                             <div id="playlist-review-panel" class="playlist-review-panel" hidden></div>
                             <div id="queue-list-container" class="queue-list queue-list-v2">
-                                <!-- Danh sách các bài hát trong hàng đợi sẽ được tạo bằng Javascript -->
-                                <div class="empty-queue-notice">Hàng đợi đang trống. Hãy dán link YouTube bài hát đầu
-                                    tiên!
+                                <!-- Danh sÃ¡ch cÃ¡c bÃ i hÃ¡t trong hÃ ng Ä‘á»£i sáº½ Ä‘Æ°á»£c táº¡o báº±ng Javascript -->
+                                <div class="empty-queue-notice">HÃ ng Ä‘á»£i Ä‘ang trá»‘ng. HÃ£y dÃ¡n link YouTube bÃ i hÃ¡t Ä‘áº§u
+                                    tiÃªn!
                                 </div>
                             </div>
                         </div>
@@ -463,38 +463,38 @@
                 </div>
 
                 <div class="right-column">
-                    <!-- Card: 2 Donate gần nhất -->
+                    <!-- Card: 2 Donate gáº§n nháº¥t -->
                     <div class="dua-card" id="card-recent-donations"
                         style="padding: 1.2rem; display: flex; flex-direction: column; gap: 0.6rem;">
                         <h3 class="dua-card-title"
                             style="border-bottom: none; padding-bottom: 0; margin-bottom: 0.1rem;">
-                            Donate gần nhất
+                            Donate gáº§n nháº¥t
                         </h3>
                         <div id="recent-donations-container"
                             style="display: flex; flex-direction: column; gap: 0.6rem;">
                             <div
                                 style="font-size: 0.85rem; color: var(--pineapple-text); opacity: 0.6; text-align: center; padding: 0.5rem 0;">
-                                Chưa nhận được donate nào
+                                ChÆ°a nháº­n Ä‘Æ°á»£c donate nÃ o
                             </div>
                         </div>
                     </div>
 
-                    <!-- Card 4.5: Gợi ý và Danh sách phát YouTube -->
+                    <!-- Card 4.5: Gá»£i Ã½ vÃ  Danh sÃ¡ch phÃ¡t YouTube -->
                     <div class="dua-card" id="card-youtube-dashboard"
                         style="padding: 1rem; display: flex; flex-direction: column; gap: 0.6rem;">
                         <!-- Tabs Row -->
                         <div class="qa-tabs-row" style="border-radius: 12px 12px 0 0; margin: -1rem -1rem 0 -1rem;">
                             <button type="button" class="qa-tab-btn active" id="qa-tab-btn-recommendations"
                                 onclick="switchQuickAddTab('recommendations')">
-                                <i class="fa-solid fa-lightbulb"></i> Gợi ý cho bạn
+                                <i class="fa-solid fa-lightbulb"></i> Gá»£i Ã½ cho báº¡n
                             </button>
                             <button type="button" class="qa-tab-btn" id="qa-tab-btn-playlists"
                                 onclick="switchQuickAddTab('playlists')">
-                                Playlist cá nhân
+                                Playlist cÃ¡ nhÃ¢n
                             </button>
                             <button type="button" class="qa-tab-btn" id="qa-tab-btn-favorites"
                                 onclick="switchQuickAddTab('favorites')">
-                                <i class="fa-solid fa-heart"></i> Yêu thích
+                                <i class="fa-solid fa-heart"></i> YÃªu thÃ­ch
                             </button>
                         </div>
 
@@ -506,7 +506,7 @@
                                 <button type="button" class="dua-btn"
                                     style="padding: 0.25rem 0.5rem; font-size: 0.75rem; border-width: 1.5px; box-shadow: 1px 1px 0px var(--pineapple-text); display: flex; align-items: center; justify-content: center; gap: 0.3rem;"
                                     onclick="refreshRecommendations()">
-                                    Làm mới gợi ý
+                                    LÃ m má»›i gá»£i Ã½
                                 </button>
                             </div>
                             <div id="qa-recommendations-list"></div>
@@ -518,7 +518,7 @@
                                 <select id="qa-playlist-select" class="dua-select"
                                     style="flex-grow: 1; padding: 0.25rem 0.5rem; font-size: 0.8rem;"
                                     onchange="loadQuickAddPlaylistVideos(this.value)">
-                                    <option value="">-- Chọn Playlist --</option>
+                                    <option value="">-- Chá»n Playlist --</option>
                                 </select>
                                 <button type="button" class="dua-btn"
                                     style="padding: 0.25rem 0.5rem; font-size: 0.75rem; border-width: 1.5px; box-shadow: 1px 1px 0px var(--pineapple-text); display: flex; align-items: center; justify-content: center;"
@@ -536,8 +536,8 @@
                                     style="grid-column: 1 / -1; padding: 30px 10px; text-align: center; color: #6B7280; font-weight: 700;">
                                     <i class="fa-solid fa-heart"
                                         style="font-size: 1.8rem; color: #E5E7EB; margin-bottom: 0.5rem; display: block;"></i>
-                                    Chưa có bài hát yêu thích nào.<br />Hãy bấm icon Trái tim ở kết quả tìm kiếm hoặc
-                                    trình phát để lưu bài!
+                                    ChÆ°a cÃ³ bÃ i hÃ¡t yÃªu thÃ­ch nÃ o.<br />HÃ£y báº¥m icon TrÃ¡i tim á»Ÿ káº¿t quáº£ tÃ¬m kiáº¿m hoáº·c
+                                    trÃ¬nh phÃ¡t Ä‘á»ƒ lÆ°u bÃ i!
                                 </div>
                             </div>
                         </div>
@@ -545,16 +545,16 @@
                 </div>
             </div>
 
-            <!-- Tab 1.5: Lời nhắn Donate -->
+            <!-- Tab 1.5: Lá»i nháº¯n Donate -->
             <div id="tab-donations" class="tab-content">
                 <div class="donation-tab-wrapper">
 
-                    <!-- Thanh công cụ lịch sử donate -->
+                    <!-- Thanh cÃ´ng cá»¥ lá»‹ch sá»­ donate -->
                     <div class="donation-tab-sticky-header">
                         <div class="donation-tab-header">
                             <div class="donation-title-group">
                                 <div id="donation-stats-line">
-                                    0 lượt donate
+                                    0 lÆ°á»£t donate
                                 </div>
                             </div>
 
@@ -562,35 +562,35 @@
                                 <div class="donation-search-wrapper">
                                     <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
                                     <input id="donation-search-input" class="dua-input" type="search"
-                                        aria-label="Tìm trong lịch sử donate"
-                                        placeholder="Tìm người gửi, số tiền, lời nhắn..."
+                                        aria-label="TÃ¬m trong lá»‹ch sá»­ donate"
+                                        placeholder="TÃ¬m ngÆ°á»i gá»­i, sá»‘ tiá»n, lá»i nháº¯n..."
                                         oninput="onDonationSearchInput(this.value)">
                                 </div>
                             </div>
 
-                            <div class="donation-view-toggle" role="group" aria-label="Kiểu hiển thị lịch sử">
+                            <div class="donation-view-toggle" role="group" aria-label="Kiá»ƒu hiá»ƒn thá»‹ lá»‹ch sá»­">
                                 <button id="donation-view-grid" class="donation-view-button" type="button"
-                                    onclick="setDonationHistoryView('grid')" title="Hiển thị dạng lưới"
-                                    aria-label="Hiển thị dạng lưới" aria-pressed="true">
+                                    onclick="setDonationHistoryView('grid')" title="Hiá»ƒn thá»‹ dáº¡ng lÆ°á»›i"
+                                    aria-label="Hiá»ƒn thá»‹ dáº¡ng lÆ°á»›i" aria-pressed="true">
                                     <i class="fa-solid fa-grip" aria-hidden="true"></i>
                                 </button>
                                 <button id="donation-view-list" class="donation-view-button" type="button"
-                                    onclick="setDonationHistoryView('list')" title="Hiển thị dạng danh sách"
-                                    aria-label="Hiển thị dạng danh sách" aria-pressed="false">
+                                    onclick="setDonationHistoryView('list')" title="Hiá»ƒn thá»‹ dáº¡ng danh sÃ¡ch"
+                                    aria-label="Hiá»ƒn thá»‹ dáº¡ng danh sÃ¡ch" aria-pressed="false">
                                     <i class="fa-solid fa-list" aria-hidden="true"></i>
                                 </button>
                             </div>
 
                             <div class="donation-action-buttons">
                                 <button class="dua-btn btn-mark-read" onclick="markAllDonationsAsRead()"
-                                    title="Đánh dấu tất cả là đã đọc">
+                                    title="ÄÃ¡nh dáº¥u táº¥t cáº£ lÃ  Ä‘Ã£ Ä‘á»c">
                                     <i class="fa-solid fa-check-double" aria-hidden="true"></i>
-                                    <span>Đã đọc</span>
+                                    <span>ÄÃ£ Ä‘á»c</span>
                                 </button>
                                 <button class="dua-btn btn-clear-all" onclick="clearAllDonationHistory()"
-                                    title="Xóa toàn bộ lịch sử donate">
+                                    title="XÃ³a toÃ n bá»™ lá»‹ch sá»­ donate">
                                     <i class="fa-regular fa-trash-can" aria-hidden="true"></i>
-                                    <span>Xóa hết</span>
+                                    <span>XÃ³a háº¿t</span>
                                 </button>
                             </div>
                         </div>
@@ -598,16 +598,16 @@
 
                     <!-- Donation Cards Grid -->
                     <div id="donation-history-list" class="donation-history-list">
-                        <div class="empty-history-notice">Chưa nhận được lời nhắn donate nào trong 30 ngày qua.</div>
+                        <div class="empty-history-notice">ChÆ°a nháº­n Ä‘Æ°á»£c lá»i nháº¯n donate nÃ o trong 30 ngÃ y qua.</div>
                     </div>
                 </div>
             </div>
 
-            <!-- Tab 2: Cấu hình (Settings) -->
+            <!-- Tab 2: Cáº¥u hÃ¬nh (Settings) -->
             <div id="tab-settings" class="tab-content">
                 <div class="settings-page-header">
                     <div>
-                        <h2>Cài đặt</h2>
+                        <h2>CÃ i Ä‘áº·t</h2>
                     </div>
                 </div>
 
@@ -615,62 +615,62 @@
                     <!-- Left Navigation Sidebar for Settings -->
                     <div class="settings-sidebar">
                         <div class="settings-nav-group">
-                            <div class="settings-nav-label">Kết nối</div>
+                            <div class="settings-nav-label">Káº¿t ná»‘i</div>
                             <button class="settings-tab-btn active"
                                 onclick="switchSettingsSection('sync')">ZyPage</button>
                             <button class="settings-tab-btn" onclick="switchSettingsSection('youtube')">YouTube</button>
                         </div>
                         <div class="settings-nav-group">
-                            <div class="settings-nav-label">Phát và kiểm soát</div>
-                            <button class="settings-tab-btn" onclick="switchSettingsSection('playback')">Phát
-                                lại</button>
+                            <div class="settings-nav-label">PhÃ¡t vÃ  kiá»ƒm soÃ¡t</div>
+                            <button class="settings-tab-btn" onclick="switchSettingsSection('playback')">PhÃ¡t
+                                láº¡i</button>
                             <button class="settings-tab-btn" onclick="switchSettingsSection('playlist')">YouTube Playlist <span class="feature-beta-badge">Beta</span></button>
-                            <button class="settings-tab-btn" onclick="switchSettingsSection('limits')">Giới hạn thời
+                            <button class="settings-tab-btn" onclick="switchSettingsSection('limits')">Giá»›i háº¡n thá»i
                                 gian</button>
                             <button class="settings-tab-btn"
                                 onclick="switchSettingsSection('filters')">SponsorBlock</button>
                         </div>
                         <div class="settings-nav-group">
-                            <div class="settings-nav-label">Hiển thị</div>
-                            <button class="settings-tab-btn" onclick="switchSettingsSection('overlay')">Giao diện và
+                            <div class="settings-nav-label">Hiá»ƒn thá»‹</div>
+                            <button class="settings-tab-btn" onclick="switchSettingsSection('overlay')">Giao diá»‡n vÃ 
                                 OBS</button>
                         </div>
                         <div class="settings-nav-group">
-                            <div class="settings-nav-label">Hệ thống</div>
-                            <button class="settings-tab-btn" onclick="switchSettingsSection('logs')">Trạng thái và nhật
-                                ký</button>
-                            <button class="settings-tab-btn" onclick="switchSettingsSection('about')">Giới
-                                thiệu</button>
+                            <div class="settings-nav-label">Há»‡ thá»‘ng</div>
+                            <button class="settings-tab-btn" onclick="switchSettingsSection('logs')">Tráº¡ng thÃ¡i vÃ  nháº­t
+                                kÃ½</button>
+                            <button class="settings-tab-btn" onclick="switchSettingsSection('about')">Giá»›i
+                                thiá»‡u</button>
                         </div>
                     </div>
 
                     <!-- Right Content Panel -->
                     <div class="settings-content-panel">
                         <div class="settings-panel-header">
-                            <h3 id="settings-panel-title">Đồng bộ ZyPage</h3>
+                            <h3 id="settings-panel-title">Äá»“ng bá»™ ZyPage</h3>
                         </div>
                         <!-- Section: sync -->
                         <div id="settings-sec-sync" class="settings-section"
                             style="display: flex; flex-direction: column; gap: 1rem; width: 100%;">
-                            <!-- Card 5: Cấu hình đồng bộ Live ZyPage -->
+                            <!-- Card 5: Cáº¥u hÃ¬nh Ä‘á»“ng bá»™ Live ZyPage -->
                             <div class="dua-card zypage-sync-card disconnected" id="zypage-sync-card"
                                 style="padding: 1.5rem; width: 100%; margin: 0;">
                                 <h3 class="dua-card-title"
                                     style="margin-bottom: 0.6rem; padding-bottom: 0.4rem; border-bottom: 2px solid var(--pineapple-border-color);">
-                                    <i class="fa-solid fa-arrows-rotate"></i> Đồng bộ ZyPage
+                                    <i class="fa-solid fa-arrows-rotate"></i> Äá»“ng bá»™ ZyPage
                                 </h3>
 
                                 <div style="display: flex; gap: 0.5rem; align-items: center; width: 100%;">
                                     <input id="zypage-url" class="dua-input" style="flex-grow: 1; font-size: 0.85rem;"
                                         type="url"
-                                        placeholder="Dán link trang donate ZyPage (donate-music hoặc donate-message)..."
+                                        placeholder="DÃ¡n link trang donate ZyPage (donate-music hoáº·c donate-message)..."
                                         required>
                                     <button id="btn-zypage-connect" class="dua-btn dua-btn-primary"
                                         style="padding: 0.35rem 0.8rem; font-size: 0.85rem;"
-                                        onclick="connectZyPageLive()">Kết nối</button>
+                                        onclick="connectZyPageLive()">Káº¿t ná»‘i</button>
                                     <button id="btn-zypage-disconnect" class="dua-btn dua-btn-danger"
                                         style="display: none; padding: 0.35rem 0.8rem; font-size: 0.85rem;"
-                                        onclick="disconnectZyPageLive()">Ngắt</button>
+                                        onclick="disconnectZyPageLive()">Ngáº¯t</button>
                                 </div>
 
                                 <div
@@ -686,24 +686,24 @@
                                     </div>
                                     <div
                                         style="display: flex; align-items: center; gap: 0.3rem; font-size: 0.8rem; font-weight: 700; color: #6B7280;">
-                                        <span>Trạng thái:</span>
+                                        <span>Tráº¡ng thÃ¡i:</span>
                                         <span id="zypage-status-badge" class="status-badge disconnected"
-                                            style="padding: 0.15rem 0.45rem; font-size: 0.75rem;">Chưa kết nối</span>
+                                            style="padding: 0.15rem 0.45rem; font-size: 0.75rem;">ChÆ°a káº¿t ná»‘i</span>
                                     </div>
                                 </div>
 
                                 <div
                                     style="margin-top: 0.8rem; border-top: 2px dashed var(--pineapple-border-color); padding-top: 0.8rem; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap; width: 100%;">
                                     <label for="zypage-min-amount-input"
-                                        style="font-size: 0.85rem; font-weight: 700; color: var(--pineapple-text); margin: 0;">Số
-                                        tiền tối thiểu nhận nhạc từ tin nhắn (VNĐ):</label>
+                                        style="font-size: 0.85rem; font-weight: 700; color: var(--pineapple-text); margin: 0;">Sá»‘
+                                        tiá»n tá»‘i thiá»ƒu nháº­n nháº¡c tá»« tin nháº¯n (VNÄ):</label>
                                     <div style="display: flex; gap: 0.5rem; align-items: center;">
                                         <input id="zypage-min-amount-input" class="dua-input"
                                             style="width: 100px; font-size: 0.85rem; padding: 0.25rem 0.5rem; border-radius: 8px; box-shadow: none; font-weight: 800; text-align: right;"
                                             type="number" min="0" value="49000">
                                         <button id="btn-zypage-min-amount-apply" class="dua-btn"
-                                            style="padding: 0.35rem 0.8rem; font-size: 0.85rem; background: var(--pineapple-yellow); border-width: 2px; box-shadow: 2px 2px 0px var(--pineapple-text); white-space: nowrap;">Áp
-                                            dụng</button>
+                                            style="padding: 0.35rem 0.8rem; font-size: 0.85rem; background: var(--pineapple-yellow); border-width: 2px; box-shadow: 2px 2px 0px var(--pineapple-text); white-space: nowrap;">Ãp
+                                            dá»¥ng</button>
                                     </div>
                                 </div>
                             </div>
@@ -713,13 +713,13 @@
                         <div id="settings-sec-youtube" class="settings-section"
                             style="display: none; flex-direction: column; gap: 1rem; width: 100%;">
 
-                            <!-- Card 5.5: Đồng bộ tài khoản YouTube -->
+                            <!-- Card 5.5: Äá»“ng bá»™ tÃ i khoáº£n YouTube -->
                             <div class="dua-card" id="card-youtube-sync"
                                 style="padding: 1.5rem; width: 100%; margin: 0;">
                                 <h3 class="dua-card-title"
                                     style="margin-bottom: 0.6rem; padding-bottom: 0.4rem; border-bottom: 2px solid var(--pineapple-border-color);">
                                     <i class="fa-brands fa-youtube"
-                                        style="color: #FF0000; font-size: 1.2rem; vertical-align: middle;"></i> Đồng bộ
+                                        style="color: #FF0000; font-size: 1.2rem; vertical-align: middle;"></i> Äá»“ng bá»™
                                     YouTube
                                 </h3>
 
@@ -731,13 +731,13 @@
                                         <div>
                                             <div id="yt-user-name"
                                                 style="font-weight: 800; font-size: 0.95rem; color: var(--pineapple-text);">
-                                                Chưa kết nối tài khoản</div>
+                                                ChÆ°a káº¿t ná»‘i tÃ i khoáº£n</div>
                                             <div
                                                 style="display: flex; align-items: center; gap: 0.3rem; font-size: 0.8rem; font-weight: 700; color: #6B7280; margin-top: 0.15rem;">
-                                                <span>Trạng thái:</span>
+                                                <span>Tráº¡ng thÃ¡i:</span>
                                                 <span id="yt-status-badge" class="status-badge disconnected"
-                                                    style="padding: 0.15rem 0.45rem; font-size: 0.75rem; border-radius: 6px;">Chưa
-                                                    kết nối</span>
+                                                    style="padding: 0.15rem 0.45rem; font-size: 0.75rem; border-radius: 6px;">ChÆ°a
+                                                    káº¿t ná»‘i</span>
                                             </div>
                                         </div>
                                     </div>
@@ -746,12 +746,12 @@
                                         <button id="btn-yt-login" class="dua-btn dua-btn-primary"
                                             style="padding: 0.35rem 0.8rem; font-size: 0.85rem;"
                                             onclick="loginYoutube()">
-                                            <i class="fa-solid fa-right-to-bracket"></i> Kết nối tài khoản
+                                            <i class="fa-solid fa-right-to-bracket"></i> Káº¿t ná»‘i tÃ i khoáº£n
                                         </button>
                                         <button id="btn-yt-logout" class="dua-btn dua-btn-danger"
                                             style="display: none; padding: 0.35rem 0.8rem; font-size: 0.85rem;"
                                             onclick="logoutYoutube()">
-                                            <i class="fa-solid fa-right-from-bracket"></i> Đăng xuất
+                                            <i class="fa-solid fa-right-from-bracket"></i> ÄÄƒng xuáº¥t
                                         </button>
                                     </div>
                                 </div>
@@ -762,25 +762,25 @@
                         <div id="settings-sec-playback" class="settings-section"
                             style="display: none; flex-direction: column; gap: 1rem; width: 100%;">
 
-                            <!-- Card 5.6: Cấu hình Phát nhạc Dự phòng YouTube -->
+                            <!-- Card 5.6: Cáº¥u hÃ¬nh PhÃ¡t nháº¡c Dá»± phÃ²ng YouTube -->
                             <div class="dua-card" id="card-yt-bypass"
                                 style="padding: 1.5rem; width: 100%; margin: 0; display: flex; flex-direction: column; gap: 0.8rem;">
                                 <h3 class="dua-card-title"
                                     style="margin-bottom: 0.4rem; padding-bottom: 0.4rem; border-bottom: 2px solid var(--pineapple-border-color);">
                                     <i class="fa-solid fa-circle-play"
                                         style="color: var(--pineapple-orange); font-size: 1.1rem; vertical-align: middle;"></i>
-                                    Hỗ trợ phát nhạc bản quyền
+                                    Há»— trá»£ phÃ¡t nháº¡c báº£n quyá»n
                                 </h3>
 
                                 <div
                                     style="display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 1rem; flex-wrap: wrap;">
                                     <div style="flex-grow: 1; min-width: 250px;">
                                         <div style="font-weight: 750; font-size: 0.9rem; color: var(--pineapple-text);">
-                                            Cho phép phát nhạc có bản quyền</div>
+                                            Cho phÃ©p phÃ¡t nháº¡c cÃ³ báº£n quyá»n</div>
                                         <div
                                             style="font-size: 0.78rem; font-weight: 600; color: #6B7280; margin-top: 0.15rem; line-height: 1.35;">
-                                            Tự động sử dụng luồng âm thanh dự phòng đối với các bài hát có bản quyền bị
-                                            YouTube hạn chế phát nhúng trên các ứng dụng ngoài (lỗi 150/101).</div>
+                                            Tá»± Ä‘á»™ng sá»­ dá»¥ng luá»“ng Ã¢m thanh dá»± phÃ²ng Ä‘á»‘i vá»›i cÃ¡c bÃ i hÃ¡t cÃ³ báº£n quyá»n bá»‹
+                                            YouTube háº¡n cháº¿ phÃ¡t nhÃºng trÃªn cÃ¡c á»©ng dá»¥ng ngoÃ i (lá»—i 150/101).</div>
                                     </div>
                                     <div class="theme-switch-wrapper" style="-webkit-app-region: no-drag;">
                                         <label class="theme-switch">
@@ -794,11 +794,11 @@
                                     style="border-top: 2px dashed var(--pineapple-border-color); padding-top: 0.8rem; display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 1rem; flex-wrap: wrap;">
                                     <div style="flex-grow: 1; min-width: 250px;">
                                         <div style="font-weight: 750; font-size: 0.9rem; color: var(--pineapple-text);">
-                                            Âm lượng thích ứng (Adaptive Volume)</div>
+                                            Ã‚m lÆ°á»£ng thÃ­ch á»©ng (Adaptive Volume)</div>
                                         <div
                                             style="font-size: 0.78rem; font-weight: 600; color: #6B7280; margin-top: 0.15rem; line-height: 1.35;">
-                                            Tự động điều chỉnh âm lượng dựa trên độ lớn (dB) của từng video YouTube để
-                                            tránh bài quá to hoặc quá nhỏ so với mức âm lượng hiện tại.</div>
+                                            Tá»± Ä‘á»™ng Ä‘iá»u chá»‰nh Ã¢m lÆ°á»£ng dá»±a trÃªn Ä‘á»™ lá»›n (dB) cá»§a tá»«ng video YouTube Ä‘á»ƒ
+                                            trÃ¡nh bÃ i quÃ¡ to hoáº·c quÃ¡ nhá» so vá»›i má»©c Ã¢m lÆ°á»£ng hiá»‡n táº¡i.</div>
                                     </div>
                                     <div class="theme-switch-wrapper" style="-webkit-app-region: no-drag;">
                                         <label class="theme-switch">
@@ -813,15 +813,15 @@
                                     <div>
                                         <div
                                             style="font-size: 0.82rem; font-weight: 700; color: var(--pineapple-text);">
-                                            Trạng thái công cụ hỗ trợ:</div>
+                                            Tráº¡ng thÃ¡i cÃ´ng cá»¥ há»— trá»£:</div>
                                         <div id="ytdlp-status-text"
                                             style="font-size: 0.78rem; font-weight: 800; color: #6B7280; margin-top: 0.15rem;">
-                                            Đang kiểm tra...</div>
+                                            Äang kiá»ƒm tra...</div>
                                     </div>
                                     <button id="btn-ytdlp-download" class="dua-btn"
                                         style="padding: 0.35rem 0.8rem; font-size: 0.82rem; background: var(--pineapple-yellow); border-width: 2px; box-shadow: 2px 2px 0px var(--pineapple-text); white-space: nowrap;"
                                         onclick="downloadYtDlp()">
-                                        Cập nhật yt-dlp.exe
+                                        Cáº­p nháº­t yt-dlp.exe
                                     </button>
                                 </div>
                             </div>
@@ -830,25 +830,25 @@
                         <!-- Section: overlay -->
                         <div id="settings-sec-overlay" class="settings-section"
                             style="display: none; flex-direction: column; gap: 1rem; width: 100%;">
-                            <!-- Card: Cấu hình Giao diện Dashboard -->
+                            <!-- Card: Cáº¥u hÃ¬nh Giao diá»‡n Dashboard -->
                             <div class="dua-card" id="card-dashboard-settings"
                                 style="width: 100%; margin: 0; padding: 1.2rem;">
                                 <h3 class="dua-card-title"
                                     style="margin-bottom: 0.6rem; padding-bottom: 0.4rem; border-bottom: 2px solid var(--pineapple-border-color);">
-                                    <i class="fa-solid fa-palette"></i> Cấu hình giao diện Dashboard
+                                    <i class="fa-solid fa-palette"></i> Cáº¥u hÃ¬nh giao diá»‡n Dashboard
                                 </h3>
                                 <div
                                     style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
                                     <span
                                         style="font-weight: 700; font-size: 0.95rem; color: var(--pineapple-text);">Giao
-                                        diện tối/sáng:</span>
+                                        diá»‡n tá»‘i/sÃ¡ng:</span>
                                     <div style="-webkit-app-region: no-drag;">
                                         <select id="dark-mode-select" class="dua-select"
                                             style="width: 150px; padding: 0.35rem 0.5rem; font-size: 0.8rem; border-radius: 8px; box-shadow: none;"
                                             onchange="changeDarkModeSetting(this.value)">
-                                            <option value="light">Set 18 (Sáng)</option>
-                                            <option value="dark">Chế độ Tối</option>
-                                            <option value="system">Theo hệ thống</option>
+                                            <option value="light">Set 18 (SÃ¡ng)</option>
+                                            <option value="dark">Cháº¿ Ä‘á»™ Tá»‘i</option>
+                                            <option value="system">Theo há»‡ thá»‘ng</option>
                                         </select>
                                     </div>
                                 </div>
@@ -858,7 +858,7 @@
                             <div class="dua-card" id="card-obs-setup" style="padding: 1.5rem; width: 100%; margin: 0;">
                                 <h3 class="dua-card-title"
                                     style="margin-bottom: 0.6rem; padding-bottom: 0.4rem; border-bottom: 2px solid var(--pineapple-border-color);">
-                                    <i class="fa-solid fa-desktop"></i> Thiết lập OBS Browser
+                                    <i class="fa-solid fa-desktop"></i> Thiáº¿t láº­p OBS Browser
                                 </h3>
                                 <div id="obs-url-container" style="margin-top: 0.2rem;">
                                     <div style="display: flex; gap: 0.4rem; align-items: center; width: 100%;">
@@ -867,26 +867,26 @@
                                             OBS:</label>
                                         <input id="obs-url-input" class="dua-input" readonly
                                             style="flex-grow: 1; font-size: 0.75rem; background: var(--pineapple-gray); cursor: pointer; padding: 0.25rem 0.4rem;"
-                                            onclick="this.select(); document.execCommand('copy'); alert('Đã sao chép link OBS!');">
+                                            onclick="this.select(); document.execCommand('copy'); alert('ÄÃ£ sao chÃ©p link OBS!');">
                                         <button class="dua-btn"
                                             style="padding: 0.25rem 0.5rem; font-size: 0.75rem; background: var(--pineapple-yellow); border-width: 2px; box-shadow: 2px 2px 0px var(--pineapple-text);"
-                                            onclick="const input = document.getElementById('obs-url-input'); input.select(); document.execCommand('copy'); alert('Đã sao chép link OBS!');">Copy</button>
+                                            onclick="const input = document.getElementById('obs-url-input'); input.select(); document.execCommand('copy'); alert('ÄÃ£ sao chÃ©p link OBS!');">Copy</button>
                                     </div>
                                     <!-- Settings Controls Grid -->
                                     <div class="obs-settings-controls">
-                                        <!-- Column 1: Giao diện -->
+                                        <!-- Column 1: Giao diá»‡n -->
                                         <div style="display: flex; flex-direction: column; gap: 0.35rem;">
                                             <label
                                                 style="font-size: 0.75rem; font-weight: 800; color: var(--pineapple-text); margin-bottom: 0;">
-                                                Giao diện:
+                                                Giao diá»‡n:
                                             </label>
                                             <select id="obs-theme-select" class="dua-select"
                                                 style="width: 100%; padding: 0.35rem 0.5rem; font-size: 0.8rem; border-radius: 8px; box-shadow: none;"
                                                 onchange="onThemeChange(this.value)">
-                                                <option value="pineapple">Dứa mặc định</option>
+                                                <option value="pineapple">Dá»©a máº·c Ä‘á»‹nh</option>
                                                 <option value="enchanted-wild" selected>TFT Set 18 Enchanted Wild
                                                 </option>
-                                                <option value="cutepink">Hồng dễ thương</option>
+                                                <option value="cutepink">Há»“ng dá»… thÆ°Æ¡ng</option>
                                             </select>
                                         </div>
 
@@ -894,7 +894,7 @@
                                         <div style="display: flex; flex-direction: column; gap: 0.35rem;">
                                             <label
                                                 style="font-size: 0.75rem; font-weight: 800; color: var(--pineapple-text); margin-bottom: 0;">
-                                                Phóng to:
+                                                PhÃ³ng to:
                                             </label>
                                             <select id="obs-scale-select" class="dua-select"
                                                 style="width: 100%; padding: 0.35rem 0.5rem; font-size: 0.8rem; border-radius: 8px; box-shadow: none;"
@@ -913,7 +913,7 @@
                                                 style="display: flex; justify-content: space-between; align-items: center;">
                                                 <label
                                                     style="font-size: 0.75rem; font-weight: 800; color: var(--pineapple-text); margin-bottom: 0;">
-                                                    Độ mờ:
+                                                    Äá»™ má»:
                                                 </label>
                                                 <span id="obs-opacity-val"
                                                     style="font-size: 0.75rem; font-weight: 800; color: var(--pineapple-text); min-width: 32px; text-align: right;">100%</span>
@@ -925,12 +925,12 @@
                                             </div>
                                         </div>
 
-                                        <!-- Column 4: Thao tác nhanh -->
+                                        <!-- Column 4: Thao tÃ¡c nhanh -->
                                         <div
                                             style="display: flex; flex-direction: column; gap: 0.35rem; justify-content: flex-end;">
                                             <label
                                                 style="font-size: 0.75rem; font-weight: 800; color: var(--pineapple-text); margin-bottom: 0;">
-                                                Thao tác nhanh:
+                                                Thao tÃ¡c nhanh:
                                             </label>
                                             <div style="display: flex; gap: 0.4rem; width: 100%;">
                                                 <button class="dua-btn dua-btn-danger"
@@ -941,7 +941,7 @@
                                                 <button class="dua-btn dua-btn-secondary"
                                                     style="flex: 1; padding: 0.35rem 0.5rem; font-size: 0.75rem; border-radius: 8px; box-shadow: 2px 2px 0px var(--pineapple-text);"
                                                     onclick="window.open('overlay.html', '_blank', 'width=460,height=240')">
-                                                    Mở Overlay
+                                                    Má»Ÿ Overlay
                                                 </button>
                                             </div>
                                         </div>
@@ -954,7 +954,7 @@
                                             style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px dashed rgba(0,0,0,0.08); padding-bottom: 0.35rem;">
                                             <span
                                                 style="font-size: 0.8rem; font-weight: 800; color: var(--pineapple-text);">Xem
-                                                trước giao diện:</span>
+                                                trÆ°á»›c giao diá»‡n:</span>
                                         </div>
                                         <div class="theme-preview-container">
                                             <iframe id="theme-preview-iframe" src="overlay.html?preview=true"
@@ -964,64 +964,64 @@
                                 </div>
                             </div>
 
-                            <!-- Card: Cấu hình hiển thị Overlay -->
+                            <!-- Card: Cáº¥u hÃ¬nh hiá»ƒn thá»‹ Overlay -->
                             <div class="dua-card" id="card-overlay-settings" style="width: 100%; margin: 0;">
                                 <h3 class="dua-card-title"
                                     style="margin-bottom: 0.6rem; padding-bottom: 0.4rem; border-bottom: 2px solid var(--pineapple-border-color);">
-                                    <i class="fa-solid fa-desktop"></i> Tùy chọn hiển thị Overlay
+                                    <i class="fa-solid fa-desktop"></i> TÃ¹y chá»n hiá»ƒn thá»‹ Overlay
                                 </h3>
                                 <div class="form-group" style="margin-bottom: 1rem;">
                                     <div
                                         style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 0.35rem;">
                                         <label
-                                            style="font-weight: 700; font-size: 0.95rem; color: var(--pineapple-text); margin: 0;">Lời
-                                            hiển thị khi hết nhạc:</label>
+                                            style="font-weight: 700; font-size: 0.95rem; color: var(--pineapple-text); margin: 0;">Lá»i
+                                            hiá»ƒn thá»‹ khi háº¿t nháº¡c:</label>
                                         <span id="overlay-empty-msg-counter"
                                             style="font-size: 0.8rem; font-weight: 700; color: #6B7280; transition: color 0.2s ease;">0/50</span>
                                     </div>
                                     <div style="display: flex; gap: 0.5rem; align-items: center; width: 100%;">
                                         <input id="overlay-empty-msg-input" class="dua-input" type="text" maxlength="50"
-                                            placeholder="Order nhạc tự động Zypage 50k"
+                                            placeholder="Order nháº¡c tá»± Ä‘á»™ng Zypage 50k"
                                             style="font-size: 0.85rem; flex-grow: 1; transition: border-color 0.2s ease;">
                                         <button id="btn-overlay-empty-msg-apply" class="dua-btn"
-                                            style="padding: 0.35rem 0.8rem; font-size: 0.85rem; background: var(--pineapple-yellow); border-width: 2px; box-shadow: 2px 2px 0px var(--pineapple-text); white-space: nowrap;">Áp
-                                            dụng</button>
+                                            style="padding: 0.35rem 0.8rem; font-size: 0.85rem; background: var(--pineapple-yellow); border-width: 2px; box-shadow: 2px 2px 0px var(--pineapple-text); white-space: nowrap;">Ãp
+                                            dá»¥ng</button>
                                     </div>
                                 </div>
                                 <div class="form-group">
                                     <div
                                         style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 0.35rem;">
                                         <label
-                                            style="font-weight: 700; font-size: 0.95rem; color: var(--pineapple-text); margin: 0;">Chữ
-                                            hành động ở thông báo Donate mới:</label>
+                                            style="font-weight: 700; font-size: 0.95rem; color: var(--pineapple-text); margin: 0;">Chá»¯
+                                            hÃ nh Ä‘á»™ng á»Ÿ thÃ´ng bÃ¡o Donate má»›i:</label>
                                         <span id="overlay-donate-action-counter"
                                             style="font-size: 0.8rem; font-weight: 700; color: #6B7280; transition: color 0.2s ease;">0/50</span>
                                     </div>
                                     <div style="display: flex; gap: 0.5rem; align-items: center; width: 100%;">
                                         <input id="overlay-donate-action-input" class="dua-input" type="text"
-                                            maxlength="50" placeholder="gửi một quả dứa"
+                                            maxlength="50" placeholder="gá»­i má»™t quáº£ dá»©a"
                                             style="font-size: 0.85rem; flex-grow: 1; transition: border-color 0.2s ease;">
                                         <button id="btn-overlay-donate-action-apply" class="dua-btn"
-                                            style="padding: 0.35rem 0.8rem; font-size: 0.85rem; background: var(--pineapple-yellow); border-width: 2px; box-shadow: 2px 2px 0px var(--pineapple-text); white-space: nowrap;">Áp
-                                            dụng</button>
+                                            style="padding: 0.35rem 0.8rem; font-size: 0.85rem; background: var(--pineapple-yellow); border-width: 2px; box-shadow: 2px 2px 0px var(--pineapple-text); white-space: nowrap;">Ãp
+                                            dá»¥ng</button>
                                     </div>
                                 </div>
                                 <div class="form-group" style="margin-top: 1rem;">
                                     <div
                                         style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 0.35rem;">
                                         <label
-                                            style="font-weight: 700; font-size: 0.95rem; color: var(--pineapple-text); margin: 0;">Lời
-                                            hiển thị khi bật Tập trung:</label>
+                                            style="font-weight: 700; font-size: 0.95rem; color: var(--pineapple-text); margin: 0;">Lá»i
+                                            hiá»ƒn thá»‹ khi báº­t Táº­p trung:</label>
                                         <span id="overlay-focus-msg-counter"
                                             style="font-size: 0.8rem; font-weight: 700; color: #6B7280; transition: color 0.2s ease;">0/50</span>
                                     </div>
                                     <div style="display: flex; gap: 0.5rem; align-items: center; width: 100%;">
                                         <input id="overlay-focus-msg-input" class="dua-input" type="text" maxlength="50"
-                                            placeholder="Đang bật chế độ Tập trung 🤫 Hàng đợi tạm dừng"
+                                            placeholder="Äang báº­t cháº¿ Ä‘á»™ Táº­p trung ðŸ¤« HÃ ng Ä‘á»£i táº¡m dá»«ng"
                                             style="font-size: 0.85rem; flex-grow: 1; transition: border-color 0.2s ease;">
                                         <button id="btn-overlay-focus-msg-apply" class="dua-btn"
-                                            style="padding: 0.35rem 0.8rem; font-size: 0.85rem; background: var(--pineapple-yellow); border-width: 2px; box-shadow: 2px 2px 0px var(--pineapple-text); white-space: nowrap;">Áp
-                                            dụng</button>
+                                            style="padding: 0.35rem 0.8rem; font-size: 0.85rem; background: var(--pineapple-yellow); border-width: 2px; box-shadow: 2px 2px 0px var(--pineapple-text); white-space: nowrap;">Ãp
+                                            dá»¥ng</button>
                                     </div>
                                 </div>
                                 <div
@@ -1029,17 +1029,17 @@
                                     <label class="sb-checkbox-label"
                                         style="font-size: 0.95rem; font-weight: 700; color: var(--pineapple-text); cursor: pointer; user-select: none; display: inline-flex; align-items: center; gap: 0.4rem;">
                                         <input type="checkbox" class="sb-checkbox" id="show-idle-price-table-toggle">
-                                        <span>Hiển thị bảng giá khi hết nhạc</span>
+                                        <span>Hiá»ƒn thá»‹ báº£ng giÃ¡ khi háº¿t nháº¡c</span>
                                     </label>
                                     <label class="sb-checkbox-label"
                                         style="font-size: 0.95rem; font-weight: 700; color: var(--pineapple-text); cursor: pointer; user-select: none; display: inline-flex; align-items: center; gap: 0.4rem;">
                                         <input type="checkbox" class="sb-checkbox" id="hide-empty-overlay-toggle">
-                                        <span>Ẩn Overlay hoàn toàn khi không có nhạc</span>
+                                        <span>áº¨n Overlay hoÃ n toÃ n khi khÃ´ng cÃ³ nháº¡c</span>
                                     </label>
                                     <label class="sb-checkbox-label"
                                         style="font-size: 0.95rem; font-weight: 700; color: var(--pineapple-text); cursor: pointer; user-select: none; display: inline-flex; align-items: center; gap: 0.4rem;">
                                         <input type="checkbox" class="sb-checkbox" id="show-overlay-lyrics-toggle">
-                                        <span>Hiển thị lyrics trên OBS Overlay</span>
+                                        <span>Hiá»ƒn thá»‹ lyrics trÃªn OBS Overlay</span>
                                     </label>
                                 </div>
                             </div>
@@ -1048,37 +1048,37 @@
                         <!-- Section: filters -->
                         <div id="settings-sec-filters" class="settings-section"
                             style="display: none; flex-direction: column; gap: 1rem; width: 100%;">
-                            <!-- Card 6: Cấu hình SponsorBlock -->
+                            <!-- Card 6: Cáº¥u hÃ¬nh SponsorBlock -->
                             <div class="dua-card" id="card-sponsorblock" style="width: 100%; margin: 0;">
                                 <h3 class="dua-card-title"
                                     style="margin-bottom: 0.6rem; padding-bottom: 0.4rem; border-bottom: 2px solid var(--pineapple-border-color);">
-                                    <i class="fa-solid fa-shield-halved"></i> Cấu hình SponsorBlock
+                                    <i class="fa-solid fa-shield-halved"></i> Cáº¥u hÃ¬nh SponsorBlock
                                 </h3>
 
                                 <div class="sponsorblock-options">
                                     <label class="sb-checkbox-label">
                                         <input type="checkbox" class="sb-checkbox" id="sb-sponsor" checked>
-                                        <span>Tài trợ (Sponsor)</span>
+                                        <span>TÃ i trá»£ (Sponsor)</span>
                                     </label>
                                     <label class="sb-checkbox-label">
                                         <input type="checkbox" class="sb-checkbox" id="sb-intro" checked>
-                                        <span>Nhạc mở đầu (Intro)</span>
+                                        <span>Nháº¡c má»Ÿ Ä‘áº§u (Intro)</span>
                                     </label>
                                     <label class="sb-checkbox-label">
                                         <input type="checkbox" class="sb-checkbox" id="sb-outro" checked>
-                                        <span>Đoạn kết (Outro)</span>
+                                        <span>Äoáº¡n káº¿t (Outro)</span>
                                     </label>
                                     <label class="sb-checkbox-label">
                                         <input type="checkbox" class="sb-checkbox" id="sb-selfpromo" checked>
-                                        <span>Quảng cáo cá nhân (Self-Promo)</span>
+                                        <span>Quáº£ng cÃ¡o cÃ¡ nhÃ¢n (Self-Promo)</span>
                                     </label>
                                     <label class="sb-checkbox-label">
                                         <input type="checkbox" class="sb-checkbox" id="sb-interaction">
-                                        <span>Kêu gọi đăng ký (Interaction)</span>
+                                        <span>KÃªu gá»i Ä‘Äƒng kÃ½ (Interaction)</span>
                                     </label>
                                     <label class="sb-checkbox-label">
                                         <input type="checkbox" class="sb-checkbox" id="sb-offtopic" checked>
-                                        <span>Đoạn đối thoại phụ (Off-topic)</span>
+                                        <span>Äoáº¡n Ä‘á»‘i thoáº¡i phá»¥ (Off-topic)</span>
                                     </label>
                                 </div>
                             </div>
@@ -1088,134 +1088,134 @@
                         <div id="settings-sec-limits" class="settings-section"
                             style="display: none; flex-direction: column; gap: 1rem; width: 100%;">
 
-                            <!-- Card 1: Cấu hình Giới hạn Thời gian -->
+                            <!-- Card 1: Cáº¥u hÃ¬nh Giá»›i háº¡n Thá»i gian -->
                             <div class="dua-card" id="card-time-limit" style="width: 100%; margin: 0; padding: 1.2rem;">
                                 <h3 class="dua-card-title"
                                     style="justify-content: space-between; border-bottom: none; padding-bottom: 0; margin-bottom: 0;">
-                                    <span><i class="fa-solid fa-hourglass-half"></i> Giới hạn thời gian</span>
+                                    <span><i class="fa-solid fa-hourglass-half"></i> Giá»›i háº¡n thá»i gian</span>
                                     <label class="sb-checkbox-label"
                                         style="font-size: 0.85rem; cursor: pointer; margin-bottom: 0; user-select: none;">
                                         <input type="checkbox" class="sb-checkbox" id="max-duration-toggle">
-                                        <span>Kích hoạt</span>
+                                        <span>KÃ­ch hoáº¡t</span>
                                     </label>
                                 </h3>
 
-                                <!-- Chọn chế độ giới hạn -->
+                                <!-- Chá»n cháº¿ Ä‘á»™ giá»›i háº¡n -->
                                 <div
                                     style="display: flex; gap: 1rem; align-items: center; margin-top: 0.5rem; font-size: 0.85rem; font-weight: 700;">
                                     <label
                                         style="cursor: pointer; display: inline-flex; align-items: center; gap: 0.25rem;">
                                         <input type="radio" name="limit-mode" value="fixed" checked
-                                            id="limit-mode-fixed"> Cố
-                                        định
+                                            id="limit-mode-fixed"> Cá»‘
+                                        Ä‘á»‹nh
                                     </label>
                                     <label
                                         style="cursor: pointer; display: inline-flex; align-items: center; gap: 0.25rem;">
                                         <input type="radio" name="limit-mode" value="milestone"
                                             id="limit-mode-milestone"> Theo
-                                        mốc donate
+                                        má»‘c donate
                                     </label>
                                 </div>
 
-                                <!-- Chế độ 1: Cố định -->
+                                <!-- Cháº¿ Ä‘á»™ 1: Cá»‘ Ä‘á»‹nh -->
                                 <div class="form-group" id="max-duration-form-group"
                                     style="display: none; margin-top: 0.8rem;">
                                     <div style="display: flex; gap: 0.5rem; align-items: center;">
                                         <label for="max-duration-input"
                                             style="font-size: 0.9rem; font-weight: 700; white-space: nowrap; margin-bottom: 0; display: inline-flex; align-items: center; gap: 0.2rem;"><i
-                                                class="fa-solid fa-clock"></i> Phát tối đa:</label>
+                                                class="fa-solid fa-clock"></i> PhÃ¡t tá»‘i Ä‘a:</label>
                                         <input id="max-duration-input" class="dua-input"
                                             style="width: 110px; padding: 0.35rem 0.6rem; border-radius: 8px; font-size: 0.85rem; box-shadow: none;"
                                             type="number" min="1" placeholder="180">
                                         <span
-                                            style="font-weight: 800; font-size: 0.85rem; color: var(--pineapple-text);">giây</span>
+                                            style="font-weight: 800; font-size: 0.85rem; color: var(--pineapple-text);">giÃ¢y</span>
                                         <button id="btn-max-duration-apply" class="dua-btn"
                                             style="padding: 0.3rem 0.6rem; border-radius: 8px; font-size: 0.8rem; box-shadow: 2px 2px 0px var(--pineapple-text); background: var(--pineapple-yellow); border-width: 2px;">OK</button>
                                     </div>
                                 </div>
 
-                                <!-- Chế độ 2: Theo mốc donate -->
+                                <!-- Cháº¿ Ä‘á»™ 2: Theo má»‘c donate -->
                                 <div id="milestone-form-group"
                                     style="display: none; margin-top: 0.8rem; flex-direction: column; gap: 0.6rem;">
-                                    <!-- Danh sách các mốc được render động bằng JavaScript -->
+                                    <!-- Danh sÃ¡ch cÃ¡c má»‘c Ä‘Æ°á»£c render Ä‘á»™ng báº±ng JavaScript -->
                                     <div id="milestone-list-container"
                                         style="display: flex; flex-direction: column; gap: 0.6rem;"></div>
 
-                                    <!-- Nút thêm mốc mới -->
+                                    <!-- NÃºt thÃªm má»‘c má»›i -->
                                     <button id="btn-add-milestone" class="dua-btn" type="button"
                                         style="align-self: flex-start; padding: 0.25rem 0.6rem; border-radius: 8px; font-size: 0.75rem; border-width: 2px; box-shadow: 1px 1px 0px var(--pineapple-text); display: inline-flex; align-items: center; gap: 0.25rem; margin-bottom: 0.2rem; cursor: pointer;">
-                                        <i class="fa-solid fa-plus"></i> Thêm mốc mới
+                                        <i class="fa-solid fa-plus"></i> ThÃªm má»‘c má»›i
                                     </button>
 
                                     <div
                                         style="display: flex; gap: 0.4rem; align-items: center; font-size: 0.85rem; font-weight: 700; flex-wrap: wrap; border-top: 2px dashed var(--pineapple-text); padding-top: 0.6rem;">
-                                        <span>Còn lại (≥ mốc cao nhất) phát tối đa</span>
+                                        <span>CÃ²n láº¡i (â‰¥ má»‘c cao nháº¥t) phÃ¡t tá»‘i Ä‘a</span>
                                         <input id="ms-dur-default" class="dua-input"
                                             style="width: 110px; padding: 0.25rem 0.5rem; border-radius: 8px; font-size: 0.8rem; box-shadow: none;"
                                             type="number" placeholder="30">
-                                        <span>phút (0 = hết bài)</span>
+                                        <span>phÃºt (0 = háº¿t bÃ i)</span>
                                     </div>
                                     <button id="btn-milestone-apply" class="dua-btn"
-                                        style="align-self: flex-start; padding: 0.3rem 0.8rem; border-radius: 8px; font-size: 0.8rem; background: var(--pineapple-yellow); border-width: 2px; box-shadow: 2px 2px 0px var(--pineapple-text); margin-top: 0.2rem;">Áp
-                                        dụng mốc</button>
+                                        style="align-self: flex-start; padding: 0.3rem 0.8rem; border-radius: 8px; font-size: 0.8rem; background: var(--pineapple-yellow); border-width: 2px; box-shadow: 2px 2px 0px var(--pineapple-text); margin-top: 0.2rem;">Ãp
+                                        dá»¥ng má»‘c</button>
                                 </div>
 
-                                <!-- Cấu hình Gia hạn thời gian nghe nhạc -->
+                                <!-- Cáº¥u hÃ¬nh Gia háº¡n thá»i gian nghe nháº¡c -->
                                 <div
                                     style="border-top: 2px dashed var(--pineapple-border-color); margin-top: 1rem; padding-top: 0.8rem;">
                                     <div
                                         style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
                                         <span
                                             style="font-size: 0.9rem; font-weight: 700; display: inline-flex; align-items: center; gap: 0.35rem; color: var(--pineapple-text);">
-                                            <i class="fa-solid fa-plus-minus"></i> Gia hạn thời gian nghe nhạc
+                                            <i class="fa-solid fa-plus-minus"></i> Gia háº¡n thá»i gian nghe nháº¡c
                                         </span>
                                         <label class="sb-checkbox-label"
                                             style="font-size: 0.85rem; cursor: pointer; margin-bottom: 0; user-select: none;">
                                             <input type="checkbox" class="sb-checkbox" id="extension-toggle">
-                                            <span>Kích hoạt</span>
+                                            <span>KÃ­ch hoáº¡t</span>
                                         </label>
                                     </div>
                                     <div id="extension-form-group"
                                         style="display: none; flex-direction: column; gap: 0.6rem; margin-top: 0.5rem;">
                                         <div
                                             style="display: flex; gap: 0.4rem; align-items: center; font-size: 0.85rem; font-weight: 700; flex-wrap: wrap;">
-                                            <span>Mỗi</span>
+                                            <span>Má»—i</span>
                                             <input id="extension-price-input" class="dua-input"
                                                 style="width: 100px; padding: 0.25rem 0.5rem; border-radius: 8px; font-size: 0.8rem; box-shadow: none;"
                                                 type="number" min="1000" placeholder="50000">
-                                            <span>VNĐ donate sẽ gia hạn thêm</span>
+                                            <span>VNÄ donate sáº½ gia háº¡n thÃªm</span>
                                             <input id="extension-minutes-input" class="dua-input"
                                                 style="width: 70px; padding: 0.25rem 0.5rem; border-radius: 8px; font-size: 0.8rem; box-shadow: none;"
                                                 type="number" min="1" placeholder="6">
-                                            <span>phút nghe nhạc</span>
+                                            <span>phÃºt nghe nháº¡c</span>
                                         </div>
                                         <button id="btn-extension-apply" class="dua-btn"
-                                            style="align-self: flex-start; padding: 0.3rem 0.8rem; border-radius: 8px; font-size: 0.8rem; background: var(--pineapple-yellow); border-width: 2px; box-shadow: 2px 2px 0px var(--pineapple-text); margin-top: 0.2rem;">Áp
-                                            dụng</button>
+                                            style="align-self: flex-start; padding: 0.3rem 0.8rem; border-radius: 8px; font-size: 0.8rem; background: var(--pineapple-yellow); border-width: 2px; box-shadow: 2px 2px 0px var(--pineapple-text); margin-top: 0.2rem;">Ãp
+                                            dá»¥ng</button>
                                     </div>
                                 </div>
-                                <!-- Cấu hình Vote Skip -->
+                                <!-- Cáº¥u hÃ¬nh Vote Skip -->
                                 <div
                                     style="border-top: 2px dashed var(--pineapple-border-color); margin-top: 1rem; padding-top: 0.8rem;">
                                     <div
                                         style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
                                         <span
                                             style="font-size: 0.9rem; font-weight: 700; display: inline-flex; align-items: center; gap: 0.35rem; color: var(--pineapple-text);">
-                                            <i class="fa-solid fa-vote-yea"></i> Cấu hình Vote Skip bài hát
+                                            <i class="fa-solid fa-vote-yea"></i> Cáº¥u hÃ¬nh Vote Skip bÃ i hÃ¡t
                                         </span>
                                     </div>
                                     <div
                                         style="display: flex; flex-direction: column; gap: 0.6rem; margin-top: 0.5rem;">
                                         <div
                                             style="display: flex; gap: 0.4rem; align-items: center; font-size: 0.85rem; font-weight: 700; flex-wrap: wrap;">
-                                            <span>Mục tiêu skip mặc định cho bài tự thêm (VNĐ):</span>
+                                            <span>Má»¥c tiÃªu skip máº·c Ä‘á»‹nh cho bÃ i tá»± thÃªm (VNÄ):</span>
                                             <input id="vote-skip-default-amount-input" class="dua-input"
                                                 style="width: 120px; padding: 0.25rem 0.5rem; border-radius: 8px; font-size: 0.8rem; box-shadow: none;"
                                                 type="number" min="1000" placeholder="20000">
                                         </div>
                                         <button id="btn-vote-skip-settings-apply" class="dua-btn"
-                                            style="align-self: flex-start; padding: 0.3rem 0.8rem; border-radius: 8px; font-size: 0.8rem; background: var(--pineapple-yellow); border-width: 2px; box-shadow: 2px 2px 0px var(--pineapple-text); margin-top: 0.2rem;">Áp
-                                            dụng</button>
+                                            style="align-self: flex-start; padding: 0.3rem 0.8rem; border-radius: 8px; font-size: 0.8rem; background: var(--pineapple-yellow); border-width: 2px; box-shadow: 2px 2px 0px var(--pineapple-text); margin-top: 0.2rem;">Ãp
+                                            dá»¥ng</button>
                                     </div>
                                 </div>
                             </div>
@@ -1229,21 +1229,21 @@
                                     <h3>YouTube Playlist <span class="feature-beta-badge">Beta</span></h3>
                                 </div>
                                 <div class="playlist-settings-grid">
-                                    <label>Mốc kích hoạt playlist
-                                        <span class="settings-input-unit"><input id="playlist-minimum-input" class="dua-input" type="number" min="0" step="10000"><b>VNĐ</b></span>
+                                    <label>Má»‘c kÃ­ch hoáº¡t playlist
+                                        <span class="settings-input-unit"><input id="playlist-minimum-input" class="dua-input" type="number" min="0" step="10000"><b>VNÄ</b></span>
                                     </label>
-                                    <label>Thời gian tại mốc tối thiểu
-                                        <span class="settings-input-unit"><input id="playlist-duration-input" class="dua-input" type="number" min="1" max="525600" step="1"><b>phút</b></span>
+                                    <label>Thá»i gian táº¡i má»‘c tá»‘i thiá»ƒu
+                                        <span class="settings-input-unit"><input id="playlist-duration-input" class="dua-input" type="number" min="1" max="525600" step="1"><b>phÃºt</b></span>
                                     </label>
-                                    <label>Bước tiền cộng thêm
-                                        <span class="settings-input-unit"><input id="playlist-extra-amount-input" class="dua-input" type="number" min="1" step="10000"><b>VNĐ</b></span>
+                                    <label>BÆ°á»›c tiá»n cá»™ng thÃªm
+                                        <span class="settings-input-unit"><input id="playlist-extra-amount-input" class="dua-input" type="number" min="1" step="10000"><b>VNÄ</b></span>
                                     </label>
-                                    <label>Thời gian thêm mỗi bước
-                                        <span class="settings-input-unit"><input id="playlist-extra-duration-input" class="dua-input" type="number" min="1" max="525600" step="1"><b>phút</b></span>
+                                    <label>Thá»i gian thÃªm má»—i bÆ°á»›c
+                                        <span class="settings-input-unit"><input id="playlist-extra-duration-input" class="dua-input" type="number" min="1" max="525600" step="1"><b>phÃºt</b></span>
                                     </label>
                                 </div>
-                                <p id="playlist-pricing-note" class="playlist-pricing-note">Từ 500.000 VNĐ được phát 30 phút; mỗi 50.000 VNĐ dư thêm 5 phút.</p>
-                                <button class="dua-btn dua-btn-primary playlist-settings-save" onclick="savePlaylistSettings()">Lưu</button>
+                                <p id="playlist-pricing-note" class="playlist-pricing-note">Tá»« 500.000 VNÄ Ä‘Æ°á»£c phÃ¡t 30 phÃºt; má»—i 50.000 VNÄ dÆ° thÃªm 5 phÃºt.</p>
+                                <button class="dua-btn dua-btn-primary playlist-settings-save" onclick="savePlaylistSettings()">LÆ°u</button>
                             </div>
                         </div>
 
@@ -1251,25 +1251,25 @@
                             <div class="vote-skip-bar-label">
                                 <i class="fa-solid fa-layer-group"></i>
                                 <span>Vote skip Playlist 50% <span class="feature-beta-badge">Beta</span>:</span>
-                                <span id="dash-playlist-vote-skip-progress-text">0 / 20.000 VNĐ</span>
+                                <span id="dash-playlist-vote-skip-progress-text">0 / 20.000 VNÄ</span>
                             </div>
                             <div class="vote-skip-bar-track">
                                 <div id="dash-playlist-vote-skip-fill" class="vote-skip-bar-fill" style="width: 0%;"></div>
                             </div>
                             <div id="dash-playlist-vote-skip-contributors" class="vote-skip-contributors" style="display: none;">
-                                <strong>Người góp phần:</strong> <span id="dash-playlist-vote-skip-contributors-list"></span>
+                                <strong>NgÆ°á»i gÃ³p pháº§n:</strong> <span id="dash-playlist-vote-skip-contributors-list"></span>
                             </div>
                         </div>
 
                         <!-- Section: logs -->
                         <div id="settings-sec-logs" class="settings-section"
                             style="display: none; flex-direction: column; gap: 1rem; width: 100%;">
-                            <!-- Monitor trạng thái kết nối -->
+                            <!-- Monitor tráº¡ng thÃ¡i káº¿t ná»‘i -->
                             <div class="dua-card" id="card-service-monitor"
                                 style="width: 100%; margin: 0; padding: 1.25rem;">
                                 <h3 class="dua-card-title"
                                     style="margin-bottom: 0.8rem; padding-bottom: 0.4rem; border-bottom: 2px solid var(--pineapple-border-color); font-size: 1rem;">
-                                    <i class="fa-solid fa-square-poll-horizontal"></i> Giám sát dịch vụ hệ thống
+                                    <i class="fa-solid fa-square-poll-horizontal"></i> GiÃ¡m sÃ¡t dá»‹ch vá»¥ há»‡ thá»‘ng
                                 </h3>
                                 <div
                                     style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem;">
@@ -1278,22 +1278,22 @@
                                         style="display: flex; flex-direction: column; gap: 0.35rem; border: 2px solid var(--pineapple-border-color); padding: 0.6rem; border-radius: 8px; background: rgba(0, 0, 0, 0.02);">
                                         <div
                                             style="display: flex; align-items: center; gap: 0.4rem; font-weight: 700; font-size: 0.85rem; color: var(--pineapple-text);">
-                                            <i class="fa-solid fa-arrows-rotate"></i> <span>Đồng bộ ZyPage</span>
+                                            <i class="fa-solid fa-arrows-rotate"></i> <span>Äá»“ng bá»™ ZyPage</span>
                                         </div>
                                         <div id="monitor-zypage" class="status-badge disconnected"
                                             style="justify-content: center; font-size: 0.75rem; padding: 0.15rem 0.5rem; border-radius: 6px;">
-                                            NGẮT KẾT NỐI</div>
+                                            NGáº®T Káº¾T Ná»I</div>
                                     </div>
                                     <!-- YouTube API -->
                                     <div
                                         style="display: flex; flex-direction: column; gap: 0.35rem; border: 2px solid var(--pineapple-border-color); padding: 0.6rem; border-radius: 8px; background: rgba(0, 0, 0, 0.02);">
                                         <div
                                             style="display: flex; align-items: center; gap: 0.4rem; font-weight: 700; font-size: 0.85rem; color: var(--pineapple-text);">
-                                            <i class="fa-brands fa-youtube"></i> <span>Tài khoản YouTube</span>
+                                            <i class="fa-brands fa-youtube"></i> <span>TÃ i khoáº£n YouTube</span>
                                         </div>
                                         <div id="monitor-youtube" class="status-badge disconnected"
                                             style="justify-content: center; font-size: 0.75rem; padding: 0.15rem 0.5rem; border-radius: 6px;">
-                                            CHƯA LIÊN KẾT</div>
+                                            CHÆ¯A LIÃŠN Káº¾T</div>
                                     </div>
                                     <!-- OBS Overlay -->
                                     <div
@@ -1304,36 +1304,36 @@
                                         </div>
                                         <div id="monitor-obs" class="status-badge disconnected"
                                             style="justify-content: center; font-size: 0.75rem; padding: 0.15rem 0.5rem; border-radius: 6px;">
-                                            CHƯA KẾT NỐI</div>
+                                            CHÆ¯A Káº¾T Ná»I</div>
                                     </div>
                                     <!-- Internet Connection -->
                                     <div
                                         style="display: flex; flex-direction: column; gap: 0.35rem; border: 2px solid var(--pineapple-border-color); padding: 0.6rem; border-radius: 8px; background: rgba(0, 0, 0, 0.02);">
                                         <div
                                             style="display: flex; align-items: center; gap: 0.4rem; font-weight: 700; font-size: 0.85rem; color: var(--pineapple-text);">
-                                            <i class="fa-solid fa-globe"></i> <span>Mạng & Gist JSON</span>
+                                            <i class="fa-solid fa-globe"></i> <span>Máº¡ng & Gist JSON</span>
                                         </div>
                                         <div id="monitor-internet" class="status-badge connecting"
                                             style="justify-content: center; font-size: 0.75rem; padding: 0.15rem 0.5rem; border-radius: 6px;">
-                                            ĐANG KIỂM TRA</div>
+                                            ÄANG KIá»‚M TRA</div>
                                     </div>
                                 </div>
                             </div>
-                            <!-- Card 7: Nhật ký Hoạt động (Logs) -->
+                            <!-- Card 7: Nháº­t kÃ½ Hoáº¡t Ä‘á»™ng (Logs) -->
                             <div class="dua-card" id="card-logs" style="width: 100%; margin: 0;">
                                 <h3 class="dua-card-title"
                                     style="margin-bottom: 0.6rem; padding-bottom: 0.4rem; border-bottom: 2px solid var(--pineapple-border-color); display: flex; justify-content: space-between; align-items: center;">
-                                    <span><i class="fa-solid fa-clock-rotate-left"></i> Nhật ký hoạt động</span>
+                                    <span><i class="fa-solid fa-clock-rotate-left"></i> Nháº­t kÃ½ hoáº¡t Ä‘á»™ng</span>
                                     <button id="btn-open-log-file" class="dua-btn"
                                         style="padding: 0.25rem 0.6rem; font-size: 0.75rem; border-radius: 8px; border-width: 2px; box-shadow: 2px 2px 0px var(--pineapple-text); display: inline-flex; align-items: center; gap: 0.3rem;"
-                                        onclick="openExternalLogFile()" title="Mở file log ngoài trên máy tính">
-                                        <i class="fa-solid fa-file-lines"></i> Xem log ngoài (.txt)
+                                        onclick="openExternalLogFile()" title="Má»Ÿ file log ngoÃ i trÃªn mÃ¡y tÃ­nh">
+                                        <i class="fa-solid fa-file-lines"></i> Xem log ngoÃ i (.txt)
                                     </button>
                                 </h3>
                                 <div id="log-box" class="log-box-inner">
                                     <div class="log-entry log-system">
-                                        <span class="log-tag log-tag-system">System</span> Khởi động hệ thống Pineapple
-                                        Studio thành công.
+                                        <span class="log-tag log-tag-system">System</span> Khá»Ÿi Ä‘á»™ng há»‡ thá»‘ng Pineapple
+                                        Studio thÃ nh cÃ´ng.
                                     </div>
                                 </div>
                             </div>
@@ -1346,8 +1346,8 @@
                                 style="padding: 2rem; width: 100%; margin: 0; box-sizing: border-box; display: flex; flex-direction: column; gap: 1.5rem; position: relative; overflow: hidden;">
                                 <h3 class="dua-card-title"
                                     style="margin-bottom: 0.6rem; padding-bottom: 0.4rem; border-bottom: 2px solid var(--pineapple-border-color); font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem;">
-                                    <i class="fa-solid fa-circle-info" style="color: var(--pineapple-orange);"></i> Giới
-                                    thiệu ứng dụng
+                                    <i class="fa-solid fa-circle-info" style="color: var(--pineapple-orange);"></i> Giá»›i
+                                    thiá»‡u á»©ng dá»¥ng
                                 </h3>
 
                                 <div style="display: flex; gap: 2rem; align-items: flex-start; flex-wrap: wrap;">
@@ -1370,21 +1370,21 @@
                                             Pineapple Studio</h2>
                                         <p
                                             style="font-size: 0.95rem; font-weight: 600; line-height: 1.6; color: var(--pineapple-text); opacity: 0.85; margin: 0;">
-                                            Trình phát nhạc donate chuyên nghiệp dành cho Streamer, đồng bộ trực tiếp
-                                            với hệ thống donate ZyPage, tích hợp OBS Overlay hiển thị đẹp mắt, và tự
-                                            động bỏ qua quảng cáo SponsorBlock.
+                                            TrÃ¬nh phÃ¡t nháº¡c donate chuyÃªn nghiá»‡p dÃ nh cho Streamer, Ä‘á»“ng bá»™ trá»±c tiáº¿p
+                                            vá»›i há»‡ thá»‘ng donate ZyPage, tÃ­ch há»£p OBS Overlay hiá»ƒn thá»‹ Ä‘áº¹p máº¯t, vÃ  tá»±
+                                            Ä‘á»™ng bá» qua quáº£ng cÃ¡o SponsorBlock.
                                         </p>
 
                                         <div
                                             style="display: grid; grid-template-columns: auto 1fr; gap: 0.5rem 1rem; font-size: 0.9rem; font-weight: 700; color: var(--pineapple-text); border-top: 2px dashed var(--pineapple-border-color); padding-top: 1rem; margin-top: 0.5rem;">
-                                            <span style="opacity: 0.7;">Nhóm phát triển:</span>
+                                            <span style="opacity: 0.7;">NhÃ³m phÃ¡t triá»ƒn:</span>
                                             <span style="color: var(--pineapple-orange);">Pineapple Team</span>
 
-                                            <span style="opacity: 0.7;">Phiên bản:</span>
+                                            <span style="opacity: 0.7;">PhiÃªn báº£n:</span>
                                             <div>
                                                 <span id="app-version-display"
                                                     style="color: var(--pineapple-orange); font-weight: 800; cursor: pointer;"
-                                                    title="Nhấp 5 lần để kích hoạt bí mật">v26.8.11</span>
+                                                    title="Nháº¥p 5 láº§n Ä‘á»ƒ kÃ­ch hoáº¡t bÃ­ máº­t">v26.8.11</span>
                                             </div>
                                         </div>
                                     </div>
@@ -1396,7 +1396,7 @@
                 </div>
             </div>
 
-            <!-- Tab 3: After Credit (Bí mật) -->
+            <!-- Tab 3: After Credit (BÃ­ máº­t) -->
             <div id="tab-aftercredit" class="tab-content">
                 <div class="settings-layout" style="display: flex; gap: 1.5rem; width: 100%;">
                     <div class="dua-card" style="width: 100%; margin: 0;">
@@ -1406,13 +1406,13 @@
                         <div style="padding: 3rem 1.5rem; text-align: center; color: var(--pineapple-text);">
                             <div
                                 style="font-size: 3.5rem; margin-bottom: 1rem; filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.15));">
-                                🎁</div>
+                                ðŸŽ</div>
                             <h2
                                 style="font-family: var(--font-title); font-weight: 800; font-size: 1.5rem; margin-bottom: 0.5rem; color: var(--pineapple-orange-dark);">
-                                Chào mừng bạn đến với góc After Credit bí mật!</h2>
+                                ChÃ o má»«ng báº¡n Ä‘áº¿n vá»›i gÃ³c After Credit bÃ­ máº­t!</h2>
                             <p
                                 style="opacity: 0.85; max-width: 500px; margin: 0.5rem auto 0; font-size: 0.95rem; font-weight: 600; line-height: 1.6;">
-                                Nội dung của phần này đang được cập nhật và sẽ sớm hiển thị tại đây.</p>
+                                Ná»™i dung cá»§a pháº§n nÃ y Ä‘ang Ä‘Æ°á»£c cáº­p nháº­t vÃ  sáº½ sá»›m hiá»ƒn thá»‹ táº¡i Ä‘Ã¢y.</p>
                         </div>
                     </div>
                 </div>
@@ -1423,24 +1423,24 @@
 
 
 
-    <!-- YouTube Video Embed Area (Ẩn hoàn toàn trong Dashboard) -->
+    <!-- YouTube Video Embed Area (áº¨n hoÃ n toÃ n trong Dashboard) -->
     <div class="dua-card" style="display: none;">
         <div class="dua-card-title" style="justify-content: space-between;">
-            <span><i class="fa-brands fa-youtube"></i> Khung hình Youtube</span>
+            <span><i class="fa-brands fa-youtube"></i> Khung hÃ¬nh Youtube</span>
             <button class="dua-btn dua-btn-secondary" style="padding: 0.3rem 0.8rem; font-size: 0.8rem;"
                 onclick="togglePlayerVisibility()">
-                <i class="fa-solid fa-eye-slash"></i> Ẩn/Hiện Video
+                <i class="fa-solid fa-eye-slash"></i> áº¨n/Hiá»‡n Video
             </button>
         </div>
         <div id="youtube-player-container-wrapper" class="youtube-player-area"
             style="display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 2rem; color: #FFF; background: #1a1a1a; box-sizing: border-box; min-height: 200px;">
-            <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">📺</div>
-            <div style="font-weight: 800; font-size: 1.05rem; color: var(--pineapple-yellow);">Trình phát hoạt động trên
+            <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">ðŸ“º</div>
+            <div style="font-weight: 800; font-size: 1.05rem; color: var(--pineapple-yellow);">TrÃ¬nh phÃ¡t hoáº¡t Ä‘á»™ng trÃªn
                 OBS Overlay</div>
             <div
                 style="font-size: 0.85rem; color: #aaa; max-width: 320px; margin-top: 0.3rem; line-height: 1.4; font-weight: 600;">
-                Hình ảnh và âm thanh của YouTube đang được đồng bộ phát trực tiếp trên cửa sổ <strong>OBS
-                    Overlay</strong> để đưa lên livestream của bạn.
+                HÃ¬nh áº£nh vÃ  Ã¢m thanh cá»§a YouTube Ä‘ang Ä‘Æ°á»£c Ä‘á»“ng bá»™ phÃ¡t trá»±c tiáº¿p trÃªn cá»­a sá»• <strong>OBS
+                    Overlay</strong> Ä‘á»ƒ Ä‘Æ°a lÃªn livestream cá»§a báº¡n.
             </div>
         </div>
     </div>
@@ -1449,31 +1449,31 @@
     <div id="fullscreen-donation-alert" class="fullscreen-donation-overlay" style="display: none;"
         onclick="closeFullscreenDonationAlert()">
         <div class="donation-alert-container">
-            <div id="fs-alert-header" class="donation-alert-header">DONATE MỚI</div>
+            <div id="fs-alert-header" class="donation-alert-header">DONATE Má»šI</div>
             <div class="donation-alert-amount-box">
-                <span id="fs-alert-amount">0</span> <span style="font-size: 1.5rem;">VNĐ</span>
+                <span id="fs-alert-amount">0</span> <span style="font-size: 1.5rem;">VNÄ</span>
             </div>
             <div class="donation-alert-sender">
-                Từ: <strong id="fs-alert-sender">Khách</strong>
+                Tá»«: <strong id="fs-alert-sender">KhÃ¡ch</strong>
             </div>
             <div id="fs-alert-message-box" class="donation-alert-message">
-                Không có tin nhắn.
+                KhÃ´ng cÃ³ tin nháº¯n.
             </div>
         </div>
     </div>
 
-    <!-- 3. MÀN HÌNH CHẶN TỰ ĐỘNG PHÁT CỦA TRÌNH DUYỆT (Autoplay Blocked Modal) -->
+    <!-- 3. MÃ€N HÃŒNH CHáº¶N Tá»° Äá»˜NG PHÃT Cá»¦A TRÃŒNH DUYá»†T (Autoplay Blocked Modal) -->
     <div id="autoplay-blocker" class="browser-blocked-overlay" style="display: none;" onclick="resumeAutoplay()">
         <div class="blocked-card">
-            <div class="blocked-icon">🔊</div>
-            <h2 class="blocked-title">Trình duyệt chặn âm thanh</h2>
+            <div class="blocked-icon">ðŸ”Š</div>
+            <h2 class="blocked-title">TrÃ¬nh duyá»‡t cháº·n Ã¢m thanh</h2>
             <p class="blocked-desc">
-                Nhấp chuột vào bất cứ vị trí nào trên màn hình này để bắt đầu kích hoạt trình phát nhạc donate!
+                Nháº¥p chuá»™t vÃ o báº¥t cá»© vá»‹ trÃ­ nÃ o trÃªn mÃ n hÃ¬nh nÃ y Ä‘á»ƒ báº¯t Ä‘áº§u kÃ­ch hoáº¡t trÃ¬nh phÃ¡t nháº¡c donate!
             </p>
         </div>
     </div>
 
-    <!-- Popup thông báo donate mới trên dashboard (Thiết kế nảy từ top giống điện thoại) -->
+    <!-- Popup thÃ´ng bÃ¡o donate má»›i trÃªn dashboard (Thiáº¿t káº¿ náº£y tá»« top giá»‘ng Ä‘iá»‡n thoáº¡i) -->
     <div id="db-alert-box" class="db-alert-box">
         <div class="db-alert-mobile-content">
             <div id="db-alert-thumb-wrapper" class="db-alert-thumb-wrapper">
@@ -1481,70 +1481,70 @@
             </div>
             <div class="db-alert-text-info">
                 <div class="db-alert-donor-line">
-                    <span id="db-alert-donor" class="db-alert-donor-name">Người gửi</span>
-                    <span class="db-alert-action-text">tặng</span>
-                    <span id="db-alert-amount" class="db-alert-amount-text">0 VNĐ</span>
+                    <span id="db-alert-donor" class="db-alert-donor-name">NgÆ°á»i gá»­i</span>
+                    <span class="db-alert-action-text">táº·ng</span>
+                    <span id="db-alert-amount" class="db-alert-amount-text">0 VNÄ</span>
                 </div>
-                <div id="db-alert-song" class="db-alert-song-title">Tên bài hát</div>
-                <div id="db-alert-message-bubble" class="db-alert-message-bubble" style="display: none;">Lời nhắn</div>
-                <!-- Trạng thái bài hát hiển thị phía dưới cùng của thông báo -->
+                <div id="db-alert-song" class="db-alert-song-title">TÃªn bÃ i hÃ¡t</div>
+                <div id="db-alert-message-bubble" class="db-alert-message-bubble" style="display: none;">Lá»i nháº¯n</div>
+                <!-- Tráº¡ng thÃ¡i bÃ i hÃ¡t hiá»ƒn thá»‹ phÃ­a dÆ°á»›i cÃ¹ng cá»§a thÃ´ng bÃ¡o -->
                 <div class="db-alert-status-wrapper" style="margin-top: 0.35rem; display: flex; align-items: center;">
-                    <span id="db-alert-status" class="db-alert-status-badge">Đang phát</span>
+                    <span id="db-alert-status" class="db-alert-status-badge">Äang phÃ¡t</span>
                 </div>
             </div>
         </div>
-        <button class="db-alert-mobile-close" onclick="closeDashboardAlert()" title="Đóng"><i
+        <button class="db-alert-mobile-close" onclick="closeDashboardAlert()" title="ÄÃ³ng"><i
                 class="fa-solid fa-xmark"></i></button>
     </div>
 
-    <!-- Toast thông báo: Chủ kênh đã thêm nhạc -->
+    <!-- Toast thÃ´ng bÃ¡o: Chá»§ kÃªnh Ä‘Ã£ thÃªm nháº¡c -->
     <div id="db-owner-add-toast">
         <img id="db-owner-add-toast-thumb" src="" alt="" />
         <div class="db-owner-toast-body">
             <div class="db-owner-toast-label">
-                Đã thêm nhạc
+                ÄÃ£ thÃªm nháº¡c
             </div>
             <div class="db-owner-toast-song" id="db-owner-add-toast-title">...</div>
         </div>
-        <button id="db-owner-add-toast-close" title="Đóng" onclick="closeDashboardOwnerAddToast()">
+        <button id="db-owner-add-toast-close" title="ÄÃ³ng" onclick="closeDashboardOwnerAddToast()">
             <i class="fa-solid fa-xmark"></i>
         </button>
     </div>
 
-    <!-- Popup thông báo hệ thống trên dashboard -->
+    <!-- Popup thÃ´ng bÃ¡o há»‡ thá»‘ng trÃªn dashboard -->
     <div id="db-system-alert-box" class="db-alert-box" style="padding-right: 2.2rem;">
-        <div id="db-sys-alert-title" class="db-alert-song-title" style="margin-bottom: 0.25rem;">Tiêu đề</div>
+        <div id="db-sys-alert-title" class="db-alert-song-title" style="margin-bottom: 0.25rem;">TiÃªu Ä‘á»</div>
         <div id="db-sys-alert-message"
-            style="font-size: 0.85rem; font-weight: 500; line-height: 1.4; color: var(--pineapple-text);">Nội dung thông
-            báo...</div>
-        <button class="db-alert-mobile-close" onclick="closeDashboardSystemAlert()" title="Đóng"><i
+            style="font-size: 0.85rem; font-weight: 500; line-height: 1.4; color: var(--pineapple-text);">Ná»™i dung thÃ´ng
+            bÃ¡o...</div>
+        <button class="db-alert-mobile-close" onclick="closeDashboardSystemAlert()" title="ÄÃ³ng"><i
                 class="fa-solid fa-xmark"></i></button>
     </div>
 
-    <!-- Walkthrough hiển thị lần đầu sau khi nâng cấp phiên bản -->
+    <!-- Walkthrough hiá»ƒn thá»‹ láº§n Ä‘áº§u sau khi nÃ¢ng cáº¥p phiÃªn báº£n -->
     <div id="walkthrough-modal" class="browser-blocked-overlay" style="display: none; z-index: 16000;">
-        <div class="walkthrough-modal-card" role="dialog" aria-modal="true" aria-label="Giới thiệu phiên bản mới">
+        <div class="walkthrough-modal-card" role="dialog" aria-modal="true" aria-label="Giá»›i thiá»‡u phiÃªn báº£n má»›i">
             <div class="walkthrough-modal-header">
                 <div class="walkthrough-modal-heading">
                     <i class="fa-solid fa-star"></i>
-                    <span style="cursor: pointer;" ondblclick="toggleWalkthroughEditMode()">Có gì mới trong Pineapple
+                    <span style="cursor: pointer;" ondblclick="toggleWalkthroughEditMode()">CÃ³ gÃ¬ má»›i trong Pineapple
                         Studio</span>
                     <span id="walkthrough-version-label" class="walkthrough-version-label"></span>
                     <button type="button" id="walkthrough-edit-trigger" class="walkthrough-edit-btn"
-                        onclick="toggleWalkthroughEditMode()" title="Chỉnh sửa (Chỉ Dev)">
+                        onclick="toggleWalkthroughEditMode()" title="Chá»‰nh sá»­a (Chá»‰ Dev)">
                         <i class="fa-solid fa-pencil"></i>
                     </button>
                 </div>
                 <button type="button" class="walkthrough-modal-close" onclick="closeWalkthroughModal()"
-                    title="Đóng giới thiệu" aria-label="Đóng giới thiệu">
+                    title="ÄÃ³ng giá»›i thiá»‡u" aria-label="ÄÃ³ng giá»›i thiá»‡u">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
-            <iframe id="walkthrough-frame" class="walkthrough-frame" title="Giới thiệu phiên bản mới"></iframe>
+            <iframe id="walkthrough-frame" class="walkthrough-frame" title="Giá»›i thiá»‡u phiÃªn báº£n má»›i"></iframe>
         </div>
     </div>
 
-    <!-- Modal Chi tiết Donate (Donation Detail Modal) -->
+    <!-- Modal Chi tiáº¿t Donate (Donation Detail Modal) -->
     <div id="donation-detail-modal" class="browser-blocked-overlay"
         style="display: none; z-index: 16100; backdrop-filter: blur(5px); background: rgba(0, 0, 0, 0.5); transition: none !important; animation: none !important;">
         <div class="blocked-card" id="donation-detail-card"
@@ -1552,7 +1552,7 @@
             <!-- Close Button (Absolute positioned at top right) -->
             <button onclick="closeDonationDetailModal()"
                 style="position: absolute; top: 1.2rem; right: 1.2rem; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--pineapple-text); display: flex; align-items: center; justify-content: center; width: 30px; height: 30px;"
-                title="Đóng">
+                title="ÄÃ³ng">
                 <i class="fa-solid fa-xmark"></i>
             </button>
 
@@ -1561,10 +1561,10 @@
                 style="display: flex; align-items: center; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.5rem; margin-bottom: 1.5rem; border-bottom: 1px dashed var(--pineapple-border-color); padding-bottom: 1rem;">
                 <strong id="donation-detail-donor"
                     style="font-size: 1.35rem; color: var(--pineapple-text); font-weight: 800;"></strong>
-                <span style="color: var(--pineapple-text); opacity: 0.4; font-weight: 400; margin: 0 0.1rem;">•</span>
+                <span style="color: var(--pineapple-text); opacity: 0.4; font-weight: 400; margin: 0 0.1rem;">â€¢</span>
                 <span id="donation-detail-amount"
                     style="font-size: 1.35rem; color: var(--pineapple-orange-dark); font-weight: 900;"></span>
-                <span style="color: var(--pineapple-text); opacity: 0.4; font-weight: 400; margin: 0 0.1rem;">•</span>
+                <span style="color: var(--pineapple-text); opacity: 0.4; font-weight: 400; margin: 0 0.1rem;">â€¢</span>
                 <span id="donation-detail-time"
                     style="font-size: 0.95rem; color: var(--pineapple-text); opacity: 0.6; font-weight: 600;"></span>
             </div>
@@ -1585,7 +1585,7 @@
             <div style="text-align: right;">
                 <button onclick="closeDonationDetailModal()" class="dua-btn dua-btn-primary"
                     style="padding: 0.6rem 2rem; border-radius: 12px; font-weight: 800; font-size: 1rem;">
-                    Đóng
+                    ÄÃ³ng
                 </button>
             </div>
         </div>
@@ -1642,3 +1642,4 @@
 </body>
 
 </html>
+
