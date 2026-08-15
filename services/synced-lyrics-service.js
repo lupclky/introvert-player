@@ -308,55 +308,55 @@ class SyncedLyricsService {
         albumName: 'Sóng 26',
         duration: 264,
         source: 'Introvert Verified LRC',
-        syncedLyrics: `[01:00.28] Anh không nhớ nổi lần cuối cùng anh nhìn vào mắt em đó là từ bao giờ
-[01:03.28] Em từng trách anh chỉ ôm ước mơ, còn không sợ mất em thì làm sao chờ?
-[01:06.56] Lúc đó anh có xin lỗi hay không thì kết quả nó cũng như nhau mà
-[01:09.28] Cuối cùng thì hai ta đều ích kỷ, nông nổi, tự trọng cao mà
-[01:12.64] Ta từng bắt gặp nhau ở khắp Sài Gòn, chắc là lúc còn yêu thì muốn tránh cũng khó
-[01:15.76] Không thể tin là mình chưa từng gặp lại sau khi mà anh bước qua cánh cửa đó
-[01:19.04] Tình yêu mình từng là ánh lửa đỏ, từng là chim sẻ cố đập cánh giữa gió
-[01:21.96] Cố gắng sống hai cuộc đời, chắc là thằng nhóc này muốn làm thần thánh nữa đó
-[01:24.60] Sao giờ em xuất hiện tại đây vậy? Cuối hàng khán giả với cánh tay vẫy
-[01:27.80] Em từng cùng anh đứng ở hậu trường và cùng anh về nhà sau khi mà bay nhảy
-[01:30.84] Cũng từng nói, "Em không có gạt anh, em thích nhạc anh", and you know the vision
-[01:34.04] Anh từng hứa là mình không nhạt đâu, sẽ không lạc nhau, cùng bên nhau vào khi cần
-[01:37.16] Ngay lúc đó anh chỉ muốn lao xuống, anh thật sự tò mò, em dạo này khỏe không?
-[01:40.16] Nhưng mà sao hôm nay em đi khuya vậy? Ba mẹ em biết là ba mẹ sẽ trông
-[01:43.08] Anh từng mong em hạnh phúc, tới khi em nở nụ cười, anh như bị đâm mười nhát
-[01:46.08] Khi anh đứng trên sân khấu một mình, còn em đứng cạnh cùng với một người khác
-[01:52.04] Em hiểu rằng chúng ta không ai là sai
-[01:56.28] Chỉ là em không muốn em mãi sẽ là lựa chọn thứ hai
-[02:00.96] Mãi sau những điều anh cho là lý do để anh tồn tại
-[02:06.16] Vậy đâu còn lý do để em ở lại?
-[02:09.40] Đây sẽ là lý do em sẽ thôi đắn đo, cứ ôm mộng hoài
-[02:13.28] So thanks for showing me the exit sign
-[02:16.48] Chưa nói tới đúng sai nhưng chuyến xe dừng lại là do chân anh đặt trên phanh
-[02:19.80] Anh đã không ngần ngại chia con đường làm hai vì anh nghĩ là anh quên nhanh
-[02:23.04] Gặp một cô gái mới coi là cả thế giới, viết tên cả hai lên tranh
-[02:25.92] Không dễ nhiều đêm trắng để chờ lên nắng, giờ thì ký ức gọi tên anh
-[02:28.76] Nên là cứ rót đi, bàn vẫn ướt mặc dù có lót ly
-[02:31.20] Ước gì có thể paste nỗi đau này qua chỗ khác, nhưng không, nó nhân lên, nó chỉ copy
-[02:34.84] Thật khó để nhìn xung quanh khi chỉ trông ngóng vì sao như Tsiolkovsky
-[02:37.96] Để bây giờ em đi mất, liên kết còn lại tồn tại giữa anh và em là chung một tài khoản Shopee
-[02:42.04] Gom hết tất cả về em xong rồi thiêu nhanh
-[02:44.00] Giọng em vang lên trước khi môi em mở, găm thẳng vào anh như là siêu thanh
-[02:47.16] Không cần phải là người giỏi toán, đủ biết đây không phải đổi ngang
-[02:49.88] Em chỉ mất đi một thằng thất bại, anh mất đi một người yêu anh
-[02:53.16] 8515 lần nói anh yêu em ở trong Mess nếu mà em search
-[02:56.24] Cũng tới lúc mình phải quên đi thôi dù từng có với nhau là rất nhiều cam kết
-[02:59.20] Tiếc nhất không phải chia tay mà là không yêu em nhiều hơn trước lúc tình yêu chết
-[03:02.16] Có lẽ phải ghi tên em vào credit vì bài nhạc nào anh cũng viết về em hết
-[03:05.24] Em hiểu rằng chúng ta không ai là sai
-[03:09.36] Chỉ là em không muốn em mãi sẽ là lựa chọn thứ hai
-[03:14.04] Mãi sau những điều anh cho là lý do để anh tồn tại
-[03:19.12] Vậy đâu còn lý do để em ở lại?
-[03:22.60] Đây sẽ là lý do em sẽ thôi đắn đo, cứ ôm mộng hoài
-[03:27.16] So thanks for showing me the exit sign
-[03:33.20] Hah-ah-ah-whoo
-[03:46.24] Hãy gìn giữ nhau trong những kỷ niệm
-[03:57.80] Hãy gìn giữ nhau trong những kỷ niệm
-[04:00.96] I thank you for finally showing me the exit sign
-[04:05.20] Thanks for showing me the exit sign`
+        syncedLyrics: `[01:01.55] Anh không nhớ nổi lần cuối cùng anh nhìn vào mắt em đó là từ bao giờ
+[01:02.40] Em từng trách anh chỉ ôm ước mơ, còn không sợ mất em thì làm sao chờ?
+[01:06.26] Lúc đó anh có xin lỗi hay không thì kết quả nó cũng như nhau mà
+[01:09.19] Cuối cùng thì hai ta đều ích kỷ, nông nổi, tự trọng cao mà
+[01:12.33] Ta từng bắt gặp nhau ở khắp Sài Gòn, chắc là lúc còn yêu thì muốn tránh cũng khó
+[01:15.39] Không thể tin là mình chưa từng gặp lại sau khi mà anh bước qua cánh cửa đó
+[01:17.60] Tình yêu mình từng là ánh lửa đỏ, từng là chim sẻ cố đập cánh giữa gió
+[01:21.44] Cố gắng sống hai cuộc đời, chắc là thằng nhóc này muốn làm thần thánh nữa đó
+[01:25.24] Sao giờ em xuất hiện tại đây vậy? Cuối hàng khán giả với cánh tay vẫy
+[01:27.50] Em từng cùng anh đứng ở hậu trường và cùng anh về nhà sau khi mà bay nhảy
+[01:30.53] Cũng từng nói, "Em không có gạt anh, em thích nhạc anh", and you know the vision
+[01:33.57] Anh từng hứa là mình không nhạt đâu, sẽ không lạc nhau, cùng bên nhau vào khi cần
+[01:36.61] Ngay lúc đó anh chỉ muốn lao xuống, anh thật sự tò mò, em dạo này khỏe không?
+[01:38.91] Nhưng mà sao hôm nay em đi khuya vậy? Ba mẹ em biết là ba mẹ sẽ trông
+[01:41.79] Anh từng mong em hạnh phúc, tới khi em nở nụ cười, anh như bị đâm mười nhát
+[01:45.75] Khi anh đứng trên sân khấu một mình, còn em đứng cạnh cùng với một người khác
+[01:51.82] Em hiểu rằng chúng ta không ai là sai
+[01:57.91] Chỉ là em không muốn em mãi sẽ là lựa chọn thứ hai
+[02:00.93] Mãi sau những điều anh cho là lý do để anh tồn tại
+[02:06.24] Vậy đâu còn lý do để em ở lại?
+[02:10.81] Đây sẽ là lý do em sẽ thôi đắn đo, cứ ôm mộng hoài
+[02:12.31] So thanks for showing me the exit sign
+[02:16.11] Chưa nói tới đúng sai nhưng chuyến xe dừng lại là do chân anh đặt trên phanh
+[02:18.39] Anh đã không ngần ngại chia con đường làm hai vì anh nghĩ là anh quên nhanh
+[02:23.51] Gặp một cô gái mới coi là cả thế giới, viết tên cả hai lên tranh
+[02:25.99] Không dễ nhiều đêm trắng để chờ lên nắng, giờ thì ký ức gọi tên anh
+[02:28.29] Nên là cứ rót đi, bàn vẫn ướt mặc dù có lót ly
+[02:31.32] Ước gì có thể paste nỗi đau này qua chỗ khác, nhưng không, nó nhân lên, nó chỉ copy
+[02:34.35] Thật khó để nhìn xung quanh khi chỉ trông ngóng vì sao như Tsiolkovsky
+[02:37.40] Để bây giờ em đi mất, liên kết còn lại tồn tại giữa anh và em là chung một tài khoản Shopee
+[02:40.43] Gom hết tất cả về em xong rồi thiêu nhanh
+[02:43.46] Giọng em vang lên trước khi môi em mở, găm thẳng vào anh như là siêu thanh
+[02:46.49] Không cần phải là người giỏi toán, đủ biết đây không phải đổi ngang
+[02:49.54] Em chỉ mất đi một thằng thất bại, anh mất đi một người yêu anh
+[02:52.57] 8515 lần nói anh yêu em ở trong Mess nếu mà em search
+[02:55.60] Cũng tới lúc mình phải quên đi thôi dù từng có với nhau là rất nhiều cam kết
+[02:58.66] Tiếc nhất không phải chia tay mà là không yêu em nhiều hơn trước lúc tình yêu chết
+[03:01.69] Có lẽ phải ghi tên em vào credit vì bài nhạc nào anh cũng viết về em hết
+[03:04.72] Em hiểu rằng chúng ta không ai là sai
+[03:08.91] Chỉ là em không muốn em mãi sẽ là lựa chọn thứ hai
+[03:12.70] Mãi sau những điều anh cho là lý do để anh tồn tại
+[03:18.78] Vậy đâu còn lý do để em ở lại?
+[03:24.86] Đây sẽ là lý do em sẽ thôi đắn đo, cứ ôm mộng hoài
+[03:26.74] So thanks for showing me the exit sign
+[03:33.00] Hah-ah-ah-whoo
+[03:45.36] Hãy gìn giữ nhau trong những kỷ niệm
+[03:56.35] Hãy gìn giữ nhau trong những kỷ niệm
+[04:01.71] I thank you for finally showing me the exit sign
+[04:04.87] Thanks for showing me the exit sign`
       };
     }
     if (vid === '4ZFezhS5hZs' || (titleNorm.includes('exit sign') && (titleNorm.includes('performance') || (titleNorm.includes('song 26') && !titleNorm.includes('live band'))))) {
@@ -366,61 +366,55 @@ class SyncedLyricsService {
         albumName: 'Sóng 26',
         duration: 261,
         source: 'Introvert Verified LRC',
-        syncedLyrics: `[00:34.60] Em hiểu rằng chúng ta không ai là sai
-[00:38.80] Chỉ là em không muốn em mãi sẽ là lựa chọn thứ hai
-[00:43.20] Mãi sau những điều anh cho là lý do để anh tồn tại
-[00:48.50] Vậy đâu còn lý do để em ở lại?
-[00:52.00] Đây sẽ là lý do em sẽ thôi đắn đo, cứ ôm mộng hoài
-[00:56.50] So thanks for showing me the exit sign
-[01:23.10] Anh không nhớ nổi lần cuối cùng anh nhìn vào mắt em đó là từ bao giờ
-[01:26.10] Em từng trách anh chỉ ôm ước mơ, còn không sợ mất em thì làm sao chờ?
-[01:29.40] Lúc đó anh có xin lỗi hay không thì kết quả nó cũng như nhau mà
-[01:32.20] Cuối cùng thì hai ta đều ích kỷ, nông nổi, tự trọng cao mà
-[01:35.00] Ta từng bắt gặp nhau ở khắp Sài Gòn, chắc là lúc còn yêu thì muốn tránh cũng khó
-[01:38.65] Không thể tin là mình chưa từng gặp lại sau khi mà anh bước qua cánh cửa đó
-[01:42.08] Tình yêu mình từng là ánh lửa đỏ, từng là chim sẻ cố đập cánh giữa gió
-[01:44.35] Cố gắng sống hai cuộc đời, chắc là thằng nhóc này muốn làm thần thánh nữa đó
-[01:46.25] Sao giờ em xuất hiện tại đây vậy? Cuối hàng khán giả với cánh tay vẫy
-[01:48.00] Em từng cùng anh đứng ở hậu trường và cùng anh về nhà sau khi mà bay nhảy
-[01:50.43] Cũng từng nói, "Em không có gạt anh, em thích nhạc anh", and you know the vision
-[01:53.00] Anh từng hứa là mình không nhạt đâu, sẽ không lạc nhau, cùng bên nhau vào khi cần
-[01:56.53] Ngay lúc đó anh chỉ muốn lao xuống, anh thật sự tò mò, em dạo này khỏe không?
-[01:59.55] Nhưng mà sao hôm nay em đi khuya vậy? Ba mẹ em biết là ba mẹ sẽ trông
-[02:02.00] Anh từng mong em hạnh phúc, tới khi em nở nụ cười, anh như bị đâm mười nhát
-[02:04.85] Khi anh đứng trên sân khấu một mình, còn em đứng cạnh cùng với một người khác
-[02:08.50] Em hiểu rằng chúng ta không ai là sai
-[02:14.73] Chỉ là em không muốn em mãi sẽ là lựa chọn thứ hai
-[02:18.53] Mãi sau những điều anh cho là lý do để anh tồn tại
-[02:24.60] Vậy đâu còn lý do để em ở lại?
-[02:26.90] Đây sẽ là lý do em sẽ thôi đắn đo, cứ ôm mộng hoài
-[02:31.05] So thanks for showing me the exit sign
-[02:34.50] Chưa nói tới đúng sai nhưng chuyến xe dừng lại là do chân anh đặt trên phanh
-[02:39.03] Anh đã không ngần ngại chia con đường làm hai vì anh nghĩ là anh quên nhanh
-[02:41.32] Gặp một cô gái mới coi là cả thế giới, viết tên cả hai lên tranh
-[02:43.23] Không dễ nhiều đêm trắng để chờ lên nắng, giờ thì ký ức gọi tên anh
-[02:45.10] Nên là cứ rót đi, bàn vẫn ướt mặc dù có lót ly
-[02:46.45] Ước gì có thể paste nỗi đau này qua chỗ khác, nhưng không, nó nhân lên, nó chỉ copy
-[02:48.18] Thật khó để nhìn xung quanh khi chỉ trông ngóng vì sao như Tsiolkovsky
-[02:50.63] Để bây giờ em đi mất, liên kết còn lại tồn tại giữa anh và em là chung một tài khoản Shopee
-[02:52.53] Gom hết tất cả về em xong rồi thiêu nhanh
-[02:54.25] Giọng em vang lên trước khi môi em mở, găm thẳng vào anh như là siêu thanh
-[02:56.15] Không cần phải là người giỏi toán, đủ biết đây không phải đổi ngang
-[02:58.60] Em chỉ mất đi một thằng thất bại, anh mất đi một người yêu anh
-[03:00.33] 8515 lần nói anh yêu em ở trong Mess nếu mà em search
-[03:03.33] Cũng tới lúc mình phải quên đi thôi dù từng có với nhau là rất nhiều cam kết
-[03:06.38] Tiếc nhất không phải chia tay mà là không yêu em nhiều hơn trước lúc tình yêu chết
-[03:08.65] Có lẽ phải ghi tên em vào credit vì bài nhạc nào anh cũng viết về em hết
-[03:11.30] Em hiểu rằng chúng ta không ai là sai
-[03:16.83] Chỉ là em không muốn em mãi sẽ là lựa chọn thứ hai
-[03:20.80] Mãi sau những điều anh cho là lý do để anh tồn tại
-[03:26.50] Vậy đâu còn lý do để em ở lại?
-[03:28.98] Đây sẽ là lý do em sẽ thôi đắn đo, cứ ôm mộng hoài
-[03:32.95] So thanks for showing me the exit sign
-[03:36.38] Hah-ah-ah-whoo
-[03:48.13] Hãy gìn giữ nhau trong những kỷ niệm
-[03:51.00] Hãy gìn giữ nhau trong những kỷ niệm
-[03:54.98] I thank you for finally showing me the exit sign
-[04:03.48] Thanks for showing me the exit sign`
+        syncedLyrics: `[00:59.60] Anh không nhớ nổi lần cuối cùng anh nhìn vào mắt em đó là từ bao giờ
+[01:01.06] Em từng trách anh chỉ ôm ước mơ, còn không sợ mất em thì làm sao chờ?
+[01:04.90] Lúc đó anh có xin lỗi hay không thì kết quả nó cũng như nhau mà
+[01:07.83] Cuối cùng thì hai ta đều ích kỷ, nông nổi, tự trọng cao mà
+[01:10.97] Ta từng bắt gặp nhau ở khắp Sài Gòn, chắc là lúc còn yêu thì muốn tránh cũng khó
+[01:14.05] Không thể tin là mình chưa từng gặp lại sau khi mà anh bước qua cánh cửa đó
+[01:16.24] Tình yêu mình từng là ánh lửa đỏ, từng là chim sẻ cố đập cánh giữa gió
+[01:20.09] Cố gắng sống hai cuộc đời, chắc là thằng nhóc này muốn làm thần thánh nữa đó
+[01:23.87] Sao giờ em xuất hiện tại đây vậy? Cuối hàng khán giả với cánh tay vẫy
+[01:26.14] Em từng cùng anh đứng ở hậu trường và cùng anh về nhà sau khi mà bay nhảy
+[01:28.42] Cũng từng nói, "Em không có gạt anh, em thích nhạc anh", and you know the vision
+[01:32.22] Anh từng hứa là mình không nhạt đâu, sẽ không lạc nhau, cùng bên nhau vào khi cần
+[01:35.25] Ngay lúc đó anh chỉ muốn lao xuống, anh thật sự tò mò, em dạo này khỏe không?
+[01:38.68] Nhưng mà sao hôm nay em đi khuya vậy? Ba mẹ em biết là ba mẹ sẽ trông
+[01:40.43] Anh từng mong em hạnh phúc, tới khi em nở nụ cười, anh như bị đâm mười nhát
+[01:44.39] Khi anh đứng trên sân khấu một mình, còn em đứng cạnh cùng với một người khác
+[01:50.46] Em hiểu rằng chúng ta không ai là sai
+[01:53.51] Chỉ là em không muốn em mãi sẽ là lựa chọn thứ hai
+[01:59.58] Mãi sau những điều anh cho là lý do để anh tồn tại
+[02:04.88] Vậy đâu còn lý do để em ở lại?
+[02:08.52] Đây sẽ là lý do em sẽ thôi đắn đo, cứ ôm mộng hoài
+[02:10.95] So thanks for showing me the exit sign
+[02:14.75] Chưa nói tới đúng sai nhưng chuyến xe dừng lại là do chân anh đặt trên phanh
+[02:17.03] Anh đã không ngần ngại chia con đường làm hai vì anh nghĩ là anh quên nhanh
+[02:20.09] Gặp một cô gái mới coi là cả thế giới, viết tên cả hai lên tranh
+[02:24.63] Không dễ nhiều đêm trắng để chờ lên nắng, giờ thì ký ức gọi tên anh
+[02:26.93] Nên là cứ rót đi, bàn vẫn ướt mặc dù có lót ly
+[02:29.95] Ước gì có thể paste nỗi đau này qua chỗ khác, nhưng không, nó nhân lên, nó chỉ copy
+[02:32.99] Thật khó để nhìn xung quanh khi chỉ trông ngóng vì sao như Tsiolkovsky
+[02:36.04] Để bây giờ em đi mất, liên kết còn lại tồn tại giữa anh và em là chung một tài khoản Shopee
+[02:39.07] Gom hết tất cả về em xong rồi thiêu nhanh
+[02:42.11] Giọng em vang lên trước khi môi em mở, găm thẳng vào anh như là siêu thanh
+[02:45.15] Không cần phải là người giỏi toán, đủ biết đây không phải đổi ngang
+[02:48.18] Em chỉ mất đi một thằng thất bại, anh mất đi một người yêu anh
+[02:51.21] 8515 lần nói anh yêu em ở trong Mess nếu mà em search
+[02:54.24] Cũng tới lúc mình phải quên đi thôi dù từng có với nhau là rất nhiều cam kết
+[02:57.30] Tiếc nhất không phải chia tay mà là không yêu em nhiều hơn trước lúc tình yêu chết
+[03:00.34] Có lẽ phải ghi tên em vào credit vì bài nhạc nào anh cũng viết về em hết
+[03:03.36] Em hiểu rằng chúng ta không ai là sai
+[03:07.55] Chỉ là em không muốn em mãi sẽ là lựa chọn thứ hai
+[03:11.34] Mãi sau những điều anh cho là lý do để anh tồn tại
+[03:17.42] Vậy đâu còn lý do để em ở lại?
+[03:21.61] Đây sẽ là lý do em sẽ thôi đắn đo, cứ ôm mộng hoài
+[03:25.38] So thanks for showing me the exit sign
+[03:31.00] Hah-ah-ah-whoo
+[03:44.00] Hãy gìn giữ nhau trong những kỷ niệm
+[03:55.00] Hãy gìn giữ nhau trong những kỷ niệm
+[04:00.36] I thank you for finally showing me the exit sign
+[04:03.51] Thanks for showing me the exit sign`
       };
     }
     return null;
