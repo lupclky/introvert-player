@@ -174,6 +174,35 @@ style.textContent = `
   ytmusic-two-row-item-renderer {
     position: relative !important;
   }
+  .pineapple-playlist-add-btn {
+    cursor: pointer;
+    background: rgba(128, 128, 128, 0.14) !important;
+    color: var(--yt-spec-text-primary, #0f0f0f) !important;
+    border: 1px solid rgba(128, 128, 128, 0.22) !important;
+    font-weight: 600 !important;
+    font-size: 0.8rem !important;
+    padding: 3px 10px !important;
+    border-radius: 12px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.25rem !important;
+    margin-left: 8px !important;
+    flex-shrink: 0 !important;
+    transition: all 0.2s ease !important;
+    user-select: none !important;
+    white-space: nowrap !important;
+    line-height: 1.3 !important;
+    vertical-align: middle !important;
+  }
+  .pineapple-playlist-add-btn:hover {
+    background: rgba(128, 128, 128, 0.26) !important;
+    transform: scale(1.03) !important;
+  }
+  .pineapple-playlist-add-btn.loading {
+    cursor: not-allowed !important;
+    opacity: 0.7 !important;
+  }
 `;
 document.head.appendChild(style);
 
@@ -371,9 +400,15 @@ function checkRoute() {
   const isVideoPage = window.location.pathname === '/watch';
   if (isVideoPage) {
     injectWatchPageButton();
+    injectWatchPlaylistHeaderButton();
   }
-  // Tự động quét và nhúng nút "+ Thêm nhanh" trên trang tìm kiếm/trang chủ/gợi ý
+  const isPlaylistPage = window.location.pathname === '/playlist';
+  if (isPlaylistPage) {
+    injectPlaylistPageButton();
+  }
+  // Tự động quét và nhúng nút "+ Thêm nhanh" trên trang tìm kiếm/trang chủ/gợi ý/playlist
   injectSearchButtons();
+  injectPlaylistCards();
 }
 
 function normalizeYouTubeMusicUrl(rawHref, kind = 'track') {
@@ -919,6 +954,11 @@ function startHomepageObserver() {
             'ytd-rich-item-renderer, ytd-rich-grid-media, ytd-video-renderer, ytd-grid-video-renderer, ytd-compact-video-renderer, ytd-playlist-panel-video-renderer, yt-lockup-view-model'
           ).forEach(c => injectButtonIntoCard(c));
           injectYouTubeMusicButtons(node);
+          injectPlaylistCards(node);
+        }
+        if (tag === 'ytd-playlist-panel-renderer' || tag === 'ytd-playlist-panel-header-renderer' || tag === 'ytd-playlist-header-renderer') {
+          injectWatchPlaylistHeaderButton();
+          injectPlaylistPageButton();
         }
       }
     }
@@ -928,6 +968,174 @@ function startHomepageObserver() {
 
 // Khởi động MutationObserver ngay khi script chạy
 startHomepageObserver();
+
+// Hàm tạo nút thêm Playlist (helper dùng chung cho YouTube)
+function createPlaylistAddButton(playlistUrl, playlistTitle, listId, isCompact = false) {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'pineapple-playlist-add-btn';
+  btn.dataset.listId = listId || '';
+  btn.dataset.playlistUrl = playlistUrl;
+  btn.dataset.playlistTitle = playlistTitle;
+  btn.innerHTML = isCompact ? '+' : '+ Playlist';
+  btn.title = 'Thêm toàn bộ playlist này vào Pineapple Studio';
+  btn.setAttribute('aria-label', btn.title);
+
+  btn.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    e.stopImmediatePropagation();
+
+    if (btn.classList.contains('loading')) return;
+
+    btn.classList.add('loading');
+    btn.innerHTML = '…';
+    btn.style.opacity = '0.7';
+
+    safeSendMessage({
+      action: 'send-to-pineapple',
+      url: btn.dataset.playlistUrl || playlistUrl,
+      title: btn.dataset.playlistTitle || playlistTitle,
+      playNow: false
+    }, (response) => {
+      btn.classList.remove('loading');
+      btn.style.opacity = '1';
+
+      if (response && response.success) {
+        btn.innerHTML = '✓ Đã thêm!';
+        btn.style.background = 'rgba(16, 185, 129, 0.2)';
+        btn.style.color = '#10B981';
+        btn.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+        showToast(`Đã thêm playlist: ${playlistTitle || 'YouTube Playlist'}`);
+
+        setTimeout(() => {
+          btn.innerHTML = isCompact ? '+' : '+ Playlist';
+          btn.style.background = '';
+          btn.style.color = '';
+          btn.style.borderColor = '';
+        }, 2500);
+      } else {
+        btn.innerHTML = '✕ Lỗi';
+        btn.style.background = 'rgba(239, 68, 68, 0.2)';
+        btn.style.color = '#EF4444';
+        btn.style.borderColor = 'rgba(239, 68, 68, 0.4)';
+
+        const errMsg = (response && response.error) ? response.error : 'Lỗi kết nối';
+        showToast(errMsg, true);
+
+        setTimeout(() => {
+          btn.innerHTML = isCompact ? '+' : '+ Playlist';
+          btn.style.background = '';
+          btn.style.color = '';
+          btn.style.borderColor = '';
+        }, 3000);
+      }
+    });
+  });
+
+  return btn;
+}
+
+// Nhúng nút "+ Playlist" vào phần tiêu đề của panel Playlist ở trang xem video (/watch?v=...&list=...)
+function injectWatchPlaylistHeaderButton() {
+  const panel = document.querySelector('ytd-playlist-panel-renderer, ytd-playlist-panel-header-renderer, #playlist.ytd-watch-flexy');
+  if (!panel) return;
+
+  const urlParams = new URLSearchParams(window.location.search);
+  let listId = urlParams.get('list');
+  const anchor = panel.querySelector('a[href*="list="]');
+  if (!listId && anchor) {
+    const match = anchor.getAttribute('href').match(/[?&]list=([^&]+)/);
+    if (match) listId = match[1];
+  }
+  if (!listId) return;
+
+  // Kiểm tra xem nút đã có trong header panel chưa
+  const existingBtn = panel.querySelector('.pineapple-playlist-add-btn');
+  if (existingBtn) {
+    if (existingBtn.dataset.listId !== listId) {
+      existingBtn.dataset.listId = listId;
+      existingBtn.dataset.playlistUrl = `https://www.youtube.com/playlist?list=${listId}`;
+    }
+    return;
+  }
+
+  // Tìm khu vực chứa tiêu đề playlist (h3 hoặc .title trong header)
+  const titleContainer = panel.querySelector(
+    '.header-top-row .title, #header-contents h3, ytd-playlist-panel-header-renderer h3, .title.ytd-playlist-panel-header-renderer, #header-contents, .header-top-row'
+  );
+  if (!titleContainer) return;
+
+  const playlistUrl = `https://www.youtube.com/playlist?list=${listId}`;
+  const titleEl = panel.querySelector('h3, .title, #title, a.yt-simple-endpoint');
+  const playlistTitle = titleEl ? titleEl.textContent.trim() : 'YouTube Playlist';
+
+  const btn = createPlaylistAddButton(playlistUrl, playlistTitle, listId);
+
+  const h3 = titleContainer.matches('h3') ? titleContainer : titleContainer.querySelector('h3');
+  if (h3) {
+    h3.style.setProperty('display', 'inline-flex', 'important');
+    h3.style.setProperty('align-items', 'center', 'important');
+    h3.style.setProperty('flex-wrap', 'wrap', 'important');
+    h3.style.setProperty('gap', '4px', 'important');
+    h3.appendChild(btn);
+  } else {
+    titleContainer.appendChild(btn);
+  }
+}
+
+// Nhúng nút "+ Playlist" trên trang danh sách phát độc lập (/playlist?list=...)
+function injectPlaylistPageButton() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const listId = urlParams.get('list');
+  if (!listId) return;
+
+  const header = document.querySelector('ytd-playlist-header-renderer, ytd-browse[page-subtype="playlist"] #page-header, .metadata-action-bar, ytd-playlist-header-renderer .metadata-wrapper');
+  if (!header) return;
+
+  if (header.querySelector('.pineapple-playlist-add-btn')) return;
+
+  const titleEl = header.querySelector('h1, #title, yt-dynamic-sizing-formatted-string, .dynamic-text-view-model-wiz__h1');
+  const playlistTitle = titleEl ? titleEl.textContent.trim() : document.title.replace(/\s+-\s+YouTube$/, '');
+  const playlistUrl = `https://www.youtube.com/playlist?list=${listId}`;
+
+  const btn = createPlaylistAddButton(playlistUrl, playlistTitle, listId);
+  btn.style.setProperty('font-size', '0.9rem', 'important');
+  btn.style.setProperty('padding', '6px 14px', 'important');
+  btn.style.setProperty('border-radius', '18px', 'important');
+
+  if (titleEl) {
+    titleEl.after(btn);
+  } else {
+    header.appendChild(btn);
+  }
+}
+
+// Nhúng nút cho các card playlist trong trang tìm kiếm hoặc trang kênh
+function injectPlaylistCards(root = document) {
+  root.querySelectorAll?.('ytd-playlist-renderer, ytd-grid-playlist-renderer, ytd-compact-playlist-renderer, ytd-radio-renderer')
+    .forEach(card => {
+      if (card.querySelector('.pineapple-playlist-add-btn')) return;
+      const anchor = card.querySelector('a[href*="playlist?list="], a[href*="watch?"][href*="list="]');
+      if (!anchor) return;
+      const href = anchor.getAttribute('href') || '';
+      const match = href.match(/[?&]list=([^&]+)/);
+      if (!match) return;
+      const listId = match[1];
+      const playlistUrl = `https://www.youtube.com/playlist?list=${listId}`;
+      const titleEl = card.querySelector('#video-title, #title, h3, a.yt-simple-endpoint');
+      const playlistTitle = titleEl ? titleEl.textContent.trim() : 'YouTube Playlist';
+
+      const btn = createPlaylistAddButton(playlistUrl, playlistTitle, listId, true);
+      const container = titleEl?.closest('h3') || titleEl?.parentElement || card;
+      if (container) {
+        container.style.setProperty('display', 'flex', 'important');
+        container.style.setProperty('align-items', 'center', 'important');
+        container.style.setProperty('flex-wrap', 'nowrap', 'important');
+        container.appendChild(btn);
+      }
+    });
+}
 
 // Hàm gửi video từ kết quả tìm kiếm sang extension background
 function sendVideoFromSearch(videoUrl, videoTitle, btn) {
@@ -976,3 +1184,4 @@ function sendVideoFromSearch(videoUrl, videoTitle, btn) {
     }
   });
 }
+
