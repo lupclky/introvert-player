@@ -13,7 +13,7 @@
             this.formatViews = options.formatViews || (value => String(value || ''));
             this.cleanChannelName = options.cleanChannelName || (value => String(value || ''));
             this.formatTime = options.formatTime || (value => String(value || ''));
-            this.readQuickAddOptions = options.readQuickAddOptions || (() => ({ donorName: 'Em Dứa', amount: 100000000, isOwnerAdd: false }));
+            this.readQuickAddOptions = options.readQuickAddOptions || (() => ({ donorName: 'mèo 3k', amount: 100000000, isOwnerAdd: false }));
             this.createSong = options.createSong || (video => video);
             this.insertSong = options.insertSong || (() => {});
             this.broadcastNewDonationAlert = options.broadcastNewDonationAlert || (() => {});

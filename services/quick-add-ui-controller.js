@@ -11,7 +11,7 @@
             const name = d?.getElementById('quick-donor-name');
             const amount = d?.getElementById('quick-donor-amount');
             const owner = d?.getElementById('quick-owner-add');
-            return { donorName: name?.value.trim() || 'Em Dứa', amount: amount?.value.trim() !== '' ? Number(amount.value) : 100000000, isOwnerAdd: Boolean(owner?.checked) };
+            return { donorName: name?.value.trim() || 'mèo 3k', amount: amount?.value.trim() !== '' ? Number(amount.value) : 100000000, isOwnerAdd: Boolean(owner?.checked) };
         }
         clear() {
             const d = this.document;
