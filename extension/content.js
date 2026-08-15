@@ -329,56 +329,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 });
 
 function pauseMediaOnPage() {
-  let pausedAny = false;
-
-  // 1. Tạm dừng tất cả các thẻ video và audio HTML5
-  const mediaElements = document.querySelectorAll('video, audio');
-  mediaElements.forEach(media => {
-    try {
-      if (!media.paused && !media.ended) {
-        media.pause();
-        pausedAny = true;
-      }
-    } catch (_) {}
-  });
-
-  // 2. Tạm dừng player YouTube chính
-  const ytPlayer = document.getElementById('movie_player');
-  if (ytPlayer && typeof ytPlayer.pauseVideo === 'function') {
-    try {
-      const state = ytPlayer.getPlayerState ? ytPlayer.getPlayerState() : -1;
-      if (state === 1 || state === 3) {
-        ytPlayer.pauseVideo();
-        pausedAny = true;
-      }
-    } catch (_) {}
-  }
-
-  // 3. Tạm dừng player bar trên YouTube Music
-  const ytMusicPlayPauseBtn = document.querySelector('ytmusic-player-bar #play-pause-button');
-  if (ytMusicPlayPauseBtn) {
-    const label = (ytMusicPlayPauseBtn.getAttribute('aria-label') || ytMusicPlayPauseBtn.getAttribute('title') || '').toLowerCase();
-    if (label.includes('pause') || label.includes('tạm dừng') || label.includes('dừng')) {
-      try {
-        ytMusicPlayPauseBtn.click();
-        pausedAny = true;
-      } catch (_) {}
-    }
-  }
-
-  // 4. Tạm dừng SoundCloud
-  const scPlayBtn = document.querySelector('.playControl.playing');
-  if (scPlayBtn) {
-    try {
-      scPlayBtn.click();
-      pausedAny = true;
-    } catch (_) {}
-  }
-
-  if (pausedAny) {
-    showToast('Đã tạm dừng phát trên web (Pineapple Studio đang phát nhạc)', false);
-    publishBrowserMediaState(true);
-  }
+  // Đã bỏ tính năng tự động dừng phát media trên trang web
+  return;
 }
 
 document.addEventListener('play', () => publishBrowserMediaState(true), true);
@@ -628,12 +580,6 @@ function injectWatchPageButton() {
     e.stopPropagation();
     
     if (btn.classList.contains('loading')) return;
-
-    // Tạm dừng video đang phát trên trình duyệt
-    const video = document.querySelector('video');
-    if (video) {
-      video.pause();
-    }
 
     btn.classList.add('loading');
     btn.innerHTML = 'Đang thêm...';

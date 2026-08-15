@@ -362,16 +362,15 @@ if (!gotTheLock) {
           app: "pineapple-studio",
           version: app.getVersion(),
           appPlaying: browserMediaStateService.appIsPlaying,
-          shouldPause: browserMediaStateService.shouldPauseBrowser()
+          shouldPause: false
         }));
         return;
       }
 
       // Xử lý API Tạm dừng media trình duyệt (POST /api/pause-browser-media)
       if (req.url === '/api/pause-browser-media' && req.method === 'POST') {
-        broadcastAppPlaybackState(true);
         res.writeHead(200, getCorsHeaders({ 'Content-Type': 'application/json' }));
-        res.end(JSON.stringify({ success: true, message: 'Pause signal broadcasted' }));
+        res.end(JSON.stringify({ success: true, message: 'Pause signal disabled' }));
         return;
       }
 
@@ -390,7 +389,7 @@ if (!gotTheLock) {
             res.end(JSON.stringify({
               success: true,
               active: state.active,
-              shouldPause: browserMediaStateService.shouldPauseBrowser(),
+              shouldPause: false,
               appPlaying: browserMediaStateService.appIsPlaying
             }));
           } catch (err) {

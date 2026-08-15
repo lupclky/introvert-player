@@ -4,24 +4,8 @@ let appWs = null;
 let wsReconnectTimer = null;
 
 async function pauseAllBrowserMedia() {
-  try {
-    const tabs = await chrome.tabs.query({
-      url: [
-        '*://*.youtube.com/*',
-        '*://music.youtube.com/*',
-        '*://*.soundcloud.com/*'
-      ]
-    });
-    for (const tab of tabs) {
-      if (Number.isInteger(tab.id)) {
-        chrome.tabs.sendMessage(tab.id, { action: 'pause-media' }, () => {
-          void chrome.runtime.lastError;
-        });
-      }
-    }
-  } catch (e) {
-    console.warn('[Pineapple Remote] Không thể gửi lệnh dừng tới các tab:', e);
-  }
+  // Đã bỏ tính năng tự động dừng media trên trình duyệt khi app phát nhạc
+  return;
 }
 
 async function connectAppWebSocket() {
@@ -37,13 +21,7 @@ async function connectAppWebSocket() {
     };
 
     appWs.onmessage = (event) => {
-      try {
-        const msg = JSON.parse(event.data || '{}');
-        if (msg.type === 'app_playback_started' || (msg.type === 'player_state' && msg.isPlaying)) {
-          console.log('[Pineapple Remote] Ứng dụng phát nhạc, tiến hành tạm dừng media trên web...');
-          pauseAllBrowserMedia();
-        }
-      } catch (_) {}
+      // Không tự động tạm dừng media trên trình duyệt khi app phát nhạc
     };
 
     appWs.onclose = () => {
