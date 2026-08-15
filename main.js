@@ -145,7 +145,7 @@ function broadcastBrowserMediaState(state) {
   }
 }
 
-// Táº¯t sandbox Ä‘á»ƒ trÃ¡nh crash khi cháº¡y tá»« thÆ° má»¥c AppData (giá»¯ GPU báº­t Ä‘á»ƒ trÃ¡nh bug input focus)
+// Tắt sandbox để tránh crash khi chạy từ thư mục AppData (giữ GPU bật để tránh bug input focus)
 app.commandLine.appendSwitch('no-sandbox');
 app.commandLine.appendSwitch('disable-gpu-sandbox');
 const gotTheLock = app.requestSingleInstanceLock();
@@ -160,7 +160,7 @@ if (!gotTheLock) {
     }
   });
 
-  // Bá»™ Ã¡nh xáº¡ MIME types Ä‘á»ƒ server phá»¥c vá»¥ Ä‘Ãºng Ä‘á»‹nh dáº¡ng file
+  // Bộ ánh xạ MIME types để server phục vụ đúng định dạng file
   const MIME_TYPES = {
     '.html': 'text/html; charset=utf-8',
     '.css': 'text/css; charset=utf-8',
@@ -174,7 +174,7 @@ if (!gotTheLock) {
     '.ico': 'image/x-icon'
   };
 
-  // HÃ m bá»• trá»£ kiá»ƒm tra Origin tin cáº­y (localhost, 127.0.0.1, file:// vÃ  null cá»§a OBS local file, vercel.app)
+  // Hàm bổ trợ kiểm tra Origin tin cậy (localhost, 127.0.0.1, file:// và null của OBS local file, vercel.app)
   function isOriginAllowed(origin) {
     if (!origin || origin === 'null') return true;
     return /^http:\/\/localhost(:\d+)?$/.test(origin) || 
@@ -184,19 +184,19 @@ if (!gotTheLock) {
            /\.vercel\.app$/.test(origin);
   }
 
-  // HÃ m khá»Ÿi táº¡o Local HTTP Server
+  // Hàm khởi tạo Local HTTP Server
   function createLocalServer(startPort, callback) {
     server = http.createServer((req, res) => {
       const origin = req.headers.origin;
 
-      // Cháº·n cÃ¡c request CORS cÃ³ Origin láº¡ khÃ´ng náº±m trong whitelist
+      // Chặn các request CORS có Origin lạ không nằm trong whitelist
       if (origin && !isOriginAllowed(origin)) {
         res.writeHead(403, { 'Content-Type': 'text/plain' });
         res.end('Forbidden: Cross-Origin Request Blocked');
         return;
       }
 
-      // Helper Ä‘á»ƒ sinh CORS Headers Ä‘á»™ng cho cÃ¡c pháº£n há»“i
+      // Helper để sinh CORS Headers động cho các phản hồi
       function getCorsHeaders(extraHeaders = {}) {
         const headers = { ...extraHeaders };
         if (origin) {
@@ -205,7 +205,7 @@ if (!gotTheLock) {
         return headers;
       }
 
-      // Xá»­ lÃ½ tiá»n kiá»ƒm CORS (OPTIONS Preflight)
+      // Xử lý tiền kiểm CORS (OPTIONS Preflight)
       if (req.method === 'OPTIONS') {
         res.writeHead(204, getCorsHeaders({
           'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
@@ -216,7 +216,7 @@ if (!gotTheLock) {
         return;
       }
 
-      // Xá»­ lÃ½ API lÆ°u cáº¥u hÃ¬nh (POST /api/config)
+      // Xử lý API lưu cấu hình (POST /api/config)
       if (req.url === '/api/config' && req.method === 'POST') {
         let body = '';
         req.setEncoding('utf8');
@@ -232,7 +232,7 @@ if (!gotTheLock) {
             }));
             res.end(JSON.stringify({ success: true }));
           } catch (err) {
-            console.error('Lá»—i lÆ°u cáº¥u hÃ¬nh AppData:', err);
+            console.error('Lỗi lưu cấu hình AppData:', err);
             res.writeHead(500, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: err.message }));
           }
@@ -240,7 +240,7 @@ if (!gotTheLock) {
         return;
       }
 
-      // Xá»­ lÃ½ API ghi log debug tá»« overlay (POST /api/debug-log)
+      // Xử lý API ghi log debug từ overlay (POST /api/debug-log)
       if (req.url === '/api/debug-log' && req.method === 'POST') {
         let body = '';
         req.setEncoding('utf8');
@@ -262,7 +262,7 @@ if (!gotTheLock) {
         return;
       }
 
-      // Xá»­ lÃ½ API lÆ°u walkthrough vÃ  Ä‘áº©y lÃªn Vercel (POST /api/save-walkthrough)
+      // Xử lý API lưu walkthrough và đẩy lên Vercel (POST /api/save-walkthrough)
       if (req.url === '/api/save-walkthrough' && req.method === 'POST') {
         let body = '';
         req.setEncoding('utf8');
@@ -274,22 +274,22 @@ if (!gotTheLock) {
             const data = JSON.parse(body);
             const htmlContent = data.html;
             
-            // Ghi Ä‘Ã¨ tá»‡p tin walkthrough.html trong thÆ° má»¥c landing
+            // Ghi đè tệp tin walkthrough.html trong thư mục landing
             const filePath = path.join(__dirname, 'landing', 'walkthrough.html');
             fs.writeFileSync(filePath, htmlContent, 'utf8');
-            console.log('[API] ÄÃ£ lÆ°u thÃ nh cÃ´ng ná»™i dung walkthrough.html vÃ o Ä‘Ä©a cá»©ng.');
+            console.log('[API] Đã lưu thành công nội dung walkthrough.html vào đĩa cứng.');
             
-            // Náº¿u cá» deploy báº±ng true, cháº¡y lá»‡nh vercel --prod
+            // Nếu cờ deploy bằng true, chạy lệnh vercel --prod
             if (data.deploy) {
               const { exec } = require('child_process');
               const landingDir = path.join(__dirname, 'landing');
               
-              console.log('[API] Báº¯t Ä‘áº§u Ä‘áº©y lÃªn Vercel...');
+              console.log('[API] Bắt đầu đẩy lên Vercel...');
               exec('npx vercel --prod --yes', { cwd: landingDir }, (error, stdout, stderr) => {
                 if (error) {
-                  console.error('[API] Lá»—i khi cháº¡y lá»‡nh deploy Vercel:', error);
+                  console.error('[API] Lỗi khi chạy lệnh deploy Vercel:', error);
                 } else {
-                  console.log('[API] Deploy Vercel thÃ nh cÃ´ng:\n', stdout);
+                  console.log('[API] Deploy Vercel thành công:\n', stdout);
                 }
               });
             }
@@ -297,9 +297,9 @@ if (!gotTheLock) {
             res.writeHead(200, getCorsHeaders({
               'Content-Type': 'application/json'
             }));
-            res.end(JSON.stringify({ success: true, message: 'ÄÃ£ lÆ°u vÃ  triá»ƒn khai thÃ nh cÃ´ng!' }));
+            res.end(JSON.stringify({ success: true, message: 'Đã lưu và triển khai thành công!' }));
           } catch (err) {
-            console.error('[API] Lá»—i API save-walkthrough:', err);
+            console.error('[API] Lỗi API save-walkthrough:', err);
             res.writeHead(500, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: err.message }));
           }
@@ -307,7 +307,7 @@ if (!gotTheLock) {
         return;
       }
 
-      // Xá»­ lÃ½ API test donate (POST /api/test-donate)
+      // Xử lý API test donate (POST /api/test-donate)
       if (req.url === '/api/test-donate' && req.method === 'POST') {
         let body = '';
         req.setEncoding('utf8');
@@ -325,7 +325,7 @@ if (!gotTheLock) {
             }));
             res.end(JSON.stringify({ success: true }));
           } catch (err) {
-            console.error('Lá»—i API test-donate:', err);
+            console.error('Lỗi API test-donate:', err);
             res.writeHead(500, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: err.message }));
           }
@@ -333,7 +333,7 @@ if (!gotTheLock) {
         return;
       }
 
-      // Xá»­ lÃ½ API Ping (GET /api/ping)
+      // Xử lý API Ping (GET /api/ping)
       if (req.url === '/api/ping' && req.method === 'GET') {
         res.writeHead(200, getCorsHeaders({
           'Content-Type': 'application/json'
@@ -342,7 +342,7 @@ if (!gotTheLock) {
         return;
       }
 
-      // Nháº­n tráº¡ng thÃ¡i media tá»« Extension Ä‘á»ƒ Overlay dÃ¹ng khi queue trá»‘ng.
+      // Nhận trạng thái media từ Extension để Overlay dùng khi queue trống.
       if (req.url === '/api/browser-media-state' && req.method === 'POST') {
         let body = '';
         req.setEncoding('utf8');
@@ -363,7 +363,7 @@ if (!gotTheLock) {
         return;
       }
 
-      // Xá»­ lÃ½ API ThÃªm nháº¡c tá»« Extension (POST /api/add-song)
+      // Xử lý API Thêm nhạc từ Extension (POST /api/add-song)
       if (req.url === '/api/add-song' && req.method === 'POST') {
         let body = '';
         req.setEncoding('utf8');
@@ -382,7 +382,7 @@ if (!gotTheLock) {
             }));
             res.end(JSON.stringify({ success: true }));
           } catch (err) {
-            console.error('Lá»—i API add-song:', err);
+            console.error('Lỗi API add-song:', err);
             res.writeHead(500, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: err.message }));
           }
@@ -390,7 +390,7 @@ if (!gotTheLock) {
         return;
       }
 
-      // Xá»­ lÃ½ API phÃ¢n giáº£i URL rÃºt gá»n (GET /api/resolve?url=...)
+      // Xử lý API phân giải URL rút gọn (GET /api/resolve?url=...)
       if (req.url.startsWith('/api/resolve') && req.method === 'GET') {
         const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
         const targetUrl = parsedUrl.searchParams.get('url');
@@ -440,7 +440,7 @@ if (!gotTheLock) {
         return;
       }
 
-      // Xá»­ lÃ½ API láº¥y Ä‘á»™ dÃ i tháº­t cá»§a YouTube video (GET /api/youtube-duration?videoId=...)
+      // Xử lý API lấy độ dài thật của YouTube video (GET /api/youtube-duration?videoId=...)
       if (req.url.startsWith('/api/youtube-duration') && req.method === 'GET') {
         const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
         const videoId = parsedUrl.searchParams.get('videoId');
@@ -470,7 +470,7 @@ if (!gotTheLock) {
         return;
       }
 
-      // Xá»­ lÃ½ API tÃ¬m kiáº¿m video YouTube (GET /api/youtube-search?q=...)
+      // Xử lý API tìm kiếm video YouTube (GET /api/youtube-search?q=...)
       if (req.url.startsWith('/api/youtube-search') && req.method === 'GET') {
         const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
         const query = parsedUrl.searchParams.get('q');
@@ -569,7 +569,7 @@ if (!gotTheLock) {
         return;
       }
 
-      // Xá»­ lÃ½ API láº¥y Ä‘á»™ dÃ i tháº­t cá»§a SoundCloud video/track (GET /api/soundcloud-duration?url=...)
+      // Xử lý API lấy độ dài thật của SoundCloud video/track (GET /api/soundcloud-duration?url=...)
       if (req.url.startsWith('/api/soundcloud-duration') && req.method === 'GET') {
         const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
         let trackUrl = parsedUrl.searchParams.get('url');
@@ -658,7 +658,7 @@ if (!gotTheLock) {
         return;
       }
 
-      // Xá»­ lÃ½ API Ä‘á»c cáº¥u hÃ¬nh (GET /api/config)
+      // Xử lý API đọc cấu hình (GET /api/config)
       if (req.url === '/api/config' && req.method === 'GET') {
         try {
           const configPath = path.join(app.getPath('userData'), 'config.json');
@@ -675,18 +675,18 @@ if (!gotTheLock) {
             res.end(JSON.stringify({}));
           }
         } catch (err) {
-          console.error('Lá»—i Ä‘á»c cáº¥u hÃ¬nh AppData:', err);
+          console.error('Lỗi đọc cấu hình AppData:', err);
           res.writeHead(500, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: err.message }));
         }
         return;
       }
 
-      // Xá»­ lÃ½ API láº¥y loudnessDb tá»« YouTube (GET /api/yt-loudness?videoId=...)
+      // Xử lý API lấy loudnessDb từ YouTube (GET /api/yt-loudness?videoId=...)
       if (req.url.startsWith('/api/yt-loudness') && req.method === 'GET') {
         const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
         const videoId = parsedUrl.searchParams.get('videoId');
-        console.log(`[API yt-loudness] Nháº­n request láº¥y loudness cho videoId: ${videoId}`);
+        console.log(`[API yt-loudness] Nhận request lấy loudness cho videoId: ${videoId}`);
         if (!videoId) {
           res.writeHead(400, getCorsHeaders({ 'Content-Type': 'application/json' }));
           res.end(JSON.stringify({ error: 'Missing videoId' }));
@@ -706,7 +706,7 @@ if (!gotTheLock) {
           ytRes.on('data', chunk => { html += chunk; });
           ytRes.on('end', () => {
             try {
-              // TÃ¬m ytInitialPlayerResponse trong HTML vÃ  trÃ­ch xuáº¥t JSON báº±ng Ä‘áº¿m ngoáº·c nhá»n
+              // Tìm ytInitialPlayerResponse trong HTML và trích xuất JSON bằng đếm ngoặc nhọn
               const marker = 'ytInitialPlayerResponse';
               const idx = html.indexOf(marker);
               if (idx !== -1) {
@@ -723,7 +723,7 @@ if (!gotTheLock) {
                     const playerResponse = JSON.parse(jsonStr);
                     const loudnessDb = playerResponse?.playerConfig?.audioConfig?.loudnessDb;
                     const perceptualLoudnessDb = playerResponse?.playerConfig?.audioConfig?.perceptualLoudnessDb;
-                    console.log(`[API yt-loudness] ThÃ nh cÃ´ng trÃ­ch xuáº¥t cho ${videoId} -> loudnessDb: ${loudnessDb}, perceptual: ${perceptualLoudnessDb}`);
+                    console.log(`[API yt-loudness] Thành công trích xuất cho ${videoId} -> loudnessDb: ${loudnessDb}, perceptual: ${perceptualLoudnessDb}`);
                     res.writeHead(200, getCorsHeaders({ 'Content-Type': 'application/json' }));
                     res.end(JSON.stringify({ videoId, loudnessDb: loudnessDb ?? null, perceptualLoudnessDb: perceptualLoudnessDb ?? null }));
                     return;
@@ -731,21 +731,21 @@ if (!gotTheLock) {
                 }
               }
             } catch (e) {
-              console.error(`[yt-loudness] Lá»—i phÃ¢n tÃ­ch playerResponse cho ${videoId}:`, e.message);
+              console.error(`[yt-loudness] Lỗi phân tích playerResponse cho ${videoId}:`, e.message);
             }
-            console.log(`[API yt-loudness] Tráº£ vá» loudnessDb máº·c Ä‘á»‹nh: null cho ${videoId}`);
+            console.log(`[API yt-loudness] Trả về loudnessDb mặc định: null cho ${videoId}`);
             res.writeHead(200, getCorsHeaders({ 'Content-Type': 'application/json' }));
             res.end(JSON.stringify({ videoId, loudnessDb: null, perceptualLoudnessDb: null }));
           });
         }).on('error', (err) => {
-          console.error(`[yt-loudness] Lá»—i káº¿t ná»‘i cho ${videoId}:`, err.message);
+          console.error(`[yt-loudness] Lỗi kết nối cho ${videoId}:`, err.message);
           res.writeHead(500, getCorsHeaders({ 'Content-Type': 'application/json' }));
           res.end(JSON.stringify({ error: err.message }));
         });
         return;
       }
 
-      // Xá»­ lÃ½ API láº¥y URL stream trá»±c tiáº¿p tá»« YouTube (GET /api/yt-stream?videoId=...)
+      // Xử lý API lấy URL stream trực tiếp từ YouTube (GET /api/yt-stream?videoId=...)
       if (req.url.startsWith('/api/yt-stream') && req.method === 'GET') {
         const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
         const videoId = parsedUrl.searchParams.get('videoId');
@@ -761,9 +761,9 @@ if (!gotTheLock) {
         });
 
         let ytDlpCookieFilePath = '';
-        // DÃ¹ng cookie cá»§a phiÃªn Ä‘Äƒng nháº­p YouTube trong app thay vÃ¬ Ä‘á»c trá»±c tiáº¿p
-        // database Chromium Ä‘ang bá»‹ khÃ³a. File Netscape chá»‰ tá»“n táº¡i trong Ä‘Ãºng
-        // thá»i gian yt-dlp phÃ¢n giáº£i URL vÃ  luÃ´n Ä‘Æ°á»£c xÃ³a á»Ÿ finally.
+        // Dùng cookie của phiên đăng nhập YouTube trong app thay vì đọc trực tiếp
+        // database Chromium đang bị khóa. File Netscape chỉ tồn tại trong đúng
+        // thời gian yt-dlp phân giải URL và luôn được xóa ở finally.
         createYtDlpCookieFile()
           .then(cookieFilePath => {
             ytDlpCookieFilePath = cookieFilePath;
@@ -799,13 +799,13 @@ if (!gotTheLock) {
         return;
       }
 
-      // Chá»‰ cháº¥p nháº­n GET requests cho file tÄ©nh
+      // Chỉ chấp nhận GET requests cho file tĩnh
       if (req.method !== 'GET') {
         res.writeHead(405, { 'Content-Type': 'text/plain' });
         return res.end('Method Not Allowed');
       }
 
-      // LÃ m sáº¡ch path Ä‘á»ƒ trÃ¡nh táº¥n cÃ´ng Directory Traversal
+      // Làm sạch path để tránh tấn công Directory Traversal
       let safeUrl = req.url.split('?')[0];
       if (safeUrl === '/') {
         safeUrl = '/index.html';
@@ -813,7 +813,7 @@ if (!gotTheLock) {
 
       const filePath = path.join(__dirname, safeUrl);
 
-      // Kiá»ƒm tra xem file cÃ³ náº±m trong thÆ° má»¥c á»©ng dá»¥ng hay khÃ´ng
+      // Kiểm tra xem file có nằm trong thư mục ứng dụng hay không
       if (!filePath.startsWith(__dirname)) {
         res.writeHead(403, { 'Content-Type': 'text/plain' });
         return res.end('Forbidden');
@@ -845,29 +845,29 @@ if (!gotTheLock) {
       });
     });
 
-    // Khá»Ÿi táº¡o WebSocket Server gáº¯n vá»›i HTTP Server hiá»‡n táº¡i
+    // Khởi tạo WebSocket Server gắn với HTTP Server hiện tại
     wss = new WebSocket.Server({ server });
     wss.on('connection', (ws, req) => {
       const origin = req.headers.origin;
       if (origin && !isOriginAllowed(origin)) {
-        console.warn(`[WebSocket] Káº¿t ná»‘i bá»‹ tá»« chá»‘i do origin láº¡: ${origin}`);
+        console.warn(`[WebSocket] Kết nối bị từ chối do origin lạ: ${origin}`);
         ws.close();
         return;
       }
 
       activeWsClients.add(ws);
-      console.log(`[WebSocket] OBS Overlay Ä‘Ã£ káº¿t ná»‘i. Tá»•ng sá»‘ client: ${activeWsClients.size}`);
+      console.log(`[WebSocket] OBS Overlay đã kết nối. Tổng số client: ${activeWsClients.size}`);
 
-      // Snapshot Ä‘Æ°á»£c gá»­i sau khi Overlay Ä‘Äƒng kÃ½ Ä‘Ãºng channel realtime.
+      // Snapshot được gửi sau khi Overlay đăng ký đúng channel realtime.
 
-      // Gá»­i tráº¡ng thÃ¡i PUBG hiá»‡n táº¡i cho client má»›i káº¿t ná»‘i
+      // Gửi trạng thái PUBG hiện tại cho client mới kết nối
       try {
         ws.send(JSON.stringify({
           type: 'pubg_state',
           data: { running: pubgMonitorService?.getRunning() || false }
         }));
       } catch (e) {
-        console.error('[WebSocket] Lá»—i gá»­i tráº¡ng thÃ¡i PUBG ban Ä‘áº§u:', e);
+        console.error('[WebSocket] Lỗi gửi trạng thái PUBG ban đầu:', e);
       }
 
       ws.on('message', (message) => {
@@ -885,15 +885,15 @@ if (!gotTheLock) {
               localRealtimeDatabaseService?.subscribe(ws, activeDashboardRealtimeChannelId, { role, sendSnapshot: false });
               activeWsClients.forEach(client => {
                 if (client !== ws && client.isRealtimeOverlayClient && client.readyState === WebSocket.OPEN) {
-                  // Chá»‰ Ä‘á»•i channel; Dashboard sáº½ gá»­i snapshot má»›i ngay sau khi subscribe.
-                  // KhÃ´ng phÃ¡t snapshot SQLite cÅ© vÃ¬ cÃ³ thá»ƒ lÃ m Overlay náº¡p láº¡i bÃ i trÆ°á»›c.
+                  // Chỉ đổi channel; Dashboard sẽ gửi snapshot mới ngay sau khi subscribe.
+                  // Không phát snapshot SQLite cũ vì có thể làm Overlay nạp lại bài trước.
                   localRealtimeDatabaseService?.subscribe(client, activeDashboardRealtimeChannelId, {
                     role: 'overlay',
                     sendSnapshot: false
                   });
                 }
               });
-              console.log(`[Local Realtime DB] Dashboard Ä‘ang listening channel: ${activeDashboardRealtimeChannelId}`);
+              console.log(`[Local Realtime DB] Dashboard đang listening channel: ${activeDashboardRealtimeChannelId}`);
             } else {
               const effectiveChannelId = activeDashboardRealtimeChannelId || parsed.channelId;
               localRealtimeDatabaseService?.subscribe(ws, effectiveChannelId, { role: 'overlay' });
@@ -909,7 +909,7 @@ if (!gotTheLock) {
                 } catch (_) { }
               }
               if (activeDashboardRealtimeChannelId && ws.requestedRealtimeChannelId !== activeDashboardRealtimeChannelId) {
-                console.warn(`[WebSocket] Overlay dÃ¹ng channel cÅ© ${ws.requestedRealtimeChannelId}; Ä‘Ã£ ghÃ©p vÃ o ${activeDashboardRealtimeChannelId}.`);
+                console.warn(`[WebSocket] Overlay dùng channel cũ ${ws.requestedRealtimeChannelId}; đã ghép vào ${activeDashboardRealtimeChannelId}.`);
               }
             }
             return;
@@ -920,17 +920,17 @@ if (!gotTheLock) {
             localRealtimeDatabaseService.publish(channelId, direction, parsed);
           }
         } catch (err) {
-          console.error('[WebSocket] Lá»—i xá»­ lÃ½ tin nháº¯n tá»« overlay:', err);
+          console.error('[WebSocket] Lỗi xử lý tin nhắn từ overlay:', err);
         }
       });
 
       ws.on('close', () => {
         activeWsClients.delete(ws);
-        console.log(`[WebSocket] OBS Overlay Ä‘Ã£ ngáº¯t káº¿t ná»‘i. Tá»•ng sá»‘ client: ${activeWsClients.size}`);
+        console.log(`[WebSocket] OBS Overlay đã ngắt kết nối. Tổng số client: ${activeWsClients.size}`);
       });
 
       ws.on('error', (err) => {
-        console.error('[WebSocket] Lá»—i káº¿t ná»‘i client:', err);
+        console.error('[WebSocket] Lỗi kết nối client:', err);
         activeWsClients.delete(ws);
       });
     });
@@ -999,7 +999,7 @@ if (!gotTheLock) {
       }
     });
 
-    // Má»Ÿ táº¥t cáº£ liÃªn káº¿t bÃªn ngoÃ i (HTTP/HTTPS) báº±ng trÃ¬nh duyá»‡t máº·c Ä‘á»‹nh cá»§a há»‡ thá»‘ng Windows
+    // Mở tất cả liên kết bên ngoài (HTTP/HTTPS) bằng trình duyệt mặc định của hệ thống Windows
     registerGlobalMediaShortcuts(mainWindow);
 
     mainWindow.webContents.setWindowOpenHandler(({ url }) => {
@@ -1009,7 +1009,7 @@ if (!gotTheLock) {
       return { action: 'deny' };
     });
 
-    // Menu chuá»™t pháº£i native cho Dashboard.
+    // Menu chuột phải native cho Dashboard.
     // The application menu is hidden, so register DevTools shortcuts directly
     // on this window rather than using a process-wide global shortcut.
     mainWindow.webContents.on('before-input-event', (event, input) => {
@@ -1035,7 +1035,7 @@ if (!gotTheLock) {
         });
         if ((params.dictionarySuggestions || []).length > 0) template.push({ type: 'separator' });
         template.push({
-          label: 'ThÃªm vÃ o tá»« Ä‘iá»ƒn',
+          label: 'Thêm vào từ điển',
           click: () => mainWindow.webContents.session.addWordToSpellCheckerDictionary(params.misspelledWord)
         });
         template.push({ type: 'separator' });
@@ -1043,57 +1043,57 @@ if (!gotTheLock) {
 
       if (params.isEditable) {
         template.push(
-          { label: 'HoÃ n tÃ¡c', role: 'undo', enabled: Boolean(editFlags.canUndo) },
-          { label: 'LÃ m láº¡i', role: 'redo', enabled: Boolean(editFlags.canRedo) },
+          { label: 'Hoàn tác', role: 'undo', enabled: Boolean(editFlags.canUndo) },
+          { label: 'Làm lại', role: 'redo', enabled: Boolean(editFlags.canRedo) },
           { type: 'separator' },
-          { label: 'Cáº¯t', role: 'cut', enabled: Boolean(editFlags.canCut) },
-          { label: 'Sao chÃ©p', role: 'copy', enabled: Boolean(editFlags.canCopy) },
-          { label: 'DÃ¡n', role: 'paste', enabled: Boolean(editFlags.canPaste) },
-          { label: 'DÃ¡n khÃ´ng Ä‘á»‹nh dáº¡ng', role: 'pasteAndMatchStyle', enabled: Boolean(editFlags.canPaste) },
-          { label: 'XÃ³a', role: 'delete', enabled: Boolean(editFlags.canDelete) },
+          { label: 'Cắt', role: 'cut', enabled: Boolean(editFlags.canCut) },
+          { label: 'Sao chép', role: 'copy', enabled: Boolean(editFlags.canCopy) },
+          { label: 'Dán', role: 'paste', enabled: Boolean(editFlags.canPaste) },
+          { label: 'Dán không định dạng', role: 'pasteAndMatchStyle', enabled: Boolean(editFlags.canPaste) },
+          { label: 'Xóa', role: 'delete', enabled: Boolean(editFlags.canDelete) },
           { type: 'separator' },
-          { label: 'Chá»n táº¥t cáº£', role: 'selectAll', enabled: Boolean(editFlags.canSelectAll) }
+          { label: 'Chọn tất cả', role: 'selectAll', enabled: Boolean(editFlags.canSelectAll) }
         );
       } else {
         if (params.selectionText && params.selectionText.trim()) {
-          template.push({ label: 'Sao chÃ©p', role: 'copy' });
+          template.push({ label: 'Sao chép', role: 'copy' });
         }
-        template.push({ label: 'Chá»n táº¥t cáº£', role: 'selectAll' });
+        template.push({ label: 'Chọn tất cả', role: 'selectAll' });
       }
 
       if (params.linkURL && /^https?:\/\//i.test(params.linkURL)) {
         if (template.length > 0) template.push({ type: 'separator' });
         template.push(
-          { label: 'Má»Ÿ liÃªn káº¿t trong trÃ¬nh duyá»‡t', click: () => shell.openExternal(params.linkURL) },
-          { label: 'Sao chÃ©p Ä‘á»‹a chá»‰ liÃªn káº¿t', click: () => clipboard.writeText(params.linkURL) }
+          { label: 'Mở liên kết trong trình duyệt', click: () => shell.openExternal(params.linkURL) },
+          { label: 'Sao chép địa chỉ liên kết', click: () => clipboard.writeText(params.linkURL) }
         );
       }
 
       if (params.mediaType === 'image' && params.srcURL) {
         if (template.length > 0) template.push({ type: 'separator' });
         template.push(
-          { label: 'Sao chÃ©p hÃ¬nh áº£nh', click: () => mainWindow.webContents.copyImageAt(params.x, params.y) },
-          { label: 'Sao chÃ©p Ä‘á»‹a chá»‰ hÃ¬nh áº£nh', click: () => clipboard.writeText(params.srcURL) }
+          { label: 'Sao chép hình ảnh', click: () => mainWindow.webContents.copyImageAt(params.x, params.y) },
+          { label: 'Sao chép địa chỉ hình ảnh', click: () => clipboard.writeText(params.srcURL) }
         );
         if (/^https?:\/\//i.test(params.srcURL)) {
-          template.push({ label: 'Má»Ÿ hÃ¬nh áº£nh trong trÃ¬nh duyá»‡t', click: () => shell.openExternal(params.srcURL) });
+          template.push({ label: 'Mở hình ảnh trong trình duyệt', click: () => shell.openExternal(params.srcURL) });
         }
       }
 
       if (template.length > 0) template.push({ type: 'separator' });
       template.push(
-        { label: 'Táº£i láº¡i giao diá»‡n', role: 'reload' },
+        { label: 'Tải lại giao diện', role: 'reload' },
         {
-          label: 'Thu phÃ³ng',
+          label: 'Thu phóng',
           submenu: [
-            { label: 'PhÃ³ng to', role: 'zoomIn' },
-            { label: 'Thu nhá»', role: 'zoomOut' },
-            { label: 'Äáº·t láº¡i 100%', role: 'resetZoom' }
+            { label: 'Phóng to', role: 'zoomIn' },
+            { label: 'Thu nhỏ', role: 'zoomOut' },
+            { label: 'Đặt lại 100%', role: 'resetZoom' }
           ]
         },
         { type: 'separator' },
         {
-          label: 'Má»Ÿ DevTools (F12)',
+          label: 'Mở DevTools (F12)',
           click: () => mainWindow.webContents.openDevTools()
         }
       );
@@ -1101,11 +1101,11 @@ if (!gotTheLock) {
       Menu.buildFromTemplate(template).popup({ window: mainWindow });
     });
 
-    // Load trang Dashboard thÃ´ng qua URL cá»§a local server
+    // Load trang Dashboard thông qua URL của local server
     mainWindow.loadURL(`http://127.0.0.1:${port}/index.html`);
 
-    // Táº¡o menu á»©ng dá»¥ng cÆ¡ báº£n
-    Menu.setApplicationMenu(null); // áº¨n menu máº·c Ä‘á»‹nh Ä‘á»ƒ giao diá»‡n trÃ´ng tá»‘i giáº£n vÃ  chuyÃªn nghiá»‡p hÆ¡n
+    // Tạo menu ứng dụng cơ bản
+    Menu.setApplicationMenu(null); // Ẩn menu mặc định để giao diện trông tối giản và chuyên nghiệp hơn
 
 
 
@@ -1132,7 +1132,7 @@ if (!gotTheLock) {
   function createTray() {
     const { nativeImage } = require('electron');
 
-    // Æ¯u tiÃªn táº£i icon tá»« extraResources (náº±m ngoÃ i ASAR), fallback vÃ o __dirname (khi dev)
+    // Ưu tiên tải icon từ extraResources (nằm ngoài ASAR), fallback vào __dirname (khi dev)
     let iconPath = path.join(process.resourcesPath, 'icon.ico');
     if (!fs.existsSync(iconPath)) {
       iconPath = path.join(__dirname, 'build', 'icon.ico');
@@ -1149,7 +1149,7 @@ if (!gotTheLock) {
       const loginSettings = app.getLoginItemSettings();
       return Menu.buildFromTemplate([
         {
-          label: 'Hiá»ƒn thá»‹',
+          label: 'Hiển thị',
           click: () => {
             if (mainWindow) {
               mainWindow.show();
@@ -1158,7 +1158,7 @@ if (!gotTheLock) {
           }
         },
         {
-          label: 'Khá»Ÿi Ä‘á»™ng cÃ¹ng Windows',
+          label: 'Khởi động cùng Windows',
           type: 'checkbox',
           checked: loginSettings.openAtLogin,
           click: (menuItem) => {
@@ -1170,7 +1170,7 @@ if (!gotTheLock) {
         },
         { type: 'separator' },
         {
-          label: 'ThoÃ¡t',
+          label: 'Thoát',
           click: () => {
             app.isQuitting = true;
             app.quit();
@@ -1197,7 +1197,7 @@ if (!gotTheLock) {
   app.whenReady().then(() => {
     initDatabase();
 
-    // Thiáº¿t láº­p khá»Ÿi Ä‘á»™ng cÃ¹ng Windows khi má»Ÿ app láº§n Ä‘áº§u
+    // Thiết lập khởi động cùng Windows khi mở app lần đầu
     try {
       const firstRunPath = path.join(app.getPath('userData'), '.first_run');
       if (!fs.existsSync(firstRunPath)) {
@@ -1209,10 +1209,10 @@ if (!gotTheLock) {
         console.log('First run: Enabled Start with Windows (openAtLogin) by default.');
       }
     } catch (e) {
-      console.error('Lá»—i khi thiáº¿t láº­p khá»Ÿi Ä‘á»™ng cÃ¹ng Windows láº§n Ä‘áº§u:', e);
+      console.error('Lỗi khi thiết lập khởi động cùng Windows lần đầu:', e);
     }
 
-    // Dá»n dáº¹p cÃ¡c file html táº¡m cá»§a thÃ´ng bÃ¡o tá»« láº§n cháº¡y trÆ°á»›c
+    // Dọn dẹp các file html tạm của thông báo từ lần chạy trước
     try {
       const userDataDir = app.getPath('userData');
       if (fs.existsSync(userDataDir)) {
@@ -1226,10 +1226,10 @@ if (!gotTheLock) {
         });
       }
     } catch (e) {
-      console.error('KhÃ´ng thá»ƒ dá»n dáº¹p file thÃ´ng bÃ¡o táº¡m:', e);
+      console.error('Không thể dọn dẹp file thông báo tạm:', e);
     }
 
-    // Báº¯t Ä‘áº§u khá»Ÿi cháº¡y server trÆ°á»›c, sau Ä‘Ã³ táº¡o cá»­a sá»• hiá»ƒn thá»‹
+    // Bắt đầu khởi chạy server trước, sau đó tạo cửa sổ hiển thị
     createLocalServer(3000, (port) => {
       createWindow(port);
       try {
@@ -1270,7 +1270,7 @@ registerZyPageSongEndIpcService({ ipcMain });
 registerZyPageShopIdIpcService({ ipcMain });
 registerSyncedLyricsIpcService({ ipcMain, service: syncedLyricsService });
 
-// Láº¯ng nghe yÃªu cáº§u hiá»ƒn thá»‹ thÃ´ng bÃ¡o taskbar tá»« Dashboard (Renderer)
+// Lắng nghe yêu cầu hiển thị thông báo taskbar từ Dashboard (Renderer)
 ipcMain.on('show-taskbar-notification', (event, data) => {
   if (data && data.title) {
     if (data.isDarkMode !== undefined) {
@@ -1280,7 +1280,7 @@ ipcMain.on('show-taskbar-notification', (event, data) => {
   }
 });
 
-// Láº¯ng nghe sá»± kiá»‡n Ä‘iá»u khiá»ƒn cá»­a sá»• tá»« Dashboard (Renderer)
+// Lắng nghe sự kiện điều khiển cửa sổ từ Dashboard (Renderer)
 ipcMain.on('window-control', (event, action) => {
   if (!mainWindow) return;
   if (action === 'minimize') {
@@ -1299,7 +1299,7 @@ ipcMain.on('window-control', (event, action) => {
     const { Menu } = require('electron');
     const menu = Menu.buildFromTemplate([
       {
-        label: 'KhÃ´i phá»¥c',
+        label: 'Khôi phục',
         enabled: mainWindow.isMaximized() || mainWindow.isMinimized(),
         click: () => {
           if (mainWindow.isMinimized()) mainWindow.restore();
@@ -1307,24 +1307,24 @@ ipcMain.on('window-control', (event, action) => {
         }
       },
       {
-        label: 'Di chuyá»ƒn',
+        label: 'Di chuyển',
         enabled: !mainWindow.isMaximized(),
         click: () => {}
       },
       {
-        label: 'KÃ­ch cá»¡',
+        label: 'Kích cỡ',
         enabled: !mainWindow.isMaximized(),
         click: () => {}
       },
       {
-        label: 'Thu nhá»',
+        label: 'Thu nhỏ',
         enabled: mainWindow.isMinimizable(),
         click: () => {
           mainWindow.minimize();
         }
       },
       {
-        label: 'PhÃ³ng to',
+        label: 'Phóng to',
         enabled: mainWindow.isMaximizable() && !mainWindow.isMaximized(),
         click: () => {
           mainWindow.maximize();
@@ -1332,7 +1332,7 @@ ipcMain.on('window-control', (event, action) => {
       },
       { type: 'separator' },
       {
-        label: 'ÄÃ³ng',
+        label: 'Đóng',
         accelerator: 'Alt+F4',
         click: () => {
           mainWindow.close();
@@ -1343,7 +1343,7 @@ ipcMain.on('window-control', (event, action) => {
   }
 });
 
-// Láº¯ng nghe sá»± kiá»‡n chuyá»ƒn Ä‘á»•i theme Ä‘á»ƒ cáº­p nháº­t Titlebar Overlay tÆ°Æ¡ng á»©ng
+// Lắng nghe sự kiện chuyển đổi theme để cập nhật Titlebar Overlay tương ứng
 ipcMain.on('theme-change', (event, theme) => {
   if (!mainWindow) return;
   if (process.platform === 'win32') {
@@ -1588,7 +1588,7 @@ ipcMain.handle('search-youtube', async (event, query) => {
           const thumbnail = v.thumbnails?.[0]?.url || '';
           const duration = v.durationRaw || '0:00';
           const author = v.channel?.name || '';
-          const views = v.views ? v.views.toLocaleString('vi-VN') + ' lÆ°á»£t xem' : '';
+          const views = v.views ? v.views.toLocaleString('vi-VN') + ' lượt xem' : '';
           
           if (videoId && title) {
             videos.push({
@@ -1717,7 +1717,7 @@ ipcMain.handle('get-youtube-metadata', async (event, videoId) => {
             });
           } else {
             resolve({
-              title: `Nháº¡c YouTube (${videoId})`,
+              title: `Nhạc YouTube (${videoId})`,
               thumbnail: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
               author
             });
@@ -1725,7 +1725,7 @@ ipcMain.handle('get-youtube-metadata', async (event, videoId) => {
         });
       }).on('error', () => {
         resolve({
-          title: `Nháº¡c YouTube (${videoId})`,
+          title: `Nhạc YouTube (${videoId})`,
           thumbnail: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
         });
       });
@@ -1787,7 +1787,7 @@ function extractYtInitialData(html) {
   if (startIdx !== -1) {
     jsonStartIdx = startIdx + startStr.length;
   } else {
-    // Thá»­ cÃ¡c máº«u khÃ¡c
+    // Thử các mẫu khác
     const altStarts = [
       "window['ytInitialData'] = ",
       'window["ytInitialData"] = ',
@@ -1804,12 +1804,12 @@ function extractYtInitialData(html) {
   
   if (jsonStartIdx === -1) return null;
   
-  // TÃ¬m tháº» káº¿t thÃºc </script> cá»§a block script hiá»‡n táº¡i
+  // Tìm thẻ kết thúc </script> của block script hiện tại
   const endIdx = html.indexOf('</script>', jsonStartIdx);
   if (endIdx === -1) return null;
   
   let jsonStr = html.substring(jsonStartIdx, endIdx).trim();
-  // Loáº¡i bá» dáº¥u cháº¥m pháº©y á»Ÿ cuá»‘i náº¿u cÃ³
+  // Loại bỏ dấu chấm phẩy ở cuối nếu có
   if (jsonStr.endsWith(';')) {
     jsonStr = jsonStr.substring(0, jsonStr.length - 1).trim();
   }
@@ -1817,7 +1817,7 @@ function extractYtInitialData(html) {
   try {
     return JSON.parse(jsonStr);
   } catch (e) {
-    // Fallback: Sá»­ dá»¥ng regex náº¿u cáº¯t chuá»—i Ä‘Æ¡n giáº£n gáº·p lá»—i
+    // Fallback: Sử dụng regex nếu cắt chuỗi đơn giản gặp lỗi
     const patterns = [
       /ytInitialData\s*=\s*({.+?});/,
       /ytInitialData\s*=\s*({.+?})(?:\s*;|\s*<\/script>)/,
@@ -1865,7 +1865,7 @@ async function createYtDlpCookieFile() {
     });
     return cookieFilePath;
   } catch (error) {
-    console.warn('KhÃ´ng thá»ƒ chuáº©n bá»‹ cookie YouTube cho DirectStream:', error?.message || error);
+    console.warn('Không thể chuẩn bị cookie YouTube cho DirectStream:', error?.message || error);
     return '';
   }
 }
@@ -1881,7 +1881,7 @@ async function removeYtDlpCookieFile(cookieFilePath) {
     } catch (error) {
       if (error?.code === 'ENOENT') return;
       if (!['EBUSY', 'EPERM'].includes(error?.code) || delayMs === retryDelaysMs.at(-1)) {
-        console.warn('KhÃ´ng thá»ƒ xÃ³a file cookie táº¡m cá»§a DirectStream:', error?.message || error);
+        console.warn('Không thể xóa file cookie tạm của DirectStream:', error?.message || error);
         return;
       }
     }
@@ -2263,7 +2263,7 @@ ipcMain.handle('youtube-login', async () => {
     let win = new BrowserWindow({
       width: 500,
       height: 600,
-      title: 'ÄÄƒng nháº­p YouTube',
+      title: 'Đăng nhập YouTube',
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true
@@ -2413,11 +2413,11 @@ ipcMain.handle('youtube-get-playlist-videos', async (event, playlistId) => {
 
 ipcMain.handle('youtube-get-recommendations', async () => {
   try {
-    // BÆ°á»›c 1: Táº£i trang chá»§ YouTube vá»›i Ä‘áº§y Ä‘á»§ cookies cá»§a tÃ i khoáº£n Ä‘Ã£ Ä‘Äƒng nháº­p
-    // fetchYoutubePageDataAndHtml Ä‘Ã£ xá»­ lÃ½ SOCS cookie + redirect Ä‘Ãºng chuáº©n, tráº£ vá» cáº£ JSON vÃ  HTML thÃ´
+    // Bước 1: Tải trang chủ YouTube với đầy đủ cookies của tài khoản đã đăng nhập
+    // fetchYoutubePageDataAndHtml đã xử lý SOCS cookie + redirect đúng chuẩn, trả về cả JSON và HTML thô
     const { jsonObj: homeData, html: homepageHtml } = await fetchYoutubePageDataAndHtml('https://www.youtube.com');
 
-    // Láº¥y cookies Ä‘áº§y Ä‘á»§ (bao gá»“m SID, SAPISID, SOCS...) Ä‘á»ƒ dÃ¹ng cho Innertube POST
+    // Lấy cookies đầy đủ (bao gồm SID, SAPISID, SOCS...) để dùng cho Innertube POST
     const rawCookies = await getYoutubeCookieHeader();
     let cookieStr = rawCookies || '';
     if (!cookieStr.includes('SOCS=')) {
@@ -2436,11 +2436,11 @@ ipcMain.handle('youtube-get-recommendations', async () => {
       baseHeaders['Authorization'] = authHeader;
     }
 
-    // Láº¥y API Key tá»« trang chá»§ HTML (Æ¯u tiÃªn apiKey thá»±c táº¿ cá»§a session rá»“i má»›i Ä‘áº¿n INNERTUBE_API_KEY dá»± phÃ²ng)
+    // Lấy API Key từ trang chủ HTML (Ưu tiên apiKey thực tế của session rồi mới đến INNERTUBE_API_KEY dự phòng)
     const apiKeyMatch = homepageHtml.match(/"apiKey"\s*:\s*"([^"]+)"/) || homepageHtml.match(/"INNERTUBE_API_KEY"\s*:\s*"([^"]+)"/);
     const apiKey = apiKeyMatch ? apiKeyMatch[1] : 'AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8';
 
-    // Helper: POST Innertube browse vá»›i cookies tÃ i khoáº£n Ä‘áº§y Ä‘á»§
+    // Helper: POST Innertube browse với cookies tài khoản đầy đủ
     const innertubePost = (body) => new Promise((resolve, reject) => {
       const postStr = JSON.stringify(body);
       const reqOpts = {
@@ -2482,11 +2482,11 @@ ipcMain.handle('youtube-get-recommendations', async () => {
       }
     };
 
-    // TÃ¬m chip "Ã‚m nháº¡c" trong feedFilterChipBarRenderer cá»§a trang chá»§ (há»— trá»£ nhiá»u ngÃ´n ngá»¯)
+    // Tìm chip "Âm nhạc" trong feedFilterChipBarRenderer của trang chủ (hỗ trợ nhiều ngôn ngữ)
     let musicChipToken = null;
     const musicLabels = [
-      'Ã‚m nháº¡c', 'Music', 'Musique', 'MÃºsica', 'Musik', 'Musica', 
-      'éŸ³æ¥½', 'ìŒì•…', 'éŸ³ä¹', 'éŸ³æ¨‚', 'ÐœÑƒÐ·Ñ‹ÐºÐ°', 'Muzyka', 'MÃ¼zik'
+      'Âm nhạc', 'Music', 'Musique', 'Música', 'Musik', 'Musica', 
+      '音楽', '음악', '音乐', '音樂', 'Музыка', 'Muzyka', 'Müzik'
     ];
     const chipResults = findKeysRecursive(homeData, ['chipCloudChipRenderer']);
     for (const item of chipResults) {
@@ -2522,27 +2522,27 @@ ipcMain.handle('youtube-get-recommendations', async () => {
     };
 
     if (musicChipToken) {
-      // BÆ°á»›c 2: POST vá»›i token chip Ã‚m nháº¡c â†’ feed trang chá»§ Ä‘Ã£ lá»c theo Ã‚m nháº¡c, cÃ¡ nhÃ¢n hÃ³a
+      // Bước 2: POST với token chip Âm nhạc → feed trang chủ đã lọc theo Âm nhạc, cá nhân hóa
       try {
         const chipJson = await innertubePost({ ...innertubeCxt, continuation: musicChipToken });
         collectVideos(findKeysRecursive(chipJson, keys));
       } catch (e) {
-        console.error("Lá»—i khi fetch chip Ã¢m nháº¡c:", e);
+        console.error("Lỗi khi fetch chip âm nhạc:", e);
       }
     }
 
-    // Fallback: dÃ¹ng ytInitialData trang chá»§ náº¿u chip khÃ´ng cÃ³ káº¿t quáº£
+    // Fallback: dùng ytInitialData trang chủ nếu chip không có kết quả
     if (videos.length === 0) {
       collectVideos(findKeysRecursive(homeData, keys));
     }
 
-    // Láº¥y thÃªm trang tiáº¿p theo náº¿u cáº§n
+    // Lấy thêm trang tiếp theo nếu cần
     if (continuationToken && videos.length < 36) {
       try {
         const contJson = await innertubePost({ ...innertubeCxt, continuation: continuationToken });
         collectVideos(findKeysRecursive(contJson, keys));
       } catch (contErr) {
-        console.error("Lá»—i khi táº£i thÃªm gá»£i Ã½ Ã¢m nháº¡c tá»« YouTube:", contErr);
+        console.error("Lỗi khi tải thêm gợi ý âm nhạc từ YouTube:", contErr);
       }
     }
 
@@ -2574,7 +2574,7 @@ ipcMain.handle('save-walkthrough-html', async (event, cleanHTML) => {
       const before = fileContent.substring(0, startIndex + startMarker.length);
       const after = fileContent.substring(endIndex);
       
-      const newCanvasHTML = `\n                <div id="editor-canvas" class="article-content" contenteditable="true" placeholder="Báº¯t Ä‘áº§u viáº¿t bÃ i viáº¿t cá»§a báº¡n táº¡i Ä‘Ã¢y...">\n${cleanHTML}\n                </div>\n`;
+      const newCanvasHTML = `\n                <div id="editor-canvas" class="article-content" contenteditable="true" placeholder="Bắt đầu viết bài viết của bạn tại đây...">\n${cleanHTML}\n                </div>\n`;
       fileContent = before + newCanvasHTML + after;
       fs.writeFileSync(filePath, fileContent, 'utf8');
       return { success: true };
@@ -2625,7 +2625,7 @@ ipcMain.handle('save-walkthrough-image', async (event, fileName, base64Data) => 
 registerExternalUrlIpcService(ipcMain);
 
 // ==========================================
-// DONATE Má»ž YOUTUBE PLAYLIST
+// DONATE MỞ YOUTUBE PLAYLIST
 // ==========================================
 
 registerPlaylistIpcService(ipcMain, {
@@ -2635,7 +2635,7 @@ registerPlaylistIpcService(ipcMain, {
 
 registerDonationIpcService(ipcMain, () => donationRepository);
 
-// Cáº¥u hÃ¬nh cáº­p nháº­t tá»± Ä‘á»™ng tá»« GitHub Release
+// Cấu hình cập nhật tự động từ GitHub Release
 const GITHUB_REPO = 'lupclky/dua-corner-player';
 
 function isNewerVersion(latest, current) {
@@ -2649,8 +2649,53 @@ function isNewerVersion(latest, current) {
   return false;
 }
 
-ipcMain.handle('check-for-updates', async () => { return { hasUpdate: false }; });
+ipcMain.handle('check-for-updates', async () => {
+  return new Promise((resolve) => {
+    const options = {
+      hostname: 'api.github.com',
+      path: `/repos/${GITHUB_REPO}/releases/latest`,
+      headers: {
+        'User-Agent': 'Electron-Update-Checker'
+      }
+    };
 
+    https.get(options, (res) => {
+      if (res.statusCode !== 200) {
+        resolve({ hasUpdate: false, error: `GitHub API returned status ${res.statusCode}` });
+        return;
+      }
+
+      let data = '';
+      res.setEncoding('utf8');
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        try {
+          const release = JSON.parse(data);
+          const latestVersion = release.tag_name;
+          const currentVersion = app.getVersion();
+
+          if (isNewerVersion(latestVersion, currentVersion)) {
+            const exeAsset = release.assets.find(asset => asset.name.toLowerCase().endsWith('.exe'));
+            if (exeAsset) {
+              resolve({
+                hasUpdate: true,
+                latestVersion: latestVersion,
+                downloadUrl: exeAsset.browser_download_url,
+                releaseNotes: release.body
+              });
+              return;
+            }
+          }
+          resolve({ hasUpdate: false });
+        } catch (e) {
+          resolve({ hasUpdate: false, error: e.message });
+        }
+      });
+    }).on('error', (err) => {
+      resolve({ hasUpdate: false, error: err.message });
+    });
+  });
+});
 
 ipcMain.on('start-update', (event, downloadUrl) => {
   const tempPath = app.getPath('temp');
@@ -2667,7 +2712,7 @@ ipcMain.on('start-update', (event, downloadUrl) => {
         mainWindow.webContents.send('update-downloaded');
       }
       
-      // Khá»Ÿi cháº¡y trÃ¬nh cÃ i Ä‘áº·t vÃ  tá»± Ä‘á»™ng thoÃ¡t app
+      // Khởi chạy trình cài đặt và tự động thoát app
       setTimeout(() => {
         try {
           const child = spawn(destPath, [], {
@@ -2679,7 +2724,7 @@ ipcMain.on('start-update', (event, downloadUrl) => {
           app.quit();
         } catch (e) {
           if (mainWindow) {
-            mainWindow.webContents.send('update-error', `KhÃ´ng thá»ƒ khá»Ÿi cháº¡y trÃ¬nh cÃ i Ä‘áº·t: ${e.message}`);
+            mainWindow.webContents.send('update-error', `Không thể khởi chạy trình cài đặt: ${e.message}`);
           }
         }
       }, 1000);
@@ -2700,14 +2745,14 @@ function downloadFileWithProgress(url, destPath, onProgress, onSuccess, onError)
   };
 
   https.get(url, options, (res) => {
-    // Xá»­ lÃ½ chuyá»ƒn hÆ°á»›ng (301, 302, 307, 308)
+    // Xử lý chuyển hướng (301, 302, 307, 308)
     if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
       downloadFileWithProgress(res.headers.location, destPath, onProgress, onSuccess, onError);
       return;
     }
 
     if (res.statusCode !== 200) {
-      onError(new Error(`Táº£i xuá»‘ng tháº¥t báº¡i: HTTP ${res.statusCode}`));
+      onError(new Error(`Tải xuống thất bại: HTTP ${res.statusCode}`));
       return;
     }
 
@@ -2746,7 +2791,7 @@ function downloadFileWithProgress(url, destPath, onProgress, onSuccess, onError)
 }
 
 // ==========================================
-// ÄIá»€U KHIá»‚N & LÆ¯U TRá»® NHáº¬T KÃ HOáº T Äá»˜NG
+// ĐIỀU KHIỂN & LƯU TRỮ NHẬT KÝ HOẠT ĐỘNG
 // ==========================================
 
 registerActivityLogService({ ipcMain, app, shell, fs, path });
@@ -2809,7 +2854,7 @@ function repositionNotifications() {
       });
     });
   } catch (e) {
-    console.error('Lá»—i khi reposition notifications:', e);
+    console.error('Lỗi khi reposition notifications:', e);
   }
 }
 
@@ -2866,7 +2911,7 @@ function showTaskbarNotification(title, message, isDarkMode = false, duration) {
   try {
     const targetDisplays = [getPreferredNotificationDisplay(screen)];
     
-    // TÃ¡ch tiÃªu Ä‘á» nháº¡c vÃ  tin nháº¯n tá»« message (phÃ¢n cÃ¡ch báº±ng \n)
+    // Tách tiêu đề nhạc và tin nhắn từ message (phân cách bằng \n)
     const rawMsgStr = (message || '').trim();
     const lines = rawMsgStr.split('\n');
     const notificationKind = /^\[PLAYLIST\]/i.test(lines[0] || '')
@@ -2874,17 +2919,17 @@ function showTaskbarNotification(title, message, isDarkMode = false, duration) {
       : (/^\[MUSIC\]/i.test(lines[0] || '') ? 'music' : 'donation');
     const notificationKindLabel = notificationKind === 'playlist'
       ? 'PLAYLIST'
-      : 'DONATE Má»šI';
+      : 'DONATE MỚI';
     let songTitle = '';
     let cleanMsg = '';
     
     if (lines.length > 1) {
-        songTitle = (lines[0] || '').replace(/^(\[PLAYLIST\]|\[MUSIC\]|ðŸŽµ|â–¶)\s*/u, '').replace(/[\uD800-\uDFFF]/g, '').trim();
+        songTitle = (lines[0] || '').replace(/^(\[PLAYLIST\]|\[MUSIC\]|🎵|▶)\s*/u, '').replace(/[\uD800-\uDFFF]/g, '').trim();
         cleanMsg = lines.slice(1).join('\n').trim();
     } else if (lines.length === 1 && rawMsgStr) {
         const singleLine = lines[0].trim();
-        if (singleLine.startsWith('[PLAYLIST]') || singleLine.startsWith('[MUSIC]') || singleLine.startsWith('ðŸŽµ') || singleLine.startsWith('â–¶') || singleLine.toLowerCase().includes('youtube') || singleLine.toLowerCase().includes('http://') || singleLine.toLowerCase().includes('https://')) {
-            songTitle = singleLine.replace(/^(\[PLAYLIST\]|\[MUSIC\]|ðŸŽµ|â–¶)\s*/u, '').replace(/[\uD800-\uDFFF]/g, '').trim();
+        if (singleLine.startsWith('[PLAYLIST]') || singleLine.startsWith('[MUSIC]') || singleLine.startsWith('🎵') || singleLine.startsWith('▶') || singleLine.toLowerCase().includes('youtube') || singleLine.toLowerCase().includes('http://') || singleLine.toLowerCase().includes('https://')) {
+            songTitle = singleLine.replace(/^(\[PLAYLIST\]|\[MUSIC\]|🎵|▶)\s*/u, '').replace(/[\uD800-\uDFFF]/g, '').trim();
             cleanMsg = '';
         } else {
             songTitle = '';
@@ -2895,9 +2940,9 @@ function showTaskbarNotification(title, message, isDarkMode = false, duration) {
 
     const notifWidth = 480;
     
-    // TÃ­nh toÃ¡n Ä‘á»™ cao linh hoáº¡t 100% theo ná»™i dung thá»±c táº¿ (khÃ´ng dÃ¹ng ellipsis ...)
+    // Tính toán độ cao linh hoạt 100% theo nội dung thực tế (không dùng ellipsis ...)
     const titleLines = Math.max(1, Math.ceil((title || '').length / 36));
-    // Chá»«a má»™t hÃ ng cho nhÃ£n DONATE Má»šI / PLAYLIST.
+    // Chừa một hàng cho nhãn DONATE MỚI / PLAYLIST.
     let calculatedHeight = 84 + (titleLines * 24);
 
     if (songTitle) {
@@ -2938,11 +2983,11 @@ function showTaskbarNotification(title, message, isDarkMode = false, duration) {
       }
     }
 
-    // Táº¡o thÃ´ng bÃ¡o trÃªn má»—i mÃ n hÃ¬nh Ä‘Æ°á»£c chá»n
+    // Tạo thông báo trên mỗi màn hình được chọn
     targetDisplays.forEach((display) => {
       const { x, y, width, height } = display.workArea;
       
-      // TÃ­nh toÃ¡n vá»‹ trÃ­ Y dá»±a trÃªn sá»‘ lÆ°á»£ng thÃ´ng bÃ¡o hiá»‡n cÃ³ trÃªn mÃ n hÃ¬nh nÃ y
+      // Tính toán vị trí Y dựa trên số lượng thông báo hiện có trên màn hình này
       let offset = 0;
       activeNotifications.forEach(notif => {
         if (notif.displayId === display.id) {
@@ -2971,7 +3016,7 @@ function showTaskbarNotification(title, message, isDarkMode = false, duration) {
         }
       });
 
-      // Äá»ƒ hiá»ƒn thá»‹ trÃªn game vÃ  cÃ¡c mÃ n hÃ¬nh khÃ¡c tá»‘t hÆ¡n
+      // Để hiển thị trên game và các màn hình khác tốt hơn
       win.setAlwaysOnTop(true, 'screen-saver');
       win.setFocusable(false);
       win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
@@ -3169,13 +3214,13 @@ function showTaskbarNotification(title, message, isDarkMode = false, duration) {
         }
       };
 
-      // ÄÄƒng kÃ½ listener trÆ°á»›c loadFile Ä‘á»ƒ khÃ´ng bá» lá»¡ ready-to-show khi mÃ¡y pháº£n há»“i nhanh.
+      // Đăng ký listener trước loadFile để không bỏ lỡ ready-to-show khi máy phản hồi nhanh.
       win.once('ready-to-show', revealNotification);
       win.webContents.once('did-finish-load', revealNotification);
       notificationEntry.revealFallback = setTimeout(revealNotification, 2000);
 
       win.loadFile(tempHtmlPath).catch((error) => {
-        console.error('Lá»—i khi táº£i giao diá»‡n notification:', error);
+        console.error('Lỗi khi tải giao diện notification:', error);
         revealNotification();
       });
 
@@ -3198,7 +3243,7 @@ function showTaskbarNotification(title, message, isDarkMode = false, duration) {
             fs.unlinkSync(tempHtmlPath);
           }
         } catch (e) {
-          console.error('Lá»—i khi xÃ³a file táº¡m notification:', e);
+          console.error('Lỗi khi xóa file tạm notification:', e);
         }
 
         const idx = activeNotifications.findIndex(n => n.window === win);
@@ -3210,11 +3255,11 @@ function showTaskbarNotification(title, message, isDarkMode = false, duration) {
     });
 
   } catch (err) {
-    console.error('Lá»—i khi táº¡o thÃ´ng bÃ¡o Taskbar:', err);
+    console.error('Lỗi khi tạo thông báo Taskbar:', err);
   }
 }
 
-// Theo dÃµi game cháº¡y á»Ÿ service riÃªng; timer Ä‘Æ°á»£c unref Ä‘á»ƒ khÃ´ng giá»¯ tiáº¿n trÃ¬nh Electron khi thoÃ¡t.
+// Theo dõi game chạy ở service riêng; timer được unref để không giữ tiến trình Electron khi thoát.
 pubgMonitorService = startPubgMonitorService({
   exec,
   broadcast: payload => {
@@ -3224,7 +3269,6 @@ pubgMonitorService = startPubgMonitorService({
     });
   }
 });
-
 
 
 

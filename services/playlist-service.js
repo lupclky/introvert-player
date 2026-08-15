@@ -128,7 +128,7 @@ class PlaylistService {
     const placeholder = {
       id: requestId,
       donationId,
-      donorName: String(context.donorName || (isOwnerAdd ? 'Chủ kênh' : 'mèo 3k')),
+      donorName: String(context.donorName || (isOwnerAdd ? 'Chủ kênh' : 'Em Dứa')),
       donationAmount: Math.max(0, Number(context.donationAmount) || 0),
       originalMessage: String(sourceUrl || ''),
       source: isOwnerAdd ? 'manual_owner' : 'manual_quick_add',

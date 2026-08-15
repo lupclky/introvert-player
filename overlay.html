@@ -111,11 +111,18 @@
         .obs-empty-overlay.idle-slideshow-active {
             overflow: hidden;
             padding: 0.55rem 0.65rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .idle-slide {
             width: 100%;
             min-width: 0;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             color: inherit;
             font-family: inherit;
         }
@@ -126,6 +133,7 @@
             justify-content: center;
             width: 100%;
             max-width: 100%;
+            height: 100%;
             min-height: 100%;
             padding-inline: 0.1rem;
             font-weight: 800;
@@ -133,6 +141,7 @@
             text-align: center;
             white-space: normal;
             overflow: hidden;
+            margin: auto;
         }
 
         .idle-slide-message-text {
@@ -145,6 +154,8 @@
             word-break: normal;
             white-space: normal;
             text-wrap: balance;
+            text-align: center;
+            margin: auto;
             -webkit-box-orient: vertical;
             -webkit-line-clamp: 3;
             line-clamp: 3;
@@ -240,12 +251,29 @@
             overflow: hidden;
         }
 
-        #obs-player-widget.is-owner-add.owner-price-table-active #obs-donor-name-container {
+        #obs-player-widget.owner-price-table-active #obs-donor-name-container,
+        #obs-player-widget.is-owner-add.owner-price-table-active #obs-donor-name-container,
+        #obs-player-widget.owner-promo-mode.owner-price-table-active #obs-donor-name-container,
+        body.theme-enchanted-wild #obs-player-widget.owner-price-table-active #obs-donor-name-container,
+        body.theme-enchanted-wild #obs-player-widget.is-owner-add.owner-price-table-active #obs-donor-name-container,
+        body.theme-enchanted-wild #obs-player-widget.owner-promo-mode.owner-price-table-active #obs-donor-name-container {
             display: none !important;
         }
 
-        #obs-player-widget.is-owner-add.owner-price-table-active .obs-owner-price-promo {
-            display: block;
+        #obs-player-widget.owner-price-table-active .obs-owner-price-promo,
+        #obs-player-widget.is-owner-add.owner-price-table-active .obs-owner-price-promo,
+        #obs-player-widget.owner-promo-mode.owner-price-table-active .obs-owner-price-promo,
+        body.theme-enchanted-wild #obs-player-widget.owner-price-table-active .obs-owner-price-promo,
+        body.theme-enchanted-wild #obs-player-widget.is-owner-add.owner-price-table-active .obs-owner-price-promo,
+        body.theme-enchanted-wild #obs-player-widget.owner-promo-mode.owner-price-table-active .obs-owner-price-promo {
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: center !important;
+            width: 100% !important;
+            min-height: 76px !important;
+            height: 76px !important;
+            overflow: hidden !important;
         }
 
         .obs-owner-price-promo .idle-price-slide {
@@ -321,10 +349,28 @@
             font-size: 0.82rem;
         }
 
-        .obs-owner-price-promo .idle-slide-message {
-            justify-content: center;
-            font-size: 1.15rem;
-            text-align: center;
+        .obs-owner-price-promo .idle-slide,
+        .obs-owner-price-promo .idle-slide-message,
+        .obs-owner-price-promo .idle-price-slide {
+            width: 100% !important;
+            height: 100% !important;
+            min-height: 76px !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: center !important;
+            text-align: center !important;
+            margin: 0 auto !important;
+        }
+
+        .obs-owner-price-promo .idle-slide-message-text {
+            font-family: 'Be Vietnam Pro', 'Inter', sans-serif !important;
+            font-size: 1.18rem !important;
+            font-weight: 800 !important;
+            line-height: 1.25 !important;
+            color: #16885c !important;
+            text-align: center !important;
+            margin: auto !important;
         }
 
         @keyframes idleFadeIn {
@@ -879,6 +925,22 @@
             text-shadow: 0 1px 3px rgba(7, 53, 38, .2);
             position: absolute;
             z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 0.55rem 0.65rem;
+            box-sizing: border-box;
+        }
+
+        body.theme-enchanted-wild .obs-empty-overlay .idle-slide,
+        body.theme-enchanted-wild .obs-empty-overlay .idle-slide-message,
+        body.theme-enchanted-wild .obs-empty-overlay .idle-slide-message-text {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            margin: auto;
         }
 
         body.theme-enchanted-wild .idle-slide-message,
@@ -887,40 +949,50 @@
         }
 
         /* Chủ kênh tự phát khi chưa có order: ưu tiên lời mời order và thu gọn bài đang phát. */
-        body.theme-enchanted-wild #obs-player-widget.owner-promo-mode .obs-player-main {
-            min-height: 82px;
-            align-items: stretch;
+        #obs-player-widget.owner-promo-mode .obs-player-main,
+        #obs-player-widget.is-owner-add .obs-player-main,
+        body.theme-enchanted-wild #obs-player-widget.owner-promo-mode .obs-player-main,
+        body.theme-enchanted-wild #obs-player-widget.is-owner-add .obs-player-main {
+            display: none !important;
         }
 
         body.theme-enchanted-wild #obs-player-widget.owner-promo-mode .obs-cover-wrapper,
         body.theme-enchanted-wild #obs-player-widget.owner-promo-mode #obs-song-title-container,
+        body.theme-enchanted-wild #obs-player-widget.owner-promo-mode #obs-channel-name-container,
         body.theme-enchanted-wild #obs-player-widget.owner-promo-mode .obs-progress-bar-bg {
             display: none !important;
         }
 
-        body.theme-enchanted-wild #obs-player-widget.owner-promo-mode .obs-details {
-            width: 100%;
-            min-width: 0;
-            flex: 1 1 auto;
-            justify-content: center;
-            align-items: stretch;
-            gap: 0;
-        }
-
-        body.theme-enchanted-wild #obs-player-widget.owner-promo-mode #obs-donor-container {
+        #obs-player-widget.owner-promo-mode #obs-donor-container,
+        #obs-player-widget.is-owner-add #obs-donor-container,
+        body.theme-enchanted-wild #obs-player-widget.owner-promo-mode #obs-donor-container,
+        body.theme-enchanted-wild #obs-player-widget.is-owner-add #obs-donor-container {
             display: flex !important;
-            min-height: 76px;
             align-items: center !important;
             justify-content: center !important;
-            padding: 0 0.65rem;
+            text-align: center !important;
+            padding: 0 0.5rem !important;
+            margin: 0 auto !important;
+            width: 100% !important;
+            min-height: 76px !important;
+            height: 76px !important;
+            box-sizing: border-box !important;
         }
 
-        body.theme-enchanted-wild #obs-player-widget.owner-promo-mode #obs-donor-name-container {
-            flex: 1 1 auto !important;
-            margin: 0 !important;
+        #obs-player-widget.owner-promo-mode #obs-donor-name-container,
+        #obs-player-widget.is-owner-add #obs-donor-name-container,
+        body.theme-enchanted-wild #obs-player-widget.owner-promo-mode #obs-donor-name-container,
+        body.theme-enchanted-wild #obs-player-widget.is-owner-add #obs-donor-name-container {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            text-align: center !important;
+            width: 100% !important;
+            height: 100% !important;
+            margin: 0 auto !important;
+            padding: 0 !important;
             overflow: visible !important;
             white-space: normal !important;
-            text-align: center;
         }
 
         body.theme-enchanted-wild #obs-player-widget.owner-promo-mode .obs-donor-name {
@@ -1422,8 +1494,8 @@
             justify-content: space-between !important;
             align-items: center !important;
             width: 100% !important;
-            margin: 0.02rem 0 0 !important;
-            padding: 0 !important;
+            margin: auto 0 0.12rem !important;
+            padding: 0 0.15rem !important;
             gap: 0.38rem !important;
         }
 
@@ -1450,15 +1522,54 @@
             white-space: nowrap !important;
         }
 
-        #obs-player-widget.lyrics-visible.is-owner-add #obs-total-time {
-            display: none !important;
+        #obs-player-widget.lyrics-visible.is-owner-add #obs-donor-container,
+        #obs-player-widget.lyrics-visible.owner-promo-mode #obs-donor-container {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            text-align: center !important;
+            width: 100% !important;
+            min-height: 76px !important;
+            height: 76px !important;
+            padding: 0 0.5rem !important;
+            margin: 0 auto !important;
+            box-sizing: border-box !important;
+        }
+
+        #obs-player-widget.lyrics-visible.is-owner-add #obs-donor-name-container,
+        #obs-player-widget.lyrics-visible.owner-promo-mode #obs-donor-name-container {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            text-align: center !important;
+            width: 100% !important;
+            height: 100% !important;
+            margin: 0 auto !important;
+            padding: 0 !important;
+        }
+
+        #obs-player-widget.lyrics-visible.is-owner-add .obs-donor-name,
+        #obs-player-widget.lyrics-visible.owner-promo-mode .obs-donor-name {
+            display: block !important;
+            text-align: center !important;
+            margin: auto !important;
+            width: 100% !important;
+            font-size: 1.18rem !important;
+            font-weight: 800 !important;
+            line-height: 1.25 !important;
         }
 
         /* The idle/order invitation must not compete with the lyric area. */
-        body.theme-enchanted-wild #obs-player-widget.lyrics-visible.owner-promo-mode .obs-donor-name {
-            font-size: 0.9rem !important;
-            line-height: 1.08 !important;
+        body.theme-enchanted-wild #obs-player-widget.lyrics-visible.owner-promo-mode .obs-donor-name,
+        body.theme-enchanted-wild #obs-player-widget.lyrics-visible.is-owner-add .obs-donor-name {
+            font-size: 1.18rem !important;
+            font-weight: 800 !important;
+            line-height: 1.25 !important;
             letter-spacing: -0.01em !important;
+        }
+
+        #obs-player-widget.lyrics-visible.is-owner-add #obs-total-time {
+            display: none !important;
         }
 
         #obs-player-widget.lyrics-visible .obs-progress-bar-bg {
@@ -2208,6 +2319,37 @@
             white-space: nowrap;
         }
 
+        .obs-lyrics-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--theme-highlight-color, #FB923C);
+            flex-shrink: 0;
+            margin-right: 0.2rem;
+            filter: drop-shadow(0 0 4px color-mix(in srgb, var(--theme-highlight-color, #FB923C) 40%, transparent));
+        }
+
+        .obs-lyrics-icon svg {
+            width: 1.1rem;
+            height: 1.1rem;
+            display: block;
+        }
+
+        .obs-owner-lyrics-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--theme-highlight-color, #FB923C);
+            flex-shrink: 0;
+            margin-right: 0.15rem;
+        }
+
+        .obs-owner-lyrics-icon svg {
+            width: 0.95rem;
+            height: 0.95rem;
+            display: block;
+        }
+
         .obs-time {
             font-size: 0.95rem;
             font-weight: 850;
@@ -2280,15 +2422,17 @@
         /* Integrated Alert Box within Player Widget for Modern Themes */
         .obs-alert-box {
             position: absolute !important;
-            top: var(--theme-border-width, 2px) !important;
-            left: var(--theme-border-width, 2px) !important;
-            width: calc(100% - 2 * var(--theme-border-width, 2px)) !important;
-            height: auto !important;
-            min-height: 0 !important;
-            max-height: 130px !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            min-height: 280px !important;
+            max-height: 280px !important;
             margin: 0 !important;
-            z-index: 1000 !important;
-            border-radius: calc(var(--theme-border-radius, 20px) - var(--theme-border-width, 2px)) !important;
+            padding: 10px 12px !important;
+            box-sizing: border-box !important;
+            z-index: 4000 !important;
+            border-radius: var(--theme-border-radius, 20px) !important;
             border: none !important;
             box-shadow: none !important;
             background: var(--theme-alert-bg) !important;
@@ -2360,27 +2504,41 @@
         }
 
         .obs-alert-box .next-fullscreen-details {
-            gap: 3px !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            text-align: center !important;
+            justify-content: center !important;
+            gap: 4px !important;
             width: 100% !important;
         }
 
         .obs-alert-box .next-fullscreen-title-container {
+            display: flex !important;
+            justify-content: center !important;
+            text-align: center !important;
+            width: 100% !important;
             padding: 2px 0 !important;
             margin: -2px 0 !important;
         }
 
-        .obs-alert-box .next-fullscreen-title {
-            font-size: 1.25rem !important;
-            line-height: 1.25 !important;
-        }
-
         .obs-alert-box .next-fullscreen-title:not(.marquee) {
+            font-size: 1.44rem !important;
+            line-height: 1.22 !important;
+            text-align: center !important;
+            font-weight: 700 !important;
             width: 100% !important;
         }
 
         .obs-alert-box .next-fullscreen-donor-row {
-            font-size: 1.05rem !important;
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+            text-align: center !important;
+            font-size: 0.95rem !important;
             margin-top: 1px !important;
+            gap: 0.35rem !important;
+            width: 100% !important;
         }
 
         .obs-alert-box .next-fullscreen-donor-name {
@@ -3427,14 +3585,18 @@
             overflow: hidden !important;
         }
 
-        #obs-player-widget.show-queue .obs-player-layout-wrapper,
-        #obs-player-widget.next-fullscreen-active .obs-player-layout-wrapper,
-        #obs-player-widget.phase-crossfade .obs-player-layout-wrapper {
+        #obs-player-widget.alert-active:not(.lyrics-visible) .obs-player-layout-wrapper,
+        #obs-player-widget.show-queue:not(.lyrics-visible) .obs-player-layout-wrapper,
+        #obs-player-widget.next-fullscreen-active:not(.lyrics-visible) .obs-player-layout-wrapper,
+        #obs-player-widget.phase-crossfade:not(.lyrics-visible) .obs-player-layout-wrapper {
             display: none !important;
         }
 
-        /* Cô lập nội dung bài đang phát khi giao diện bài tiếp theo chiếm toàn bộ widget.
+        /* Cô lập nội dung bài đang phát khi giao diện thông báo / bài tiếp theo chiếm toàn bộ widget.
            Selector theo ID giúp trạng thái này luôn thắng layout riêng của bài chủ kênh. */
+        #obs-player-widget.alert-active:not(.lyrics-visible) .obs-owner-price-promo,
+        #obs-player-widget.alert-active:not(.lyrics-visible) #obs-empty-overlay,
+        #obs-player-widget.alert-active:not(.lyrics-visible) #obs-donor-container,
         #obs-player-widget.show-queue .obs-owner-price-promo,
         #obs-player-widget.next-fullscreen-active .obs-owner-price-promo,
         #obs-player-widget.phase-crossfade .obs-owner-price-promo,
@@ -3754,6 +3916,12 @@
 
         body.theme-enchanted-wild .next-fullscreen-donor-row {
             font-size: 1.16rem !important;
+            line-height: 1.2;
+            text-shadow: none !important;
+        }
+
+        body.theme-enchanted-wild .obs-alert-box .next-fullscreen-donor-row {
+            font-size: 0.95rem !important;
             line-height: 1.2;
             text-shadow: none !important;
         }
@@ -4086,36 +4254,11 @@
             box-sizing: border-box;
         }
 
-        body.theme-enchanted-wild #obs-player-widget.has-special-lyrics-layout .obs-alert-box,
         body.theme-enchanted-wild #obs-player-widget.has-special-lyrics-layout .obs-next-song-fullscreen,
         body.theme-enchanted-wild #obs-player-widget.has-special-lyrics-layout .obs-next-songs-modal {
             height: 274px !important;
             min-height: 274px !important;
             max-height: 274px !important;
-        }
-
-        body.theme-enchanted-wild #obs-player-widget.has-special-lyrics-layout .obs-alert-box {
-            padding: 7px 10px !important;
-        }
-
-        body.theme-enchanted-wild #obs-player-widget.has-special-lyrics-layout .obs-alert-box .next-fullscreen-body,
-        body.theme-enchanted-wild #obs-player-widget.has-special-lyrics-layout .obs-next-song-fullscreen .next-fullscreen-body {
-            padding-top: 34px;
-            gap: 4px !important;
-        }
-
-        body.theme-enchanted-wild #obs-player-widget.has-special-lyrics-layout .obs-alert-box .next-fullscreen-thumb-wrapper,
-        body.theme-enchanted-wild #obs-player-widget.has-special-lyrics-layout .obs-next-song-fullscreen .next-fullscreen-thumb-wrapper {
-            width: min(100%, 205px) !important;
-        }
-
-        body.theme-enchanted-wild #obs-player-widget.has-special-lyrics-layout .next-fullscreen-title {
-            font-size: 1rem !important;
-            line-height: 1.2 !important;
-        }
-
-        body.theme-enchanted-wild #obs-player-widget.has-special-lyrics-layout .next-fullscreen-donor-row {
-            font-size: 0.82rem !important;
         }
 
         body.theme-enchanted-wild #obs-player-widget.has-special-lyrics-layout.show-queue .obs-next-songs-modal .modal-body {
@@ -4132,7 +4275,7 @@
         /* Set 18 fixed-height notification layouts. Donate mới, hàng đợi và
            tiếp theo replace only the player area; synced lyrics keep their
            normal space below and the widget never grows for these states. */
-        body.theme-enchanted-wild #obs-player-widget.alert-active:not(.lyrics-visible),
+        body.theme-enchanted-wild #obs-player-widget.alert-active,
         body.theme-enchanted-wild #obs-player-widget.show-queue:not(.lyrics-visible),
         body.theme-enchanted-wild #obs-player-widget.next-fullscreen-active:not(.lyrics-visible),
         body.theme-enchanted-wild #obs-player-widget.phase-crossfade:not(.lyrics-visible) {
@@ -4187,9 +4330,7 @@
         }
 
         /* Keep Donate mới and the 15-second countdown inside the compact player
-           region whenever synced lyrics are visible. These state-based selectors
-           deliberately do not depend on has-special-lyrics-layout: alert and
-           lyrics updates can arrive in separate realtime frames. */
+           region whenever synced lyrics are visible. */
         body.theme-enchanted-wild #obs-player-widget.lyrics-visible.alert-active .obs-alert-box,
         body.theme-enchanted-wild #obs-player-widget.lyrics-visible.next-fullscreen-active .obs-next-song-fullscreen,
         body.theme-enchanted-wild #obs-player-widget.lyrics-visible.phase-crossfade .obs-next-song-fullscreen {
@@ -4203,18 +4344,21 @@
             overflow: hidden !important;
             border-radius: calc(var(--theme-border-radius) - 2px) calc(var(--theme-border-radius) - 2px) 10px 10px !important;
             z-index: 4000 !important;
+            padding: 7px 10px !important;
+            box-sizing: border-box !important;
         }
 
         body.theme-enchanted-wild #obs-player-widget.lyrics-visible.alert-active .obs-alert-box .next-fullscreen-body,
         body.theme-enchanted-wild #obs-player-widget.lyrics-visible.next-fullscreen-active .obs-next-song-fullscreen .next-fullscreen-body,
         body.theme-enchanted-wild #obs-player-widget.lyrics-visible.phase-crossfade .obs-next-song-fullscreen .next-fullscreen-body {
             display: grid !important;
-            grid-template-columns: 104px minmax(0, 1fr);
+            grid-template-columns: 104px minmax(0, 1fr) !important;
             align-items: center !important;
             gap: 9px !important;
             height: 100% !important;
-            padding: 25px 0 0 !important;
+            padding: 22px 0 0 !important;
             box-sizing: border-box;
+            flex-direction: unset !important;
         }
 
         body.theme-enchanted-wild #obs-player-widget.lyrics-visible.alert-active .obs-alert-box .next-fullscreen-thumb-wrapper,
@@ -4234,11 +4378,13 @@
         body.theme-enchanted-wild #obs-player-widget.has-special-lyrics-layout .obs-alert-box .next-fullscreen-body,
         body.theme-enchanted-wild #obs-player-widget.has-special-lyrics-layout .obs-next-song-fullscreen .next-fullscreen-body {
             display: grid !important;
-            grid-template-columns: 104px minmax(0, 1fr);
+            grid-template-columns: 104px minmax(0, 1fr) !important;
             align-items: center !important;
             gap: 9px !important;
             height: 100%;
-            padding: 25px 0 0 !important;
+            padding: 22px 0 0 !important;
+            box-sizing: border-box !important;
+            flex-direction: unset !important;
         }
 
         body.theme-enchanted-wild #obs-player-widget.has-special-lyrics-layout .obs-alert-box .next-fullscreen-thumb-wrapper,
@@ -4249,32 +4395,49 @@
             border-radius: 8px !important;
         }
 
-        body.theme-enchanted-wild #obs-player-widget.has-special-lyrics-layout .next-fullscreen-details {
+        body.theme-enchanted-wild #obs-player-widget.has-special-lyrics-layout .obs-alert-box .next-fullscreen-details,
+        body.theme-enchanted-wild #obs-player-widget.lyrics-visible.alert-active .obs-alert-box .next-fullscreen-details,
+        body.theme-enchanted-wild #obs-player-widget.has-special-lyrics-layout .obs-next-song-fullscreen .next-fullscreen-details,
+        body.theme-enchanted-wild #obs-player-widget.lyrics-visible.next-fullscreen-active .obs-next-song-fullscreen .next-fullscreen-details {
             align-items: flex-start !important;
             justify-content: center !important;
             text-align: left !important;
             gap: 2px !important;
             overflow: hidden;
+            width: 100% !important;
         }
 
-        body.theme-enchanted-wild #obs-player-widget.has-special-lyrics-layout .next-fullscreen-title-container {
+        body.theme-enchanted-wild #obs-player-widget.has-special-lyrics-layout .obs-alert-box .next-fullscreen-title-container,
+        body.theme-enchanted-wild #obs-player-widget.lyrics-visible.alert-active .obs-alert-box .next-fullscreen-title-container,
+        body.theme-enchanted-wild #obs-player-widget.has-special-lyrics-layout .obs-next-song-fullscreen .next-fullscreen-title-container,
+        body.theme-enchanted-wild #obs-player-widget.lyrics-visible.next-fullscreen-active .obs-next-song-fullscreen .next-fullscreen-title-container {
             justify-content: flex-start !important;
             text-align: left !important;
             padding: 1px 0 !important;
             margin: 0 !important;
+            width: 100% !important;
         }
 
-        body.theme-enchanted-wild #obs-player-widget.has-special-lyrics-layout .next-fullscreen-title {
+        body.theme-enchanted-wild #obs-player-widget.has-special-lyrics-layout .obs-alert-box .next-fullscreen-title,
+        body.theme-enchanted-wild #obs-player-widget.lyrics-visible.alert-active .obs-alert-box .next-fullscreen-title,
+        body.theme-enchanted-wild #obs-player-widget.has-special-lyrics-layout .obs-next-song-fullscreen .next-fullscreen-title,
+        body.theme-enchanted-wild #obs-player-widget.lyrics-visible.next-fullscreen-active .obs-next-song-fullscreen .next-fullscreen-title {
             max-width: 100%;
             font-size: 0.92rem !important;
             line-height: 1.18 !important;
+            text-align: left !important;
         }
 
-        body.theme-enchanted-wild #obs-player-widget.has-special-lyrics-layout .next-fullscreen-donor-row {
+        body.theme-enchanted-wild #obs-player-widget.has-special-lyrics-layout .obs-alert-box .next-fullscreen-donor-row,
+        body.theme-enchanted-wild #obs-player-widget.lyrics-visible.alert-active .obs-alert-box .next-fullscreen-donor-row,
+        body.theme-enchanted-wild #obs-player-widget.has-special-lyrics-layout .obs-next-song-fullscreen .next-fullscreen-donor-row,
+        body.theme-enchanted-wild #obs-player-widget.lyrics-visible.next-fullscreen-active .obs-next-song-fullscreen .next-fullscreen-donor-row {
             justify-content: flex-start !important;
             margin: 0 !important;
-            font-size: 0.72rem !important;
+            font-size: 0.76rem !important;
             line-height: 1.15;
+            text-align: left !important;
+            gap: 0.25rem !important;
         }
 
         body.theme-enchanted-wild #obs-player-widget.has-special-lyrics-layout.show-queue .obs-next-songs-modal .modal-body {
@@ -4538,7 +4701,7 @@
             opacity: 1;
         }
 
-        #obs-player-widget.is-playlist-playing .obs-song-title-container {
+        #obs-player-widget.is-playlist-playing .obs-song-title-row {
             order: 2;
             padding: 4px 0 !important;
             margin: -4px 0 !important;
@@ -4711,8 +4874,15 @@
                         </div>
                         <!-- Chi tiết bài hát bên phải -->
                         <div class="obs-details">
-                            <div id="obs-song-title-container" class="obs-song-title-container">
-                                <div id="obs-song-title" class="obs-song-title">Tên bài hát</div>
+                            <div id="obs-song-title-row" class="obs-song-title-row" style="display: flex; align-items: center; width: 100%; min-width: 0;">
+                                <span id="obs-lyrics-icon" class="obs-lyrics-icon" style="display: none;" title="Có lời bài hát">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                                        <path d="M6.8 4.7A3.8 3.8 0 0 1 10.6 8.5c0 3.4-2.1 6.6-5.3 9.2a1 1 0 0 1-1.4-1.4c2.3-2 3.7-4.3 4-6.3A3.8 3.8 0 1 1 6.8 4.7zm10.4 0A3.8 3.8 0 0 1 21 8.5c0 3.4-2.1 6.6-5.3 9.2a1 1 0 0 1-1.4-1.4c2.3-2 3.7-4.3 4-6.3A3.8 3.8 0 1 1 17.2 4.7z"></path>
+                                    </svg>
+                                </span>
+                                <div id="obs-song-title-container" class="obs-song-title-container" style="flex: 1; min-width: 0;">
+                                    <div id="obs-song-title" class="obs-song-title">Tên bài hát</div>
+                                </div>
                             </div>
                             <div id="obs-channel-name-container" class="obs-channel-name-container">
                                 <div id="obs-channel-name" class="obs-channel-name">Tên kênh</div>
@@ -4744,6 +4914,11 @@
                                 <path d="M12 12H3"></path>
                                 <path d="M16 6H3"></path>
                                 <path d="M12 18H3"></path>
+                            </svg>
+                        </span>
+                        <span id="obs-owner-lyrics-icon" class="obs-owner-lyrics-icon" style="display: none;" title="Có lời bài hát">
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                                <path d="M6.8 4.7A3.8 3.8 0 0 1 10.6 8.5c0 3.4-2.1 6.6-5.3 9.2a1 1 0 0 1-1.4-1.4c2.3-2 3.7-4.3 4-6.3A3.8 3.8 0 1 1 6.8 4.7zm10.4 0A3.8 3.8 0 0 1 21 8.5c0 3.4-2.1 6.6-5.3 9.2a1 1 0 0 1-1.4-1.4c2.3-2 3.7-4.3 4-6.3A3.8 3.8 0 1 1 17.2 4.7z"></path>
                             </svg>
                         </span>
                         <div id="obs-owner-promo-title-container" class="obs-owner-promo-title-container">
@@ -4947,13 +5122,13 @@
         function adjustEmptyOverlayFontSize(element, text) {
             if (!element) return;
             const len = Array.from(String(text || '').trim()).length;
-            let baseSize = 2.0; // rem (increased standard size)
+            let baseSize = 1.4; // rem
             if (len > 25) {
-                // Scales down from 2.0rem to 1.4rem as length increases from 25 to 50 characters
+                // Scales down from 1.4rem to 1.0rem as length increases from 25 to 50 characters
                 const scale = Math.min(1, (len - 25) / (50 - 25));
-                baseSize = 2.0 - scale * 0.6;
+                baseSize = 1.4 - scale * 0.4;
             }
-            if (baseSize < 1.2) baseSize = 1.2; // clamp minimum to 1.2rem
+            if (baseSize < 0.9) baseSize = 0.9; // clamp minimum to 0.9rem
             element.style.fontSize = `${baseSize}rem`;
         }
 
@@ -5367,6 +5542,7 @@
         }
 
         function updateOverlayLyrics(song, currentTime = 0) {
+            updateLyricsOverlayDetails(song);
             const lyrics = song?.lyrics;
             const showOverlayLyrics = localStorage.getItem('dua_show_overlay_lyrics') !== 'false';
             const hasSyncedLyrics = Boolean(showOverlayLyrics && lyrics?.available && lyrics?.synced !== false
@@ -5843,32 +6019,57 @@
         // Biến quản lý phase ngăn kéo "Tiếp theo"
         let currentDrawerText = "";
 
-        function applyMarquee(containerEl, textEl, text, baseSpeed = 30) {
+        function applyMarquee(containerEl, textEl, text, baseSpeed = 40) {
             if (!containerEl || !textEl) return;
 
+            if (textEl._marqueeTimeout) {
+                clearTimeout(textEl._marqueeTimeout);
+                textEl._marqueeTimeout = null;
+            }
+
             textEl.classList.remove('marquee');
-            textEl.style.animationDuration = '0s';
+            textEl.style.animation = 'none';
             textEl.style.display = 'inline-block';
+            textEl.style.whiteSpace = 'nowrap';
             textEl.style.overflow = 'hidden';
             textEl.textContent = text;
 
-            // Tăng tốc độ chạy chữ lên 1.4 lần để dễ đọc và mượt mà hơn
-            const speed = baseSpeed * 1.4;
+            const speed = baseSpeed;
 
-            setTimeout(() => {
-                const containerWidth = containerEl.offsetWidth;
+            textEl._marqueeTimeout = setTimeout(() => {
+                textEl._marqueeTimeout = null;
+                if (!containerEl || !textEl) return;
+                const containerWidth = containerEl.clientWidth || containerEl.offsetWidth;
                 const textWidth = textEl.scrollWidth;
-                if (textWidth > containerWidth) {
-                    textEl.innerHTML = `<span style="padding-right: 2rem;">${text}</span><span style="padding-right: 2rem;">${text}</span>`;
+                
+                if (textWidth > containerWidth + 2) {
+                    textEl.innerHTML = `<span style="display: inline-block; padding-right: 2.5rem; white-space: nowrap;">${text}</span><span style="display: inline-block; padding-right: 2.5rem; white-space: nowrap;">${text}</span>`;
+                    
+                    // padding-right: 2.5rem. Lấy chính xác kích thước root font size để tính khoảng cách
+                    let rootFontSize = 16;
+                    try {
+                        rootFontSize = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+                    } catch (e) {}
+                    const gap = 2.5 * rootFontSize;
+                    
+                    // Quãng đường di chuyển thực tế của animation (-50%) chính là chiều dài của 1 block (textWidth + gap).
+                    const distance = textWidth + gap;
+                    const duration = distance / speed;
+                    
                     textEl.classList.add('marquee');
-                    textEl.style.animationDuration = `${Math.max(4, textWidth / speed)}s`;
                     textEl.style.display = 'inline-block';
+                    textEl.style.whiteSpace = 'nowrap';
+                    textEl.style.animation = `obs-marquee ${duration.toFixed(3)}s linear infinite`;
                     textEl.style.overflow = 'visible';
                 } else {
+                    textEl.textContent = text;
+                    textEl.classList.remove('marquee');
                     textEl.style.display = 'inline-block';
+                    textEl.style.whiteSpace = 'nowrap';
                     textEl.style.overflow = 'hidden';
+                    textEl.style.animation = 'none';
                 }
-            }, 50);
+            }, 60);
         }
 
         function calculateNextSongLimitDuration(nextSong) {
@@ -5951,12 +6152,13 @@
             if (!song?.playlistRequestId) return '';
             const position = Math.max(1, Number(song.playlistPosition || 1));
             const total = Math.max(position, Number(song.playlistTotalTracks || position));
-            return `${position}/${total}`;
+            const plTitle = song.playlistTitle || 'YouTube Playlist';
+            return `${position}/${total} ${plTitle}`;
         }
 
         function getUpcomingDonorLabel(song) {
             const donor = song?.donorName || 'Khách';
-            return song?.playlistRequestId ? `Playlist của ${donor}` : donor;
+            return song?.playlistRequestId ? (song?.playlistTitle || 'YouTube Playlist') : donor;
         }
 
         function getSongPlaybackStart(song) {
@@ -6240,7 +6442,7 @@
                         titleEl.dataset.originalTitle = nextSong.title;
                         titleEl.dataset.lastTheme = currentTheme;
                         const containerEl = document.getElementById('next-fullscreen-title-container');
-                        applyMarquee(containerEl, titleEl, nextSong.title || 'Không rõ tên bài hát', 30);
+                        applyMarquee(containerEl, titleEl, nextSong.title || 'Không rõ tên bài hát', 40);
                     }
 
                     if (nextSong.isOwnerAdd) {
@@ -6486,7 +6688,7 @@
                     nextSongDrawer.style.setProperty('--next-cover-url', `url('${targetSrc}')`);
 
                     const containerEl = document.getElementById('obs-next-title-container');
-                    applyMarquee(containerEl, nextTextEl, currentSong.nextSongTitle || '', 25);
+                    applyMarquee(containerEl, nextTextEl, currentSong.nextSongTitle || '', 40);
 
                     if (nextDonorInfo) {
                         const donor = currentSong.nextSongDonorName || 'Khách';
@@ -6590,7 +6792,7 @@
                     nextSongDrawer.style.setProperty('--next-cover-url', `url('${targetSrc}')`);
 
                     const containerEl = document.getElementById('obs-next-title-container');
-                    applyMarquee(containerEl, nextTextEl, currentSong.nextSongTitle || '', 25);
+                    applyMarquee(containerEl, nextTextEl, currentSong.nextSongTitle || '', 40);
 
                     if (nextDonorInfo) {
                         const donor = currentSong.nextSongDonorName || 'Khách';
@@ -8294,7 +8496,7 @@
                                 const channelNameContainer = document.getElementById('obs-channel-name-container');
                                 if (channelNameEl) {
                                     if (channelNameContainer) {
-                                        applyMarquee(channelNameContainer, channelNameEl, vd.author, 25);
+                                        applyMarquee(channelNameContainer, channelNameEl, vd.author, 40);
                                     } else {
                                         channelNameEl.textContent = vd.author;
                                     }
@@ -8856,9 +9058,10 @@
             if (title) title.textContent = "Không Thời Gian - Dương Domic";
             if (channelNameEl) channelNameEl.textContent = "Dương Domic";
             if (promoTitleEl) promoTitleEl.textContent = "Không Thời Gian - Dương Domic";
+            updateLyricsOverlayDetails({ lyrics: { available: true, lines: [{ time: 0, text: 'Sample' }] } });
             if (donorContainer) donorContainer.style.display = 'flex';
             if (donorName) {
-                donorName.textContent = "mèo 3k";
+                donorName.textContent = "Em Dứa";
                 donorName.style.removeProperty('max-width');
                 donorName.style.removeProperty('white-space');
             }
@@ -8934,7 +9137,7 @@
                 const signature = `${song.id || ''}|${titleText}`;
                 if (lastOwnerPromoTitleSignature !== signature && promoContainer && promoTitle) {
                     lastOwnerPromoTitleSignature = signature;
-                    applyMarquee(promoContainer, promoTitle, titleText, 25);
+                    applyMarquee(promoContainer, promoTitle, titleText, 40);
                 }
             } else {
                 widgetElement.classList.remove('owner-price-table-active');
@@ -8976,8 +9179,9 @@
             const total = Number(songData.playlistTotalTracks || activePlaylist.totalTracks || 1);
 
             if (meta) {
-                const playlistName = songData.playlistName || activePlaylist.name || '';
-                meta.textContent = playlistName ? `${position}/${total} ${playlistName}` : `${position}/${total}`;
+                const remaining = Number(activePlaylist.remainingPlaylistSec || 0);
+                const plTitle = songData.playlistTitle || activePlaylist.playlistTitle || 'YouTube Playlist';
+                meta.textContent = `${position}/${total} ${plTitle}${remaining > 0 ? ` · còn ${formatTime(remaining)}` : ''}`;
                 meta.hidden = false;
             }
         }
@@ -9002,6 +9206,19 @@
                 progressText.textContent = `${amount.toLocaleString('vi-VN')}đ / ${target.toLocaleString('vi-VN')}đ`;
             }
             if (progressFill) progressFill.style.width = `${percent}%`;
+        }
+
+        function updateLyricsOverlayDetails(songData) {
+            const obsLyricsIcon = document.getElementById('obs-lyrics-icon');
+            const obsOwnerLyricsIcon = document.getElementById('obs-owner-lyrics-icon');
+            const hasLyrics = Boolean(songData?.lyrics?.available && songData.lyrics.lines?.length);
+            const isOwner = Boolean(songData?.isOwnerAdd);
+            if (obsLyricsIcon) {
+                obsLyricsIcon.style.display = hasLyrics ? 'inline-flex' : 'none';
+            }
+            if (obsOwnerLyricsIcon) {
+                obsOwnerLyricsIcon.style.display = (hasLyrics && isOwner) ? 'inline-flex' : 'none';
+            }
         }
 
         let browserMediaState = null;
@@ -9074,7 +9291,7 @@
                 const donorSignature = `${ownerSong.id}|${orderMessage}`;
                 if (lastBrowserOwnerDonorSignature !== donorSignature) {
                     lastBrowserOwnerDonorSignature = donorSignature;
-                    if (donorNameContainer) applyMarquee(donorNameContainer, donorName, orderMessage, 25);
+                    if (donorNameContainer) applyMarquee(donorNameContainer, donorName, orderMessage, 40);
                     else donorName.textContent = orderMessage;
                 }
                 donorName.style.setProperty('max-width', 'none', 'important');
@@ -9196,6 +9413,7 @@
                     updateOverlayLyrics(null, 0);
                     updateVoteSkipProgress(null);
                     updatePlaylistOverlayDetails(null);
+                    updateLyricsOverlayDetails(null);
                     const browserOwnerSignature = `${browserSongWhilePaused.id || ''}|${browserSongWhilePaused.title || ''}`;
                     if (!widget.classList.contains('browser-media-fallback')
                         || lastOwnerPromoTitleSignature !== browserOwnerSignature) {
@@ -9207,6 +9425,7 @@
 
                 if (!dataRaw) {
                     updateOverlayLyrics(null, 0);
+                    updateLyricsOverlayDetails(null);
                     const browserOwnerSong = getBrowserMediaOwnerSong();
                     // Khi owner browser view đã ổn định, chỉ cập nhật metadata và
                     // playhead. Không tháo/lắp lại player, slideshow và class mỗi
@@ -9221,6 +9440,7 @@
                     }
                     updateVoteSkipProgress(null);
                     updatePlaylistOverlayDetails(null);
+                    updateLyricsOverlayDetails(null);
                     updateOwnerPromoMode(widget, browserOwnerSong);
                     if (destroyTimeout) {
                         clearTimeout(destroyTimeout);
@@ -9354,6 +9574,7 @@
 
                 const data = JSON.parse(dataRaw);
                 updateVoteSkipProgress(data);
+                updateLyricsOverlayDetails(data);
                 const isOwnerPromo = updateOwnerPromoMode(widget, data);
 
                 const isLuckyNewSong = String(lastSongId ?? '') !== String(data.id ?? '');
@@ -9558,7 +9779,7 @@
 
                     if (channelNameEl) {
                         if (channelNameContainer && !skipMarquee) {
-                            applyMarquee(channelNameContainer, channelNameEl, channelText, 25);
+                            applyMarquee(channelNameContainer, channelNameEl, channelText, 40);
                         } else {
                             channelNameEl.textContent = channelText;
                         }
@@ -9573,7 +9794,8 @@
                             const total = Number(songData.playlistTotalTracks || activePlaylist.totalTracks || 1);
                             const remaining = Number(activePlaylist.remainingPlaylistSec || 0);
                             const donor = songData.donorName || activePlaylist.donorName || 'Khách';
-                            playlistMetaEl.textContent = `Playlist của ${donor} · Video ${position}/${total}${remaining > 0 ? ` · còn ${formatTime(remaining)}` : ''}`;
+                            const plTitle = songData.playlistTitle || activePlaylist.playlistTitle || 'YouTube Playlist';
+                            playlistMetaEl.textContent = `${position}/${total} ${plTitle}${remaining > 0 ? ` · còn ${formatTime(remaining)}` : ''}`;
                             playlistMetaEl.hidden = false;
                         } else {
                             playlistMetaEl.hidden = true;
@@ -9597,7 +9819,7 @@
                                         data.author = fetchedAuthor;
                                         if (channelNameEl) {
                                             if (channelNameContainer) {
-                                                applyMarquee(channelNameContainer, channelNameEl, fetchedAuthor, 25);
+                                                applyMarquee(channelNameContainer, channelNameEl, fetchedAuthor, 40);
                                             } else {
                                                 channelNameEl.textContent = fetchedAuthor;
                                             }
@@ -9617,7 +9839,7 @@
                         if (playerWidgetEl) playerWidgetEl.classList.add('is-owner-add');
                         const emptyMsg = localStorage.getItem('dua_empty_queue_message') || 'Order nhạc tự động Zypage 50k';
                         if (donorNameContainer) {
-                            applyMarquee(donorNameContainer, donorName, emptyMsg, 25);
+                            applyMarquee(donorNameContainer, donorName, emptyMsg, 40);
                         } else {
                             donorName.textContent = emptyMsg;
                         }
@@ -9630,7 +9852,7 @@
                         const songTitleText = songData.title || "Chưa có tên bài hát";
                         if (promoTitleEl) {
                             if (promoTitleContainer && !skipMarquee) {
-                                applyMarquee(promoTitleContainer, promoTitleEl, songTitleText, 25);
+                                applyMarquee(promoTitleContainer, promoTitleEl, songTitleText, 40);
                             } else {
                                 promoTitleEl.textContent = songTitleText;
                             }
@@ -9639,7 +9861,7 @@
                         if (playerWidgetEl) playerWidgetEl.classList.remove('is-owner-add');
                         const nameToUse = songData.donorName || "Khách";
                         if (donorNameContainer) {
-                            applyMarquee(donorNameContainer, donorName, nameToUse, 25);
+                            applyMarquee(donorNameContainer, donorName, nameToUse, 40);
                         } else {
                             donorName.textContent = nameToUse;
                         }
@@ -9666,7 +9888,7 @@
                     title.dataset.lastTheme = currentTheme;
 
                     if (!skipMarquee) {
-                        applyMarquee(titleContainer, title, songData.title || "Chưa có tên bài hát", 30);
+                        applyMarquee(titleContainer, title, songData.title || "Chưa có tên bài hát", 40);
                     } else {
                         title.classList.remove('marquee');
                         title.style.animationDuration = '0s';
@@ -9755,7 +9977,7 @@
 
                             // Bắt đầu chạy dòng chữ marquee chính
                             const titleContainer = document.getElementById('obs-song-title-container');
-                            applyMarquee(titleContainer, title, data.title || "Chưa có tên bài hát", 30);
+                            applyMarquee(titleContainer, title, data.title || "Chưa có tên bài hát", 40);
                         }, 800);
                     } else {
                         // Cập nhật ngay lập tức và tĩnh, không hiệu ứng nhảy chữ hay nhảy avatar
@@ -9785,7 +10007,7 @@
                 if (hasThemeChanged) {
                     title.dataset.lastTheme = currentTheme;
                     const titleContainer = document.getElementById('obs-song-title-container');
-                    applyMarquee(titleContainer, title, data.title || "Chưa có tên bài hát", 30);
+                    applyMarquee(titleContainer, title, data.title || "Chưa có tên bài hát", 40);
                 }
 
                 // Đồng bộ hóa các Player (YouTube, Spotify, SoundCloud) trên overlay
@@ -10196,15 +10418,22 @@
                 void alertBox.offsetWidth; // Trigger reflow để reset transition
                 alertBox.classList.add('active');
 
-                // Ẩn thông báo sau 15 giây.
+                // Ẩn thông báo sau 6 giây.
                 if (alertTimeout) clearTimeout(alertTimeout);
+                if (window._alertActiveClassTimeout) {
+                    clearTimeout(window._alertActiveClassTimeout);
+                    window._alertActiveClassTimeout = null;
+                }
                 alertTimeout = setTimeout(() => {
                     alertBox.classList.remove('active');
-                    if (widget) {
-                        widget.classList.remove('alert-active');
-                        syncSpecialLyricsLayout();
-                        transitionOverlayWidgetHeight(getOverlayRestingHeight());
-                    }
+                    window._alertActiveClassTimeout = setTimeout(() => {
+                        window._alertActiveClassTimeout = null;
+                        if (widget) {
+                            widget.classList.remove('alert-active');
+                            syncSpecialLyricsLayout();
+                            transitionOverlayWidgetHeight(getOverlayRestingHeight());
+                        }
+                    }, 320);
                 }, 6000);
             } catch (err) {
                 console.error("Error in triggerNewDonationAlert:", err);
@@ -10214,6 +10443,12 @@
 
         function updateLyricsRealtimeSync() {
             if (isPreview || isLuckyRolling) return;
+            // Khi app đang pause/stop và browser media đang phát, loop 200ms của
+            // updateOverlayUI đã gọi updateOverlayLyrics(null) để tắt lyrics.
+            // Không để loop 5ms này override ngược lại — tránh giật do xung đột.
+            if (lastCommandType === 'pause' || lastCommandType === 'stop') {
+                if (getBrowserMediaOwnerSong()) return;
+            }
             let song = null;
             try {
                 song = JSON.parse(localStorage.getItem('dua_current_song') || 'null');
