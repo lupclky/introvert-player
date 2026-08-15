@@ -821,6 +821,36 @@ test('link Mua Doi Cho sHxWsIfOsm0 tra ve bo loi verified 3 phut 58 giay day du'
   assert.ok(result.lines.length >= 40);
 });
 
+test('video performance Song 26 cua EXIT SIGN (4ZFezhS5hZs) nhan verified synced lyrics', async () => {
+  const { service } = createService({
+    fetchImpl: async url => {
+      const value = String(url);
+      if (value.includes('youtube.com/oembed')) {
+        return response(200, { title: 'EXIT SIGN - HIEUTHUHAI x MARZUZ | SÓNG 26 [PERFORMANCE]', author_name: 'Vie Channel - MUSIC' });
+      }
+      if (value.includes('youtube.com/watch')) {
+        return response(200, '<script>"lengthSeconds":"261"</script>');
+      }
+      throw new Error(`unexpected url: ${value}`);
+    }
+  });
+
+  const result = await service.resolve({
+    videoId: '4ZFezhS5hZs',
+    title: 'EXIT SIGN - HIEUTHUHAI x MARZUZ | SÓNG 26 [PERFORMANCE]',
+    author: 'Vie Channel - MUSIC',
+    duration: 261,
+    sourceUrl: 'https://www.youtube.com/watch?v=4ZFezhS5hZs'
+  });
+
+  assert.equal(result.available, true);
+  assert.equal(result.synced, true);
+  assert.equal(result.duration, 261);
+  assert.equal(result.source, 'Introvert Verified LRC');
+  assert.equal(result.trackName, 'Exit Sign (Sóng 26 Performance)');
+  assert.ok(result.lines.length >= 45);
+});
+
 test('loai timeline LRCLIB cua SOLO dung duration nhung thieu hon mot phut cuoi', async () => {
   const corruptLyrics = {
     id: 13459054,
