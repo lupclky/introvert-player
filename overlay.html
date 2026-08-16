@@ -6219,8 +6219,7 @@
         }
 
         function getUpcomingDonorLabel(song) {
-            const donor = song?.donorName || 'Khách';
-            return song?.playlistRequestId ? (song?.playlistTitle || 'YouTube Playlist') : donor;
+            return song?.donorName || 'Khách';
         }
 
         function getSongPlaybackStart(song) {
@@ -6756,7 +6755,7 @@
                     applyMarquee(containerEl, nextTextEl, currentSong.nextSongTitle || '', 40);
 
                     if (nextDonorInfo) {
-                        const donor = currentSong.nextSongDonorName || 'Khách';
+                        const donor = currentSong.nextSongDonor || 'Khách';
                         const amount = (currentSong.nextSongAmount && Number(currentSong.nextSongAmount) > 0)
                             ? ` · ${Number(currentSong.nextSongAmount).toLocaleString('vi-VN')} ₫`
                             : '';
@@ -6860,7 +6859,7 @@
                     applyMarquee(containerEl, nextTextEl, currentSong.nextSongTitle || '', 40);
 
                     if (nextDonorInfo) {
-                        const donor = currentSong.nextSongDonorName || 'Khách';
+                        const donor = currentSong.nextSongDonor || 'Khách';
                         const amount = (currentSong.nextSongAmount && Number(currentSong.nextSongAmount) > 0)
                             ? ` · ${Number(currentSong.nextSongAmount).toLocaleString('vi-VN')} ₫`
                             : '';
