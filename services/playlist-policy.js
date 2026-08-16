@@ -16,7 +16,7 @@ const DEFAULT_PLAYLIST_SETTINGS = Object.freeze({
   // Giá trị tương thích cho các luồng playlist thêm thủ công. Với donation,
   // PlaylistService sẽ tính lại giới hạn theo đúng số tiền của request.
   playlistMaximumDurationSec: PLAYLIST_PRICING.baseDurationSec,
-  playlistMaximumItemsToResolve: 50,
+  playlistMaximumItemsToResolve: 200,
   playlistAutoAccept: true,
   playlistContinuousPlayback: true,
   playlistDeduplicateTracks: true
@@ -43,7 +43,7 @@ function normalizePlaylistSettings(input = {}) {
     playlistExtraDonationStepVnd: clampInteger(input.playlistExtraDonationStepVnd, PLAYLIST_PRICING.extraDonationStepVnd, 1, 1000000000),
     playlistExtraDurationStepSec: clampInteger(input.playlistExtraDurationStepSec, PLAYLIST_PRICING.extraDurationStepSec, 1, Number.MAX_SAFE_INTEGER),
     playlistMaximumDurationSec: clampInteger(input.playlistMaximumDurationSec, PLAYLIST_PRICING.baseDurationSec, 60, Number.MAX_SAFE_INTEGER),
-    playlistMaximumItemsToResolve: clampInteger(input.playlistMaximumItemsToResolve, 50, 1, 100),
+    playlistMaximumItemsToResolve: clampInteger(input.playlistMaximumItemsToResolve, 200, 1, 500),
     playlistAutoAccept: normalizeBoolean(input.playlistAutoAccept, DEFAULT_PLAYLIST_SETTINGS.playlistAutoAccept),
     playlistContinuousPlayback: normalizeBoolean(input.playlistContinuousPlayback, DEFAULT_PLAYLIST_SETTINGS.playlistContinuousPlayback),
     playlistDeduplicateTracks: normalizeBoolean(input.playlistDeduplicateTracks, DEFAULT_PLAYLIST_SETTINGS.playlistDeduplicateTracks)
