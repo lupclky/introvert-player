@@ -1624,7 +1624,7 @@
             align-items: stretch;
             gap: 0.32rem;
             transform: translate3d(0, 0, 0);
-            transition: transform 700ms cubic-bezier(0.25, 1, 0.5, 1);
+            transition: transform 560ms cubic-bezier(0.22, 1, 0.36, 1);
             will-change: transform;
         }
 
@@ -1636,7 +1636,7 @@
             width: 100%;
             overflow: hidden;
             color: var(--theme-sub-text-color);
-            font-family: var(--font-title);
+            font-family: var(--font-body);
             display: flex;
             flex-direction: column;
             align-items: flex-start;
@@ -1653,7 +1653,7 @@
             word-break: normal;
             text-align: left;
             transform-origin: left center;
-            transition: color 500ms ease-out, opacity 500ms ease-out, transform 600ms cubic-bezier(0.25, 1, 0.5, 1);
+            transition: color 420ms ease, opacity 420ms ease, transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
         }
 
         .obs-lyric-text {
@@ -1688,6 +1688,7 @@
 
         .obs-lyric-line.is-window-visible.is-active {
             color: var(--theme-highlight-color);
+            font-family: var(--font-title);
             font-size: 1.36rem;
             font-weight: 900;
             opacity: 1;

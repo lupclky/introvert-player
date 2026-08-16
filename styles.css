@@ -6838,7 +6838,7 @@ body.app-dashboard .playlist-group-toggle {
     cursor: pointer;
     text-align: left;
     transform-origin: left center;
-    transition: opacity 500ms ease-out, color 500ms ease-out, transform 600ms cubic-bezier(0.25, 1, 0.5, 1);
+    transition: opacity 180ms ease, color 180ms ease, transform 180ms ease;
 }
 
 .dashboard-lyric-text {
@@ -6871,7 +6871,7 @@ body.app-dashboard .playlist-group-toggle {
 .dashboard-lyric-line.is-active {
     color: var(--pineapple-orange-dark);
     font-size: 1.1rem;
-    font-weight: 700;
+    font-weight: 800;
     opacity: 1;
     transform: scale(1.01);
     background: color-mix(in srgb, var(--pineapple-orange) 7%, transparent);
