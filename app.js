@@ -3817,6 +3817,7 @@ function renderPlaylistGroupV2(group, groupIndex = 0, groupCount = 1, options = 
         ? `Đang phát ${Number(activeSong.playlistPosition || 1)}/${playlistTotal}`
         : `${songs.length} video · ${formatTime(duration)}`;
     const newBadge = renderQueueNewBadge(songs);
+    const remainingTimeHtml = activeSong ? `<span id="dashboard-playlist-remaining-${requestId}" style="font-variant-numeric: tabular-nums; min-width: 4.5ch; display: inline-block; text-align: right; margin-right: 0.5rem; font-size: 0.9em; opacity: 0.9; font-weight: 600;"></span>` : '';
 
     return `
         <section class="playlist-group-card ${expanded ? 'is-expanded' : ''} ${activeSong ? 'is-active-playlist' : ''}" data-playlist-request-id="${requestId}">
@@ -3828,6 +3829,7 @@ function renderPlaylistGroupV2(group, groupIndex = 0, groupCount = 1, options = 
                     <span class="playlist-group-status"><i class="fa-solid fa-volume-high"></i> ${statusText}</span>
                 </div>
                 <div class="playlist-group-header-actions">
+                    ${remainingTimeHtml}
                     <button class="primary" title="${activeSong ? (state.isPlaying ? 'Tạm dừng playlist' : 'Tiếp tục playlist') : 'Phát playlist ngay'}" onclick="${activeSong ? 'toggleCurrentPlaylistPause()' : `userForcePlaySong('${first.id}')`}"><i class="fa-solid fa-${activeSong && state.isPlaying ? 'pause' : 'play'}"></i></button>
                     <button title="Di chuyển playlist lên" ${groupIndex <= 0 || activeSong ? 'disabled' : ''} onclick="movePlaylistGroup('${requestId}', 'up')"><i class="fa-solid fa-arrow-up"></i></button>
                     <button title="Di chuyển playlist xuống" ${groupIndex >= groupCount - 1 || activeSong ? 'disabled' : ''} onclick="movePlaylistGroup('${requestId}', 'down')"><i class="fa-solid fa-arrow-down"></i></button>
@@ -7288,6 +7290,12 @@ function handleMqttMessage(topic, messageStrOrObj) {
                     }
                     return total + Math.max(0, Number(song.duration || 0));
                 }, 0);
+                
+                const dashboardRemainingEl = document.getElementById(`dashboard-playlist-remaining-${state.currentSong.playlistRequestId}`);
+                if (dashboardRemainingEl) {
+                    dashboardRemainingEl.textContent = formatTime(remainingPlaylistSec);
+                }
+                
                 publishMqtt('playlist.track_progress', {
                     playlistRequestId: state.currentSong.playlistRequestId,
                     trackId: state.currentSong.playlistTrackId,
