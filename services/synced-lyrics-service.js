@@ -132,7 +132,8 @@ class SyncedLyricsService {
   }
 
   hasCompatibleDuration(candidate, identity) {
-    return SyncedLyricsService.getDurationDistance(candidate, identity) <= this.durationToleranceSeconds;
+    const tolerance = identity?.isKaraoke ? 15 : this.durationToleranceSeconds;
+    return SyncedLyricsService.getDurationDistance(candidate, identity) <= tolerance;
   }
 
   static getDurationDistance(candidate, identity) {
