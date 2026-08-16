@@ -3624,9 +3624,11 @@ function renderQueueSongCardV2Legacy(song, options = {}) {
     const playlistChip = song.playlistRequestId
         ? (() => {
             const sameGroup = state.queue.filter(s => s && s.playlistRequestId === song.playlistRequestId);
-            const pos = sameGroup.findIndex(s => String(s.id) === String(song.id)) + 1;
-            const total = sameGroup.length || song.playlistTotalTracks || 1;
-            return `<span class="queue-playlist-chip"><i class="fa-solid fa-layer-group"></i> Playlist · Video ${pos || 1}/${total}</span>`;
+            const total = Number(song.playlistTotalTracks || sameGroup.length || 1);
+            const completed = Math.max(0, total - sameGroup.length);
+            const idx = sameGroup.findIndex(s => String(s.id) === String(song.id));
+            const pos = completed + 1 + (idx !== -1 ? idx : 0);
+            return `<span class="queue-playlist-chip"><i class="fa-solid fa-layer-group"></i> Playlist · Video ${pos}/${total}</span>`;
         })()
         : '';
     const ownerLabel = song.isOwnerAdd ? 'Chủ kênh' : donor;
@@ -3771,9 +3773,9 @@ function renderPlaylistTrackRowLegacy(song, index, total) {
 }
 
 function renderPlaylistTrackRow(song, index, total, options = {}) {
-    const songUrl = getQueueSongUrl(song);
     const isCurrent = Boolean(state.currentSong && String(state.currentSong.id) === String(song.id));
     const title = escapeDashboardHtml(song.title || 'Chưa có tên bài hát');
+    const songUrl = getQueueSongUrl(song);
     const linkedTitle = songUrl !== '#'
         ? `<a href="${escapeDashboardHtml(songUrl)}" onclick="openExternalLink(event, '${escapeDashboardHtml(songUrl)}')">${title}</a>`
         : title;
@@ -3781,11 +3783,13 @@ function renderPlaylistTrackRow(song, index, total, options = {}) {
     const duration = Number(song.duration || 0);
     const movableIndex = Number.isInteger(options.movableIndex) ? options.movableIndex : index;
     const movableTotal = Number.isInteger(options.movableTotal) ? options.movableTotal : total;
+    const completedOffset = Number.isInteger(options.completedOffset) ? options.completedOffset : 0;
+    const displayIndex = completedOffset + 1 + index;
     const newBadge = renderQueueNewBadge(song);
     const lyricsBadge = renderQueueLyricsBadge(song);
     return `
         <article class="playlist-track-row ${song.isPinned ? 'is-pinned' : ''} ${isCurrent ? 'is-playing' : ''}" data-song-id="${escapeDashboardHtml(String(song.id))}" ${isCurrent ? 'aria-current="true"' : ''}>
-            <span class="playlist-track-number">${Number(song.playlistPosition || index + 1)}</span>
+            <span class="playlist-track-number">${displayIndex}</span>
             <img class="playlist-track-thumb" src="${thumbnail}" alt="" loading="lazy">
             <div class="playlist-track-title" title="${title}">
                 ${lyricsBadge}${linkedTitle}
@@ -3815,10 +3819,12 @@ function renderPlaylistGroupV2(group, groupIndex = 0, groupCount = 1, options = 
     const movableSongs = songs.filter(song => !activeSong || String(song.id) !== String(activeSong.id));
     const donorName = escapeDashboardHtml(first.donorName || 'Khách');
     const playlistTotal = Number(first.playlistTotalTracks || songs.length);
+    const completedCount = Math.max(0, playlistTotal - songs.length);
     const ownerText = first.isOwnerAdd
         ? 'Chủ kênh thêm'
         : `${donorName} <b>${Number(first.amount || 0).toLocaleString('vi-VN')}đ</b>`;
-    const currentPos = Number(activeSong?.playlistPosition || 1);
+    const activeIndex = activeSong ? songs.findIndex(s => String(s.id) === String(activeSong.id)) : -1;
+    const currentPos = completedCount + 1 + (activeIndex !== -1 ? activeIndex : 0);
     const statusText = activeSong
         ? `Đang phát ${currentPos}/${playlistTotal}`
         : `${songs.length} video · ${formatTime(duration)}`;
@@ -3849,7 +3855,8 @@ function renderPlaylistGroupV2(group, groupIndex = 0, groupCount = 1, options = 
             <div class="playlist-group-tracks">
                 ${expanded ? songs.map((song, index) => renderPlaylistTrackRow(song, index, songs.length, {
                     movableIndex: movableSongs.findIndex(item => String(item.id) === String(song.id)),
-                    movableTotal: movableSongs.length
+                    movableTotal: movableSongs.length,
+                    completedOffset: completedCount
                 })).join('') : ''}
             </div>
         </section>
@@ -7321,11 +7328,17 @@ function handleMqttMessage(topic, messageStrOrObj) {
                     dashboardRemainingEl.textContent = formatTime(remainingPlaylistSec);
                 }
                 
+                const samePlaylistTracks = state.queue.filter(s => s && s.playlistRequestId === state.currentSong.playlistRequestId);
+                const playlistTotal = Number(state.currentSong.playlistTotalTracks || samePlaylistTracks.length || 1);
+                const completedCount = Math.max(0, playlistTotal - samePlaylistTracks.length);
+                const currentTrackIdx = samePlaylistTracks.findIndex(s => String(s.id) === String(state.currentSong.id));
+                const currentTrackPos = completedCount + 1 + (currentTrackIdx !== -1 ? currentTrackIdx : 0);
+
                 publishMqtt('playlist.track_progress', {
                     playlistRequestId: state.currentSong.playlistRequestId,
                     trackId: state.currentSong.playlistTrackId,
-                    currentTrack: Number(state.currentSong.playlistPosition || 1),
-                    totalTracks: Number(state.currentSong.playlistTotalTracks || 1),
+                    currentTrack: currentTrackPos,
+                    totalTracks: playlistTotal,
                     currentTimeSec: Number(data.currentTime || 0),
                     durationSec: Number(data.duration || state.currentSong.duration || 0),
                     remainingPlaylistSec

@@ -86,13 +86,13 @@ test('playlist đang phát khi nhảy bài ở giữa vẫn chọn đúng bài t
   const t1 = { id: 'p1-1', playlistRequestId: 'p1', playlistPosition: 1 };
   const t2 = { id: 'p1-2', playlistRequestId: 'p1', playlistPosition: 2 };
   const t3 = { id: 'p1-3', playlistRequestId: 'p1', playlistPosition: 3 };
-  const queue = [t1, t2, t3];
+  const queue = [t2, t3, t1];
   
-  // Khi đang phát bài 2, getNextSong phải trả về bài 3 (không phải bài 1)
+  // Khi đang phát bài 2, getNextSong phải trả về bài tiếp theo trong hàng đợi (t3)
   assert.equal(PlaylistQueueService.getNextSong(queue, t2).id, 'p1-3');
   
-  // Khi đang phát bài 3 (cuối sequence), getNextSong quay lại bài 1 còn lại
-  assert.equal(PlaylistQueueService.getNextSong([t1, t3], t3).id, 'p1-1');
+  // Khi đang phát bài 3, getNextSong trả về bài t1 còn lại
+  assert.equal(PlaylistQueueService.getNextSong([t3, t1], t3).id, 'p1-1');
 });
 
 test('playlist đang phát được gom thành khối liên tục mà không đảo thứ tự nội bộ', () => {

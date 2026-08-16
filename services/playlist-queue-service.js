@@ -64,18 +64,6 @@ class PlaylistQueueService {
     if (!currentSong?.playlistRequestId) return pending[0] || null;
 
     const samePlaylist = pending.filter(song => song.playlistRequestId === currentSong.playlistRequestId);
-    if (samePlaylist.length === 0) return pending[0] || null;
-
-    const currentPos = Number(currentSong.playlistPosition || 0);
-    if (currentPos > 0) {
-      const nextInSequence = samePlaylist
-        .filter(song => Number(song.playlistPosition || 0) > currentPos)
-        .sort((a, b) => Number(a.playlistPosition || 0) - Number(b.playlistPosition || 0));
-      if (nextInSequence.length > 0) {
-        return nextInSequence[0];
-      }
-    }
-
     return samePlaylist[0] || pending[0] || null;
   }
 
