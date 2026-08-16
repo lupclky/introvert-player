@@ -4546,57 +4546,33 @@ function forcePlaySong(songId) {
     const targetPlaylistId = targetSong.playlistRequestId;
     const currentPlaylistId = state.currentSong?.playlistRequestId;
 
-    const saveCurrentProgress = () => {
-        if (!state.currentSong) return;
+    // Lưu tiến trình bài đang phát nếu chuyển sang bài/playlist khác
+    if (state.currentSong) {
         const currentSongInQueue = state.queue.find(s => String(s.id) === String(state.currentSong.id));
         if (currentSongInQueue) {
-            const duration = currentSongInQueue.duration || 0;
-            const currentTime = state.lastReportedTime || 0;
-            // Chỉ lưu tiến trình nếu bài hát đã phát được trên 2 giây và còn cách kết thúc trên 5 giây
-            if (currentTime > 2 && (duration === 0 || currentTime < duration - 5)) {
-                currentSongInQueue.savedProgress = currentTime;
-                logSystem(`Đã lưu tiến trình bài hát "${currentSongInQueue.title}" tại ${formatTime(currentTime)}`, 'system');
-            }
-            if (currentSongInQueue.playlistRequestId) {
-                currentSongInQueue.playlistInterrupted = true;
-                window.electronAPI?.pausePlaylist?.(currentSongInQueue.playlistRequestId).catch(() => {});
+            const isSamePlaylist = targetPlaylistId && currentPlaylistId && targetPlaylistId === currentPlaylistId;
+            if (!isSamePlaylist) {
+                const duration = currentSongInQueue.duration || 0;
+                const currentTime = state.lastReportedTime || 0;
+                if (currentTime > 2 && (duration === 0 || currentTime < duration - 5)) {
+                    currentSongInQueue.savedProgress = currentTime;
+                    logSystem(`Đã lưu tiến trình bài hát "${currentSongInQueue.title}" tại ${formatTime(currentTime)}`, 'system');
+                }
+                if (currentSongInQueue.playlistRequestId) {
+                    currentSongInQueue.playlistInterrupted = true;
+                    window.electronAPI?.pausePlaylist?.(currentSongInQueue.playlistRequestId).catch(() => {});
+                }
             }
         }
-    };
+    }
 
     if (targetPlaylistId) {
-        if (targetPlaylistId === currentPlaylistId) {
-            // Bỏ qua các bài hát trước targetSong trong cùng playlist
-            // Không lưu tiến trình bài hiện tại (vì đây là thao tác skip)
-            const samePlaylistTracks = state.queue.filter(s => s.playlistRequestId === targetPlaylistId);
-            const targetTrackPos = samePlaylistTracks.findIndex(s => String(s.id) === String(songId));
-            if (targetTrackPos > 0) {
-                const tracksToRemove = samePlaylistTracks.slice(0, targetTrackPos);
-                tracksToRemove.forEach(t => {
-                    const idx = state.queue.findIndex(s => String(s.id) === String(t.id));
-                    if (idx !== -1) state.queue.splice(idx, 1);
-                });
-            }
-            // Bỏ qua currentSong nếu nó đang nằm trước targetSong (đã bị xóa ở trên)
-            // Khỏi unshift targetSong, giữ nguyên trong queue để bảo toàn trật tự
-        } else {
-            // Ép phát playlist mới, lưu tiến trình bài hiện tại
-            saveCurrentProgress();
-            
-            // Đưa toàn bộ playlist này lên đầu hàng đợi
-            const samePlaylistTracks = state.queue.filter(s => s.playlistRequestId === targetPlaylistId);
-            state.queue = state.queue.filter(s => s.playlistRequestId !== targetPlaylistId);
-            state.queue.unshift(...samePlaylistTracks);
-            
-            // Xóa các bài trước targetSong
-            const targetTrackPos = samePlaylistTracks.findIndex(s => String(s.id) === String(songId));
-            if (targetTrackPos > 0) {
-                state.queue.splice(0, targetTrackPos);
-            }
+        // Đưa toàn bộ playlist này lên đầu hàng đợi để các bài cùng nhóm nằm cạnh nhau
+        if (window.PlaylistQueueService?.prioritizeActivePlaylist) {
+            state.queue = window.PlaylistQueueService.prioritizeActivePlaylist(state.queue, targetSong);
         }
     } else {
-        // Bài đơn lẻ (Standalone)
-        saveCurrentProgress();
+        // Bài đơn lẻ (Standalone): đưa lên đầu hàng đợi
         const currentTargetIndex = state.queue.findIndex(s => String(s.id) === String(songId));
         if (currentTargetIndex !== -1) {
             const target = state.queue.splice(currentTargetIndex, 1)[0];

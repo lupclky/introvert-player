@@ -9832,6 +9832,7 @@
 
                 // Định nghĩa hàm cập nhật nội dung chữ và marquee
                 const updateTextContent = (songData, skipMarquee = false) => {
+                    const isOwner = Boolean(songData?.isOwnerAdd);
                     title.textContent = songData.title || "Chưa có tên bài hát";
 
                     const channelNameEl = document.getElementById('obs-channel-name');
@@ -10757,7 +10758,18 @@
                 updateOverlayUI();
             } else if (payload.type === 'playlist.track_progress') {
                 const previous = JSON.parse(localStorage.getItem('dua_active_playlist') || '{}');
-                localStorage.setItem('dua_active_playlist', JSON.stringify({ ...previous, ...eventData }));
+                const nextPlaylist = { ...previous, ...eventData };
+                localStorage.setItem('dua_active_playlist', JSON.stringify(nextPlaylist));
+                const plRemainingEl = document.getElementById('obs-playlist-remaining');
+                if (plRemainingEl) {
+                    const remaining = Number(nextPlaylist.remainingPlaylistSec || 0);
+                    if (remaining > 0) {
+                        plRemainingEl.textContent = formatTime(remaining);
+                        plRemainingEl.style.display = 'inline-block';
+                    } else {
+                        plRemainingEl.style.display = 'none';
+                    }
+                }
             } else if (payload.type === 'playlist.completed') {
                 localStorage.removeItem('dua_active_playlist');
                 updateOverlayUI();
