@@ -1460,8 +1460,7 @@
             line-height: 1;
         }
 
-        #obs-player-widget.lyrics-visible .obs-song-message,
-        #obs-player-widget.lyrics-visible .obs-vote-skip-widget {
+        #obs-player-widget.lyrics-visible .obs-song-message {
             display: none !important;
         }
 
@@ -1911,42 +1910,17 @@
            animation or queue transition is attached to this widget. */
         .obs-vote-skip-widget {
             display: none;
-            flex-direction: column;
-            gap: 3px;
             width: 100%;
-            margin-top: 4px;
+            margin-top: 2px;
+            color: var(--theme-highlight-color);
+            font-family: var(--font-title);
+            font-size: 0.86rem;
+            font-weight: 800;
+            line-height: 1.1;
         }
 
         .obs-vote-skip-widget:not([hidden]) {
-            display: flex;
-        }
-
-        .obs-vote-skip-label {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 8px;
-            color: var(--theme-highlight-color);
-            font-family: var(--font-title);
-            font-size: 0.68rem;
-            font-weight: 800;
-            line-height: 1;
-        }
-
-        .obs-vote-skip-track {
-            width: 100%;
-            height: 5px;
-            overflow: hidden;
-            border-radius: 999px;
-            background: var(--theme-progress-bg);
-        }
-
-        .obs-vote-skip-fill {
-            width: 0%;
-            height: 100%;
-            border-radius: inherit;
-            background: var(--theme-progress-fill);
-            transition: width 0.25s ease;
+            display: block;
         }
 
         .obs-song-title.marquee,
@@ -4888,13 +4862,7 @@
                                 <div id="obs-channel-name" class="obs-channel-name">Tên kênh</div>
                             </div>
                             <div id="obs-vote-skip-widget" class="obs-vote-skip-widget" hidden>
-                                <div class="obs-vote-skip-label">
-                                    <span>Vote Skip</span>
-                                    <span id="obs-vote-skip-progress-text">0đ / 20.000đ</span>
-                                </div>
-                                <div class="obs-vote-skip-track" aria-hidden="true">
-                                    <div id="obs-vote-skip-fill" class="obs-vote-skip-fill"></div>
-                                </div>
+                                <span id="obs-vote-skip-progress-text">Vote skip 0 / 20.000 đ</span>
                             </div>
                             <div id="obs-playlist-meta" class="obs-playlist-meta" hidden></div>
                             <!-- Extension panel đã được chuyển ra ngoài widget, không còn ở đây nữa -->
@@ -9286,23 +9254,17 @@
         function updateVoteSkipProgress(songData) {
             const voteSkipWidget = document.getElementById('obs-vote-skip-widget');
             const progressText = document.getElementById('obs-vote-skip-progress-text');
-            const progressFill = document.getElementById('obs-vote-skip-fill');
             if (!voteSkipWidget) return;
 
             const isActive = Boolean(songData?.voteSkipActive);
             voteSkipWidget.hidden = !isActive;
-            if (!isActive) {
-                if (progressFill) progressFill.style.width = '0%';
-                return;
-            }
+            if (!isActive) return;
 
             const target = Math.max(1, Number(songData.voteSkipTarget) || 20000);
             const amount = Math.max(0, Number(songData.voteAmount) || 0);
-            const percent = Math.min(100, (amount / target) * 100);
             if (progressText) {
-                progressText.textContent = `${amount.toLocaleString('vi-VN')}đ / ${target.toLocaleString('vi-VN')}đ`;
+                progressText.textContent = `Vote skip ${amount.toLocaleString('vi-VN')} / ${target.toLocaleString('vi-VN')} đ`;
             }
-            if (progressFill) progressFill.style.width = `${percent}%`;
         }
 
         function updateLyricsOverlayDetails(songData) {
