@@ -3780,7 +3780,7 @@ function renderPlaylistTrackRow(song, index, total, options = {}) {
     const lyricsBadge = renderQueueLyricsBadge(song);
     return `
         <article class="playlist-track-row ${song.isPinned ? 'is-pinned' : ''} ${isCurrent ? 'is-playing' : ''}" data-song-id="${escapeDashboardHtml(String(song.id))}" ${isCurrent ? 'aria-current="true"' : ''}>
-            <span class="playlist-track-number">${Number(song.playlistPosition || index + 1)}</span>
+            <span class="playlist-track-number">${index + 1}</span>
             <img class="playlist-track-thumb" src="${thumbnail}" alt="" loading="lazy">
             <div class="playlist-track-title" title="${title}">
                 ${lyricsBadge}${linkedTitle}
