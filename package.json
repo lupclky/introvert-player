@@ -1,6 +1,6 @@
 {
   "name": "introvert-player",
-  "version": "26.8.18",
+  "version": "26.8.19",
   "description": "Pineapple Studio",
   "main": "main.js",
   "scripts": {
@@ -44,7 +44,7 @@
     "win": {
       "target": "nsis",
       "icon": "build/icon.ico",
-      "artifactName": "IntrovertPlayer.Setup.26.8.18.${ext}"
+      "artifactName": "IntrovertPlayer.Setup.26.8.19.${ext}"
     },
     "nsis": {
       "oneClick": true,
