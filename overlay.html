@@ -13,6 +13,13 @@
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
+    <!-- Network Prioritization (Cơ chế ưu tiên đường mạng cho OBS Iframe) -->
+    <link rel="preconnect" href="https://www.youtube.com" crossorigin>
+    <link rel="preconnect" href="https://i.ytimg.com" crossorigin>
+    <link rel="preconnect" href="https://googlevideo.com" crossorigin>
+    <link rel="dns-prefetch" href="https://www.youtube.com">
+    <link rel="dns-prefetch" href="https://googlevideo.com">
+
     <style>
         * {
             box-sizing: border-box;
@@ -8051,6 +8058,12 @@
                     targetVolume = localStorage.getItem('dua_volume') !== null ? parseInt(localStorage.getItem('dua_volume')) : targetVolume;
                     applyTargetVolume();
                     event.target.seekTo(startTime || 0, true);
+
+                    // Cơ chế ưu tiên đường mạng: Yêu cầu OBS tải luồng video ưu tiên cao nhất
+                    try {
+                        const iframe = event.target.getIframe();
+                        if (iframe) iframe.setAttribute('fetchpriority', 'high');
+                    } catch (e) { }
 
                     enforceIframePlaybackQuality(event.target);
                     setTimeout(() => {
