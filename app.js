@@ -7325,7 +7325,7 @@ function handleMqttMessage(topic, messageStrOrObj) {
                     playlistRequestId: state.currentSong.playlistRequestId,
                     trackId: state.currentSong.playlistTrackId,
                     currentTrack: Number(state.currentSong.playlistPosition || 1),
-                    totalTracks: Number(state.currentSong.playlistTotalTracks || samePlaylistTracks.length || 1),
+                    totalTracks: Number(state.currentSong.playlistTotalTracks || 1),
                     currentTimeSec: Number(data.currentTime || 0),
                     durationSec: Number(data.duration || state.currentSong.duration || 0),
                     remainingPlaylistSec
