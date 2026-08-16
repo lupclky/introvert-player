@@ -4840,6 +4840,7 @@
                                 <path d="M12 18H3"></path>
                             </svg>
                         </span>
+                        <span id="obs-playlist-remaining" style="display: none; font-variant-numeric: tabular-nums; display: inline-block; min-width: 4.5ch; text-align: left; margin-right: 0.3rem;"></span>
                         <div id="obs-donor-name-container"
                             style="overflow: hidden; white-space: nowrap; flex: 1; min-width: 0; display: inline-block; margin-right: 0.5rem;">
                             <span id="obs-donor-name" class="obs-donor-name" style="display: inline-block;">Khách</span>
@@ -9258,7 +9259,17 @@
             if (meta) {
                 const remaining = Number(activePlaylist.remainingPlaylistSec || 0);
                 const plTitle = songData.playlistTitle || activePlaylist.playlistTitle || 'YouTube Playlist';
-                meta.textContent = `${position}/${total} ${plTitle}${remaining > 0 ? ` · còn ${formatTime(remaining)}` : ''}`;
+                meta.textContent = `${position}/${total} ${plTitle}`;
+                
+                const plRemainingEl = document.getElementById('obs-playlist-remaining');
+                if (plRemainingEl) {
+                    if (remaining > 0 && !isOwner) {
+                        plRemainingEl.textContent = formatTime(remaining);
+                        plRemainingEl.style.display = 'inline-block';
+                    } else {
+                        plRemainingEl.style.display = 'none';
+                    }
+                }
                 meta.hidden = false;
             }
         }
@@ -9866,7 +9877,17 @@
                             const remaining = Number(activePlaylist.remainingPlaylistSec || 0);
                             const donor = songData.donorName || activePlaylist.donorName || 'Khách';
                             const plTitle = songData.playlistTitle || activePlaylist.playlistTitle || 'YouTube Playlist';
-                            playlistMetaEl.textContent = `${position}/${total} ${plTitle}${remaining > 0 ? ` · còn ${formatTime(remaining)}` : ''}`;
+                            playlistMetaEl.textContent = `${position}/${total} ${plTitle}`;
+                            
+                            const plRemainingEl = document.getElementById('obs-playlist-remaining');
+                            if (plRemainingEl) {
+                                if (remaining > 0 && !isOwner) {
+                                    plRemainingEl.textContent = formatTime(remaining);
+                                    plRemainingEl.style.display = 'inline-block';
+                                } else {
+                                    plRemainingEl.style.display = 'none';
+                                }
+                            }
                             playlistMetaEl.hidden = false;
                         } else {
                             playlistMetaEl.hidden = true;
