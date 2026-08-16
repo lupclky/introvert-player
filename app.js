@@ -3622,7 +3622,12 @@ function renderQueueSongCardV2Legacy(song, options = {}) {
         ? `<a href="${escapeDashboardHtml(songUrl)}" onclick="openExternalLink(event, '${escapeDashboardHtml(songUrl)}')" title="Mở trên trình duyệt">${title}</a>`
         : title;
     const playlistChip = song.playlistRequestId
-        ? `<span class="queue-playlist-chip"><i class="fa-solid fa-layer-group"></i> Playlist · Video ${song.playlistPosition}/${song.playlistTotalTracks}</span>`
+        ? (() => {
+            const sameGroup = state.queue.filter(s => s && s.playlistRequestId === song.playlistRequestId);
+            const pos = sameGroup.findIndex(s => String(s.id) === String(song.id)) + 1;
+            const total = sameGroup.length || song.playlistTotalTracks || 1;
+            return `<span class="queue-playlist-chip"><i class="fa-solid fa-layer-group"></i> Playlist · Video ${pos || 1}/${total}</span>`;
+        })()
         : '';
     const ownerLabel = song.isOwnerAdd ? 'Chủ kênh' : donor;
     const statusLabel = isCurrent ? (state.isPlaying ? 'Đang phát' : 'Đã tạm dừng') : '';
@@ -3813,8 +3818,10 @@ function renderPlaylistGroupV2(group, groupIndex = 0, groupCount = 1, options = 
     const ownerText = first.isOwnerAdd
         ? 'Chủ kênh thêm'
         : `${donorName} <b>${Number(first.amount || 0).toLocaleString('vi-VN')}đ</b>`;
+    const activeIndex = activeSong ? songs.findIndex(s => String(s.id) === String(activeSong.id)) : -1;
+    const activePos = activeIndex !== -1 ? activeIndex + 1 : 1;
     const statusText = activeSong
-        ? `Đang phát ${Number(activeSong.playlistPosition || 1)}/${playlistTotal}`
+        ? `Đang phát ${activePos}/${songs.length}`
         : `${songs.length} video · ${formatTime(duration)}`;
     const newBadge = renderQueueNewBadge(songs);
     const remainingTimeHtml = activeSong ? `<span id="dashboard-playlist-remaining-${requestId}" style="font-variant-numeric: tabular-nums; min-width: 4.5ch; display: inline-block; text-align: right; margin-right: 0.5rem; font-size: 0.9em; opacity: 0.9; font-weight: 600;"></span>` : '';
@@ -7315,11 +7322,15 @@ function handleMqttMessage(topic, messageStrOrObj) {
                     dashboardRemainingEl.textContent = formatTime(remainingPlaylistSec);
                 }
                 
+                const currentTrackIdx = samePlaylistTracks.findIndex(s => String(s.id) === String(state.currentSong.id));
+                const currentTrackPos = currentTrackIdx !== -1 ? currentTrackIdx + 1 : (state.currentSong.playlistPosition || 1);
+                const totalTracksCount = samePlaylistTracks.length || state.currentSong.playlistTotalTracks || 1;
+
                 publishMqtt('playlist.track_progress', {
                     playlistRequestId: state.currentSong.playlistRequestId,
                     trackId: state.currentSong.playlistTrackId,
-                    currentTrack: state.currentSong.playlistPosition,
-                    totalTracks: state.currentSong.playlistTotalTracks,
+                    currentTrack: currentTrackPos,
+                    totalTracks: totalTracksCount,
                     currentTimeSec: Number(data.currentTime || 0),
                     durationSec: Number(data.duration || state.currentSong.duration || 0),
                     remainingPlaylistSec

@@ -6,6 +6,28 @@
             if (!song) return null;
             const channelName = value => value ? (value.channelName || value.author || value.channelTitle || value.uploader || '') : '';
             const resumeFrom = options.isResuming ? Number(options.resumeFrom || 0) : null;
+            let currentPlaylistPosition = song.playlistPosition || null;
+            let currentPlaylistTotalTracks = song.playlistTotalTracks || null;
+            if (song.playlistRequestId && Array.isArray(state.queue)) {
+                const samePlaylist = state.queue.filter(item => item && item.playlistRequestId === song.playlistRequestId);
+                if (samePlaylist.length > 0) {
+                    const idx = samePlaylist.findIndex(item => String(item.id) === String(song.id));
+                    currentPlaylistPosition = idx !== -1 ? idx + 1 : (song.playlistPosition || 1);
+                    currentPlaylistTotalTracks = samePlaylist.length;
+                }
+            }
+
+            let nextPlaylistPosition = nextSong?.playlistPosition || null;
+            let nextPlaylistTotalTracks = nextSong?.playlistTotalTracks || null;
+            if (nextSong?.playlistRequestId && Array.isArray(state.queue)) {
+                const samePlaylist = state.queue.filter(item => item && item.playlistRequestId === nextSong.playlistRequestId);
+                if (samePlaylist.length > 0) {
+                    const idx = samePlaylist.findIndex(item => String(item.id) === String(nextSong.id));
+                    nextPlaylistPosition = idx !== -1 ? idx + 1 : (nextSong.playlistPosition || 1);
+                    nextPlaylistTotalTracks = samePlaylist.length;
+                }
+            }
+
             return {
                 id: song.id, type: song.type || 'youtube', videoId: song.videoId || null,
                 soundcloudUrl: song.soundcloudUrl || null, spotifyId: song.spotifyId || null,
@@ -34,7 +56,7 @@
                 voteAmount: Math.max(0, Number(song.voteAmount) || 0),
                 playlistRequestId: song.playlistRequestId || null, playlistTrackId: song.playlistTrackId || null,
                 playlistTitle: song.playlistTitle || null, playlistOwnerName: song.playlistOwnerName || null,
-                playlistPosition: song.playlistPosition || null, playlistTotalTracks: song.playlistTotalTracks || null,
+                playlistPosition: currentPlaylistPosition, playlistTotalTracks: currentPlaylistTotalTracks,
                 playlistTotalDurationSec: song.playlistTotalDurationSec || null,
                 playlistThumbnailUrl: song.playlistThumbnailUrl || null,
                 lyrics: song.lyrics?.available && Array.isArray(song.lyrics.lines)
@@ -66,8 +88,8 @@
                 nextSongPlaylistRequestId: nextSong?.playlistRequestId || null,
                 nextSongPlaylistTrackId: nextSong?.playlistTrackId || null,
                 nextSongTimeLimitExempt: Boolean(nextSong?.timeLimitExempt || (nextSong?.playlistRequestId && nextSong?.playlistTrackId)),
-                nextSongPlaylistPosition: nextSong?.playlistPosition || null,
-                nextSongPlaylistTotalTracks: nextSong?.playlistTotalTracks || null,
+                nextSongPlaylistPosition: nextPlaylistPosition,
+                nextSongPlaylistTotalTracks: nextPlaylistTotalTracks,
                 nextSongPlaylistTitle: nextSong?.playlistTitle || null,
                 nextSongDuration: nextSong?.duration ?? null, nextSongStart: nextSong?.start ?? null,
                 nextSongEnd: nextSong?.end ?? null, luckyMode: Boolean(state.luckyMode)
