@@ -4230,6 +4230,14 @@ function updatePlayPauseButtonUI(isPlaying) {
         if (waves) waves.classList.add('paused');
         if (playBtn) playBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
     }
+
+    const pausedBadge = document.getElementById('dashboard-paused-badge');
+    if (pausedBadge) {
+        pausedBadge.style.display = (!isPlaying && state.currentSong) ? 'inline-flex' : 'none';
+    }
+    if (!isPlaying) {
+        setDashboardVideoLoading(false);
+    }
     
     // Disable if controls are locked due to long-waiting auto pinned song playing
     const disabled = isControlsDisabled();
@@ -4840,8 +4848,13 @@ window.togglePinQueueItem = togglePinQueueItem;
 // --- CẬP NHẬT GIAO DIỆN KHI CÓ BÀI MỚI / DỪNG ---
 function setDashboardVideoLoading(isLoading) {
     const element = document.getElementById('dashboard-video-loading');
+    const pausedBadge = document.getElementById('dashboard-paused-badge');
     if (!element) return;
-    element.hidden = !isLoading;
+    const shouldShowLoading = Boolean(isLoading && state.isPlaying);
+    element.hidden = !shouldShowLoading;
+    if (pausedBadge) {
+        pausedBadge.style.display = (!state.isPlaying && state.currentSong && !shouldShowLoading) ? 'inline-flex' : 'none';
+    }
 }
 
 function updatePlayerUI(song) {
@@ -4856,6 +4869,8 @@ function updatePlayerUI(song) {
     if (!song) {
         clearDashboardLyrics();
         setDashboardVideoLoading(false);
+        const pausedBadge = document.getElementById('dashboard-paused-badge');
+        if (pausedBadge) pausedBadge.style.display = 'none';
         const directStreamBadge = document.getElementById('direct-stream-badge');
         if (directStreamBadge) directStreamBadge.style.display = 'none';
 
@@ -4907,7 +4922,11 @@ function updatePlayerUI(song) {
 
     updateDashboardLyrics(song.lyrics, state.lastReportedTime || 0);
 
-    setDashboardVideoLoading(state.currentSongPlaybackConfirmed === false);
+    setDashboardVideoLoading(Boolean(state.isPlaying && state.currentSongPlaybackConfirmed === false));
+    const pausedBadge = document.getElementById('dashboard-paused-badge');
+    if (pausedBadge) {
+        pausedBadge.style.display = (!state.isPlaying && state.currentSong) ? 'inline-flex' : 'none';
+    }
  
     cover.src = song.thumbnail;
     
@@ -7362,10 +7381,11 @@ function handleMqttMessage(topic, messageStrOrObj) {
                 && String(data.songId) !== String(state.currentSong?.id ?? '')) return;
             const ignorePreSeekProgress = shouldIgnorePreSeekProgress(data.currentTime);
 
-            if (state.currentSong && (data.isPlaying === true || Number(data.currentTime || 0) > 0.5)) {
+            if (state.currentSong && (data.isPlaying === true || Number(data.currentTime || 0) > 0.5 || Number(data.duration || 0) > 0)) {
                 state.currentSongPlaybackConfirmed = true;
             }
             setDashboardVideoLoading(Boolean(state.currentSong
+                && state.isPlaying
                 && (data.isBuffering === true || state.currentSongPlaybackConfirmed === false)));
             
             // Cập nhật DirectStream badge dựa trên trạng thái phát trực tiếp từ file
