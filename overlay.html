@@ -8053,7 +8053,8 @@
             }
 
             const playerVars = {
-                'autoplay': 0,
+                'autoplay': 1,
+                'mute': 1,
                 'start': Math.floor(Math.max(0, Number(startTime) || 0)),
                 'controls': 1,
                 'modestbranding': 1,
@@ -8072,6 +8073,7 @@
             overlayPlayer = new YT.Player('obs-youtube-placeholder', {
                 height: '100%',
                 width: '100%',
+                videoId: videoId,
                 playerVars,
                 'onReady': (event) => {
                     if (playerSongId !== activePlaybackSongId) {
@@ -8082,7 +8084,7 @@
                     targetVolume = localStorage.getItem('dua_volume') !== null ? parseInt(localStorage.getItem('dua_volume')) : targetVolume;
                     const finalVolume = getAdjustedVolume();
 
-                    // Khóa audio tuyệt đối trước khi nạp video để tránh nổ âm lượng 100%
+                    // Khóa audio tuyệt đối trước khi phát để tránh nổ âm lượng 100%
                     try {
                         if (typeof event.target.mute === 'function') {
                             event.target.mute();
@@ -8094,15 +8096,7 @@
                         console.warn("Overlay Player: Lỗi thiết lập mute/volume ban đầu:", e);
                     }
 
-                    youtubeStartupPhase = 'loading';
-
-                    // Nạp video và bắt đầu phát trong trạng thái MUTE
-                    if (typeof event.target.loadVideoById === 'function') {
-                        event.target.loadVideoById({
-                            videoId: videoId,
-                            startSeconds: Math.floor(Math.max(0, Number(startTime) || 0))
-                        });
-                    }
+                    event.target.seekTo(startTime || 0, true);
 
                     // Cơ chế ưu tiên đường mạng: Yêu cầu OBS tải luồng video ưu tiên cao nhất
                     try {
@@ -8118,6 +8112,7 @@
                     if (warningCountdownInterval) {
                         try { event.target.pauseVideo(); } catch (e) { }
                     } else {
+                        event.target.playVideo();
                         seekActivePlayerToResumeTarget(true);
                         startVolumeEnforcer(); // Bắt đầu ép volume liên tục
                         startPlaybackMonitor();
@@ -9498,7 +9493,7 @@
                         duration: observedDuration,
                         playerState,
                         hasStarted: activePlaybackHasStarted,
-                        isPlaybackSuppressed: Boolean(warningCountdownInterval || isLuckyRolling || youtubeStartupPhase === 'preparing'),
+                        isPlaybackSuppressed: Boolean(warningCountdownInterval || isLuckyRolling),
                         states: YT.PlayerState
                     });
 
