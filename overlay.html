@@ -5664,6 +5664,7 @@
         let overlayPlayer = null;
         let isPlayerReady = false;
         let currentVideoId = null;
+        let youtubeStartupPhase = 'idle'; // 'idle' | 'preparing' | 'loading' | 'playing'
         let lastSongId = null;
         let endedSignalSongId = null;
         let activePlaybackSongId = null;
@@ -7924,6 +7925,7 @@
         }
 
         function tryDirectStreamFallback(reason, videoId, startTime) {
+            youtubeStartupPhase = 'idle';
             // Chỉ fallback ở lỗi iframe xác thực. Mặc định bật để xử lý 101/150;
             // streamer vẫn có thể tắt hẳn tại Dashboard.
             const bypassEnabled = localStorage.getItem('dua_yt_bypass_enabled') !== 'false';
@@ -7960,6 +7962,7 @@
         }
 
         function stopDirectAudioStream() {
+            youtubeStartupPhase = 'idle';
             isDirectAudioPlaying = false;
             currentDirectVideoId = null;
             currentDirectSongId = null;
@@ -8039,6 +8042,7 @@
             lastSongLoadStartTimestamp = Date.now();
             currentVideoId = videoId; // Set currentVideoId to avoid double loading in updateOverlayUI
             lastCommandType = 'play'; // Đặt lệnh mặc định về play khi khởi tạo mới
+            youtubeStartupPhase = 'preparing';
             if (overlayPlayer) {
                 try {
                     overlayPlayer.destroy();
@@ -8049,7 +8053,7 @@
             }
 
             const playerVars = {
-                'autoplay': 1,
+                'autoplay': 0,
                 'start': Math.floor(Math.max(0, Number(startTime) || 0)),
                 'controls': 1,
                 'modestbranding': 1,
@@ -8068,7 +8072,6 @@
             overlayPlayer = new YT.Player('obs-youtube-placeholder', {
                 height: '100%',
                 width: '100%',
-                videoId: videoId,
                 playerVars,
                 'onReady': (event) => {
                     if (playerSongId !== activePlaybackSongId) {
@@ -8077,8 +8080,29 @@
                     }
                     // Cập nhật targetVolume từ localStorage (phòng trường hợp thay đổi trong lúc chờ)
                     targetVolume = localStorage.getItem('dua_volume') !== null ? parseInt(localStorage.getItem('dua_volume')) : targetVolume;
-                    applyTargetVolume();
-                    event.target.seekTo(startTime || 0, true);
+                    const finalVolume = getAdjustedVolume();
+
+                    // Khóa audio tuyệt đối trước khi nạp video để tránh nổ âm lượng 100%
+                    try {
+                        if (typeof event.target.mute === 'function') {
+                            event.target.mute();
+                        }
+                        if (typeof event.target.setVolume === 'function') {
+                            event.target.setVolume(finalVolume);
+                        }
+                    } catch (e) {
+                        console.warn("Overlay Player: Lỗi thiết lập mute/volume ban đầu:", e);
+                    }
+
+                    youtubeStartupPhase = 'loading';
+
+                    // Nạp video và bắt đầu phát trong trạng thái MUTE
+                    if (typeof event.target.loadVideoById === 'function') {
+                        event.target.loadVideoById({
+                            videoId: videoId,
+                            startSeconds: Math.floor(Math.max(0, Number(startTime) || 0))
+                        });
+                    }
 
                     // Cơ chế ưu tiên đường mạng: Yêu cầu OBS tải luồng video ưu tiên cao nhất
                     try {
@@ -8094,7 +8118,6 @@
                     if (warningCountdownInterval) {
                         try { event.target.pauseVideo(); } catch (e) { }
                     } else {
-                        event.target.playVideo();
                         seekActivePlayerToResumeTarget(true);
                         startVolumeEnforcer(); // Bắt đầu ép volume liên tục
                         startPlaybackMonitor();
@@ -8107,6 +8130,7 @@
                     }
                 },
                 'onError': (event) => {
+                    youtubeStartupPhase = 'idle';
                     if (playerSongId !== activePlaybackSongId) {
                         console.warn(`Overlay Player: Bỏ lỗi từ player cũ của bài ${playerSongId}.`);
                         return;
@@ -8863,6 +8887,7 @@
             }
 
             if (event.data === YT.PlayerState.ENDED) {
+                youtubeStartupPhase = 'idle';
                 if (!activePlaybackHasStarted) {
                     console.warn('Overlay Player: Bỏ ENDED cũ vì bài hiện tại chưa bắt đầu phát.');
                     return;
@@ -8870,6 +8895,7 @@
                 stopVolumeEnforcer();
                 triggerEndedEvent('youtube_ended', playerSongId);
             } else if (event.data === YT.PlayerState.PLAYING) {
+                youtubeStartupPhase = 'playing';
                 lastSongLoadStartTimestamp = 0;
                 activePlaybackHasStarted = true;
                 // onReady can race with a repeated current_song render and leave
@@ -8903,9 +8929,20 @@
                     console.log(`Overlay Player: Chủ động seek sang ${resumeTargetTime}s khi bắt đầu phát tiếp tục`);
                     try { event.target.seekTo(resumeTargetTime, true); } catch (e) { }
                 }
-                // Video đang phát — ép volume ngay (YouTube hay reset đúng lúc này)
-                applyTargetVolume();
-                console.log(`[onStateChange] PLAYING — ép volume: ${targetVolume}%`);
+                // Đảm bảo volume đúng trước khi mở âm thanh (Startup Mute Gate)
+                const finalVolume = getAdjustedVolume();
+                try {
+                    if (typeof event.target.setVolume === 'function') {
+                        event.target.setVolume(finalVolume);
+                    }
+                    if (typeof event.target.unMute === 'function') {
+                        event.target.unMute();
+                    }
+                } catch (e) {
+                    console.warn("Overlay Player: Lỗi setVolume/unMute khi PLAYING:", e);
+                }
+                startVolumeEnforcer();
+                console.log(`[onStateChange] PLAYING — unMute & ép volume: ${finalVolume}%`);
 
                 // Adaptive Volume: lấy loudnessDb từ server cho video đang phát
                 if (localStorage.getItem('dua_adaptive_volume_enabled') === 'true') {
@@ -9461,7 +9498,7 @@
                         duration: observedDuration,
                         playerState,
                         hasStarted: activePlaybackHasStarted,
-                        isPlaybackSuppressed: Boolean(warningCountdownInterval || isLuckyRolling),
+                        isPlaybackSuppressed: Boolean(warningCountdownInterval || isLuckyRolling || youtubeStartupPhase === 'preparing'),
                         states: YT.PlayerState
                     });
 
