@@ -704,12 +704,6 @@ function updateDashboardLyrics(lyrics, currentTime = 0) {
 }
 
 async function loadSyncedLyricsForSong(song) {
-    if (localStorage.getItem('dua_lyrics_enabled') === 'false') {
-        clearDashboardLyrics();
-        const lyricsIconEl = document.getElementById('current-song-lyrics-icon');
-        if (lyricsIconEl) lyricsIconEl.style.display = 'none';
-        return;
-    }
     if (!song || typeof window.electronAPI?.getSyncedLyrics !== 'function') {
         clearDashboardLyrics();
         return;
@@ -752,9 +746,17 @@ async function loadSyncedLyricsForSong(song) {
             state.currentSong = state.currentSong;
         }
         updateDashboardLyrics(lyricsState, state.lastReportedTime || 0);
-        const lyricsIconEl = document.getElementById('current-song-lyrics-icon');
+        const lyricsIconEl = document.getElementById('btn-toggle-lyrics-visibility');
         if (lyricsIconEl) {
             lyricsIconEl.style.display = Boolean(lyricsState.available && lyricsState.lines?.length) ? 'inline-flex' : 'none';
+            const isEnabled = localStorage.getItem('dua_lyrics_enabled') !== 'false';
+            if (isEnabled) {
+                lyricsIconEl.classList.add('dua-btn-primary');
+                lyricsIconEl.classList.remove('dua-btn-secondary');
+            } else {
+                lyricsIconEl.classList.add('dua-btn-secondary');
+                lyricsIconEl.classList.remove('dua-btn-primary');
+            }
         }
 
         const payloadRaw = localStorage.getItem('dua_current_song');
@@ -4835,7 +4837,7 @@ function updatePlayerUI(song) {
         title.textContent = "Chưa có bài hát nào";
         const playlistIconEl = document.getElementById('current-song-playlist-icon');
         if (playlistIconEl) playlistIconEl.style.display = 'none';
-        const lyricsIconEl = document.getElementById('current-song-lyrics-icon');
+        const lyricsIconEl = document.getElementById('btn-toggle-lyrics-visibility');
         if (lyricsIconEl) lyricsIconEl.style.display = 'none';
         donorSection.style.display = 'none';
         getWindowsMediaService()?.updateMetadata?.(null, false);
@@ -4895,8 +4897,18 @@ function updatePlayerUI(song) {
     const isPlaylist = Boolean(song.playlistRequestId || song.isPlaylistTrack || song.playlistTrackId);
     const playlistIconEl = document.getElementById('current-song-playlist-icon');
     if (playlistIconEl) playlistIconEl.style.display = isPlaylist ? 'inline-flex' : 'none';
-    const lyricsIconEl = document.getElementById('current-song-lyrics-icon');
-    if (lyricsIconEl) lyricsIconEl.style.display = Boolean(song.lyrics?.available && song.lyrics.lines?.length) ? 'inline-flex' : 'none';
+    const lyricsIconEl = document.getElementById('btn-toggle-lyrics-visibility');
+    if (lyricsIconEl) {
+        lyricsIconEl.style.display = Boolean(song.lyrics?.available && song.lyrics.lines?.length) ? 'inline-flex' : 'none';
+        const isEnabled = localStorage.getItem('dua_lyrics_enabled') !== 'false';
+        if (isEnabled) {
+            lyricsIconEl.classList.add('dua-btn-primary');
+            lyricsIconEl.classList.remove('dua-btn-secondary');
+        } else {
+            lyricsIconEl.classList.add('dua-btn-secondary');
+            lyricsIconEl.classList.remove('dua-btn-primary');
+        }
+    }
     getWindowsMediaService()?.updateMetadata?.(song, state.isPlaying);
 
     if (currentSongUrl && currentSongUrl !== '#') {
@@ -5218,6 +5230,42 @@ function toggleFocusMode(enabled) {
         }
     }
 }
+
+function toggleDashboardLyricsVisibility() {
+    const isCurrentlyEnabled = localStorage.getItem('dua_lyrics_enabled') !== 'false';
+    const newState = !isCurrentlyEnabled;
+    localStorage.setItem('dua_lyrics_enabled', newState ? 'true' : 'false');
+    publishMqtt('lyrics_config', { enabled: newState });
+    logSystem(`🔧 <strong>[Lời bài hát]</strong> Đã ${newState ? 'BẬT' : 'TẮT'} lời bài hát đồng bộ (Synced Lyrics).`, 'system');
+    showDashboardSystemAlert("Lời bài hát", `Đã ${newState ? 'bật' : 'tắt'} hiển thị lời bài hát.`);
+
+    const btn = document.getElementById('btn-toggle-lyrics-visibility');
+    if (btn) {
+        if (newState) {
+            btn.classList.add('dua-btn-primary');
+            btn.classList.remove('dua-btn-secondary');
+        } else {
+            btn.classList.add('dua-btn-secondary');
+            btn.classList.remove('dua-btn-primary');
+        }
+    }
+
+    const settingsToggle = document.getElementById('lyrics-enabled-toggle');
+    if (settingsToggle) {
+        settingsToggle.checked = newState;
+    }
+
+    if (!newState) {
+        clearDashboardLyrics();
+    } else if (state?.currentSong) {
+        if (state.currentSong.lyrics?.available) {
+            updateDashboardLyrics(state.currentSong.lyrics, state.lastReportedTime || 0);
+        } else {
+            loadSyncedLyricsForSong(state.currentSong);
+        }
+    }
+}
+window.toggleDashboardLyricsVisibility = toggleDashboardLyricsVisibility;
 
 // --- BẬT / TẮT CHẾ ĐỘ LUCKY (QUAY NHẠC NGẪU NHIÊN) ---
 function toggleLuckyMode(enabled) {

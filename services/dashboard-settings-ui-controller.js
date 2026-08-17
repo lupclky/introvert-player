@@ -164,6 +164,17 @@
             logSystem(`🔧 <strong>[Lời bài hát]</strong> Đã ${isChecked ? 'BẬT' : 'TẮT'} lời bài hát đồng bộ (Synced Lyrics).`, 'system');
             showDashboardSystemAlert("Lời bài hát", `Đã ${isChecked ? 'bật' : 'tắt'} hiển thị lời bài hát.`);
 
+            const btn = document.getElementById('btn-toggle-lyrics-visibility');
+            if (btn) {
+                if (isChecked) {
+                    btn.classList.add('dua-btn-primary');
+                    btn.classList.remove('dua-btn-secondary');
+                } else {
+                    btn.classList.add('dua-btn-secondary');
+                    btn.classList.remove('dua-btn-primary');
+                }
+            }
+
             if (!isChecked) {
                 if (typeof window.clearDashboardLyrics === 'function') {
                     window.clearDashboardLyrics();
@@ -173,8 +184,6 @@
                     const lyricsLines = document.getElementById('dashboard-lyrics-lines');
                     if (lyricsLines) lyricsLines.replaceChildren();
                 }
-                const lyricsIconEl = document.getElementById('current-song-lyrics-icon');
-                if (lyricsIconEl) lyricsIconEl.style.display = 'none';
             } else if (state?.currentSong) {
                 if (typeof window.loadSyncedLyricsForSong === 'function') {
                     window.loadSyncedLyricsForSong(state.currentSong);

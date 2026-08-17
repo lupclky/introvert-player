@@ -4840,7 +4840,7 @@
                                 <path d="M12 18H3"></path>
                             </svg>
                         </span>
-                        <span id="obs-playlist-remaining" style="display: none; font-variant-numeric: tabular-nums; display: inline-block; min-width: 4.5ch; text-align: left; margin-right: 0.3rem;"></span>
+                        <span id="obs-playlist-remaining" style="display: none; font-variant-numeric: tabular-nums; min-width: 4.5ch; text-align: left; margin-right: 0.3rem;"></span>
                         <div id="obs-donor-name-container"
                             style="overflow: hidden; white-space: nowrap; flex: 1; min-width: 0; display: inline-block; margin-right: 0.5rem;">
                             <span id="obs-donor-name" class="obs-donor-name" style="display: inline-block;">Khách</span>
@@ -9138,6 +9138,16 @@
             if (promoTitleEl) promoTitleEl.textContent = "Không Thời Gian - Dương Domic";
             updateLyricsOverlayDetails({ lyrics: { available: true, lines: [{ time: 0, text: 'Sample' }] } });
             if (donorContainer) donorContainer.style.display = 'flex';
+            const plRemainingEl = document.getElementById('obs-playlist-remaining');
+            if (plRemainingEl) {
+                plRemainingEl.style.display = 'none';
+                plRemainingEl.textContent = '';
+            }
+            const playlistMetaEl = document.getElementById('obs-playlist-meta');
+            if (playlistMetaEl) {
+                playlistMetaEl.hidden = true;
+                playlistMetaEl.textContent = '';
+            }
             if (donorName) {
                 donorName.textContent = "Em Dứa";
                 donorName.style.removeProperty('max-width');
@@ -9248,6 +9258,11 @@
             }
             if (!isPlaylist) {
                 if (meta) { meta.hidden = true; meta.textContent = ''; }
+                const plRemainingEl = document.getElementById('obs-playlist-remaining');
+                if (plRemainingEl) {
+                    plRemainingEl.style.display = 'none';
+                    plRemainingEl.textContent = '';
+                }
                 return;
             }
 
@@ -9268,6 +9283,7 @@
                         plRemainingEl.style.display = 'inline-block';
                     } else {
                         plRemainingEl.style.display = 'none';
+                        plRemainingEl.textContent = '';
                     }
                 }
                 meta.hidden = false;
@@ -9869,30 +9885,40 @@
                     }
 
                     const playlistMetaEl = document.getElementById('obs-playlist-meta');
-                    if (playlistMetaEl) {
+                    const plRemainingEl = document.getElementById('obs-playlist-remaining');
+                    const isPlaylist = Boolean(songData.playlistRequestId || songData.isPlaylistTrack || songData.playlistTrackId);
+                    if (playlistMetaEl || plRemainingEl) {
                         let activePlaylist = {};
                         try { activePlaylist = JSON.parse(localStorage.getItem('dua_active_playlist') || '{}'); } catch (_) { }
-                        if (songData.playlistRequestId) {
+                        if (isPlaylist) {
                             const position = Number(songData.playlistPosition || activePlaylist.currentTrack || 1);
                             const total = Number(songData.playlistTotalTracks || activePlaylist.totalTracks || 1);
                             const remaining = Number(activePlaylist.remainingPlaylistSec || 0);
                             const donor = songData.donorName || activePlaylist.donorName || 'Khách';
                             const plTitle = songData.playlistTitle || activePlaylist.playlistTitle || 'YouTube Playlist';
-                            playlistMetaEl.textContent = `${position}/${total} ${plTitle}`;
+                            if (playlistMetaEl) {
+                                playlistMetaEl.textContent = `${position}/${total} ${plTitle}`;
+                                playlistMetaEl.hidden = false;
+                            }
                             
-                            const plRemainingEl = document.getElementById('obs-playlist-remaining');
                             if (plRemainingEl) {
                                 if (remaining > 0 && !isOwner) {
                                     plRemainingEl.textContent = formatTime(remaining);
                                     plRemainingEl.style.display = 'inline-block';
                                 } else {
                                     plRemainingEl.style.display = 'none';
+                                    plRemainingEl.textContent = '';
                                 }
                             }
-                            playlistMetaEl.hidden = false;
                         } else {
-                            playlistMetaEl.hidden = true;
-                            playlistMetaEl.textContent = '';
+                            if (playlistMetaEl) {
+                                playlistMetaEl.hidden = true;
+                                playlistMetaEl.textContent = '';
+                            }
+                            if (plRemainingEl) {
+                                plRemainingEl.style.display = 'none';
+                                plRemainingEl.textContent = '';
+                            }
                         }
                     }
 
@@ -10762,16 +10788,25 @@
                 localStorage.setItem('dua_active_playlist', JSON.stringify(nextPlaylist));
                 const plRemainingEl = document.getElementById('obs-playlist-remaining');
                 if (plRemainingEl) {
+                    let currentSong = null;
+                    try { currentSong = JSON.parse(localStorage.getItem('dua_current_song') || '{}'); } catch (_) { }
+                    const isPlaylistPlaying = Boolean(currentSong?.playlistRequestId || currentSong?.isPlaylistTrack || currentSong?.playlistTrackId);
                     const remaining = Number(nextPlaylist.remainingPlaylistSec || 0);
-                    if (remaining > 0) {
+                    if (isPlaylistPlaying && remaining > 0 && !currentSong?.isOwnerAdd) {
                         plRemainingEl.textContent = formatTime(remaining);
                         plRemainingEl.style.display = 'inline-block';
                     } else {
                         plRemainingEl.style.display = 'none';
+                        plRemainingEl.textContent = '';
                     }
                 }
             } else if (payload.type === 'playlist.completed') {
                 localStorage.removeItem('dua_active_playlist');
+                const plRemainingEl = document.getElementById('obs-playlist-remaining');
+                if (plRemainingEl) {
+                    plRemainingEl.style.display = 'none';
+                    plRemainingEl.textContent = '';
+                }
                 updateOverlayUI();
             }
         }
