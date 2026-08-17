@@ -8139,7 +8139,6 @@
                         code: event.data,
                         videoId: currentVideoId || videoId,
                         origin: playerVars.origin || '(không có origin HTTP)'
-                }
                     });
 
                     if (event.data === 150 || event.data === 101 || event.data === 153 || event.data === 2 || event.data === 5 || event.data === 100) {
@@ -8179,6 +8178,7 @@
 
                     stopVolumeEnforcer();
                 }
+                } // end events
             });
         }
 
