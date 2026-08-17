@@ -21,7 +21,11 @@
         return value;
     }
 
-    function installStartupAutoplayGuard(scope) {
+    function safeSoundCloudLoadOptions(options) {
+        return { ...(options || {}), auto_play: false };
+    }
+
+    function installIframeGuard(scope) {
         const proto = scope?.HTMLIFrameElement?.prototype;
         if (!proto || proto.__duaStartupAutoplayGuardInstalled) return;
         try { Object.defineProperty(proto, '__duaStartupAutoplayGuardInstalled', { value: true }); } catch (_) { return; }
@@ -42,6 +46,48 @@
                 });
             } catch (_) { }
         }
+    }
+
+    function patchSoundCloudWidget(scope) {
+        const factory = scope?.SC?.Widget;
+        if (typeof factory !== 'function' || factory.__duaStartupAutoplayGuardInstalled) return false;
+
+        const guardedFactory = function (...args) {
+            const widget = factory.apply(this, args);
+            if (widget && typeof widget.load === 'function' && !widget.__duaStartupAutoplayGuardInstalled) {
+                const nativeLoad = widget.load;
+                widget.load = function (trackUrl, options) {
+                    return nativeLoad.call(this, trackUrl, safeSoundCloudLoadOptions(options));
+                };
+                try { Object.defineProperty(widget, '__duaStartupAutoplayGuardInstalled', { value: true }); } catch (_) { }
+            }
+            return widget;
+        };
+
+        try {
+            Object.getOwnPropertyNames(factory).forEach(key => {
+                if (['length', 'name', 'prototype'].includes(key)) return;
+                const descriptor = Object.getOwnPropertyDescriptor(factory, key);
+                if (descriptor) Object.defineProperty(guardedFactory, key, descriptor);
+            });
+            Object.defineProperty(guardedFactory, '__duaStartupAutoplayGuardInstalled', { value: true });
+            scope.SC.Widget = guardedFactory;
+            return true;
+        } catch (_) {
+            return false;
+        }
+    }
+
+    function installSoundCloudGuard(scope) {
+        if (!scope?.document) return;
+        patchSoundCloudWidget(scope);
+        scope.document.addEventListener?.('load', event => {
+            const target = event?.target;
+            if (String(target?.tagName || '').toUpperCase() !== 'SCRIPT') return;
+            if (/w\.soundcloud\.com\/player\/api\.js/i.test(String(target?.src || ''))) {
+                patchSoundCloudWidget(scope);
+            }
+        }, true);
     }
 
     class YouTubePlaybackFallbackPolicy {
@@ -88,7 +134,9 @@
     }
 
     YouTubePlaybackFallbackPolicy.sanitizeStartupMediaUrl = sanitizeStartupMediaUrl;
-    installStartupAutoplayGuard(globalScope);
+    YouTubePlaybackFallbackPolicy.safeSoundCloudLoadOptions = safeSoundCloudLoadOptions;
+    installIframeGuard(globalScope);
+    installSoundCloudGuard(globalScope);
 
     globalScope.YouTubePlaybackFallbackPolicy = YouTubePlaybackFallbackPolicy;
     if (typeof module !== 'undefined' && module.exports) {
