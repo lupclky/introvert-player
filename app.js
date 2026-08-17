@@ -3310,7 +3310,7 @@ async function handleQuickAddSubmit(event) {
     try {
         const resolvedMedia = await getQuickAddService().resolve(url);
         const nameInput = document.getElementById('quick-donor-name');
-        const donorName = (nameInput && nameInput.value.trim()) ? nameInput.value.trim() : "Fan Cứng Nhạc Trẻ";
+        const donorName = (nameInput && nameInput.value.trim()) ? nameInput.value.trim() : "Em Dứa";
         const amountInput = document.getElementById('quick-donor-amount');
         const donorAmount = (amountInput && amountInput.value.trim() !== '') ? Number(amountInput.value) : 100000000;
         const ownerAddCheckbox = document.getElementById('quick-owner-add');

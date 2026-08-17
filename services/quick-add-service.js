@@ -62,7 +62,7 @@
                 sourceUrl: source.sourceUrl || source.url || media.sourceUrl || media.songLink || null,
                 title: source.metadata.title,
                 thumbnail: source.metadata.thumbnail, author: source.metadata.author || '',
-                duration: this.parseDuration(source.metadata.duration) || '', donorName: options.donorName || 'Fan Cứng Nhạc Trẻ',
+                duration: this.parseDuration(source.metadata.duration) || '', donorName: options.donorName || 'Em Dứa',
                 amount: Number(options.amount ?? 100000000), message: '', start: 0, end: null,
                 timestamp, localAddedAt: timestamp, views: source.metadata.views || '',
                 isOwnerAdd: owner, isQuickAdd: !owner
