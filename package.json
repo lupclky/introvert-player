@@ -44,7 +44,7 @@
     "win": {
       "target": "nsis",
       "icon": "build/icon.ico",
-      "artifactName": "IntrovertPlayer.Setup..fordtn."
+      "artifactName": "IntrovertPlayer.Setup.\\.fordtn.\\"
     },
     "nsis": {
       "oneClick": true,
