@@ -44,7 +44,7 @@
     "win": {
       "target": "nsis",
       "icon": "build/icon.ico",
-      "artifactName": "IntrovertPlayer.Setup.v1.0.0formeo3k.${ext}"
+      "artifactName": "IntrovertPlayer.Setup.v1.0.0fordtn.${ext}"
     },
     "nsis": {
       "oneClick": true,
