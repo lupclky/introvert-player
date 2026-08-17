@@ -1,26 +1,10 @@
 let cachedPort = null;
 const mediaByTab = new Map();
-let currentPlayingTabId = null;
+let lastActiveTabId = null;
 let appWs = null;
 let wsReconnectTimer = null;
 
-async function pauseOtherBrowserMedia(exceptTabId) {
-  try {
-    const tabs = await chrome.tabs.query({ url: ['*://*.youtube.com/*', '*://music.youtube.com/*', '*://soundcloud.com/*'] });
-    for (const tab of tabs) {
-      if (tab.id !== exceptTabId) {
-        try {
-          await chrome.tabs.sendMessage(tab.id, { action: 'pause-video' });
-        } catch (err) {}
-      }
-    }
-  } catch (err) {
-    console.error('Lỗi khi tạm dừng media tab khác:', err);
-  }
-}
-
 async function pauseAllBrowserMedia() {
-  currentPlayingTabId = null;
   try {
     const tabs = await chrome.tabs.query({ url: ['*://*.youtube.com/*', '*://music.youtube.com/*', '*://soundcloud.com/*'] });
     for (const tab of tabs) {
@@ -76,6 +60,31 @@ function scheduleWsReconnect() {
 // Khởi động kết nối WebSocket nền tới ứng dụng
 connectAppWebSocket();
 
+// Lấy tab đang active ban đầu
+chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+  if (tabs && tabs[0]) {
+    lastActiveTabId = tabs[0].id;
+  }
+});
+
+// Lắng nghe khi chuyển tab trên trình duyệt
+chrome.tabs.onActivated.addListener((activeInfo) => {
+  lastActiveTabId = activeInfo.tabId;
+  publishSelectedMedia().catch(() => {});
+});
+
+// Lắng nghe khi chuyển cửa sổ trình duyệt
+chrome.windows.onFocusChanged.addListener(async (windowId) => {
+  if (windowId === chrome.windows.WINDOW_ID_NONE) return;
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, windowId });
+    if (tab && tab.id) {
+      lastActiveTabId = tab.id;
+      publishSelectedMedia().catch(() => {});
+    }
+  } catch (_) {}
+});
+
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'send-to-pineapple') {
     if (request.playNow) {
@@ -100,7 +109,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       const now = Date.now();
       const isPlaying = Boolean(request.data?.playing);
       const previous = mediaByTab.get(tabId);
-      const justStarted = isPlaying && (!previous || !previous.playing);
 
       mediaByTab.set(tabId, {
         ...request.data,
@@ -109,16 +117,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         receivedAt: now,
         lastPlayingAt: isPlaying ? now : (previous?.lastPlayingAt || 0)
       });
-
-      if (justStarted) {
-        currentPlayingTabId = tabId;
-        // Khi 1 tab YouTube bắt đầu phát, tự động tạm dừng tất cả tab YouTube khác
-        pauseOtherBrowserMedia(tabId);
-      } else if (!isPlaying && currentPlayingTabId === tabId) {
-        // Tab đang phát vừa tạm dừng -> kiểm tra xem có tab nào khác đang phát không
-        const otherPlaying = [...mediaByTab.values()].find(t => t.tabId !== tabId && t.playing && (now - t.receivedAt < 15000));
-        currentPlayingTabId = otherPlaying ? otherPlaying.tabId : null;
-      }
     }
     publishSelectedMedia().then(sendResponse).catch(err => {
       sendResponse({ success: false, error: err.message });
@@ -127,9 +125,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 });
 
-chrome.tabs.onRemoved.addListener(tabId => {
-  if (currentPlayingTabId === tabId) {
-    currentPlayingTabId = null;
+chrome.tabs.onRemoved.addListener((tabId) => {
+  if (lastActiveTabId === tabId) {
+    lastActiveTabId = null;
   }
   if (!mediaByTab.delete(tabId)) return;
   publishSelectedMedia().catch(() => {});
@@ -139,28 +137,37 @@ function selectActiveMedia() {
   const now = Date.now();
   const validTabs = [...mediaByTab.values()].filter(item => now - item.receivedAt < 15000);
 
-  // 1. Ưu tiên tab đang được xác định là active và đang phát
-  if (currentPlayingTabId) {
-    const activeItem = validTabs.find(item => item.tabId === currentPlayingTabId && item.playing);
-    if (activeItem) {
-      return { ...activeItem, playing: true, updatedAt: now };
+  // 1. ƯU TIÊN SỐ 1: Tab mà chủ kênh đang trực tiếp xem (active tab)
+  if (lastActiveTabId) {
+    const activeTabMedia = validTabs.find(item => item.tabId === lastActiveTabId);
+    if (activeTabMedia) {
+      return {
+        ...activeTabMedia,
+        updatedAt: now
+      };
     }
   }
 
-  // 2. Tìm bất kỳ tab nào đang phát nhạc thực sự (sắp xếp theo thời gian nhận mới nhất)
-  const playingTabs = validTabs
+  // 2. Nếu tab đang xem không có media (ví dụ ở trang web khác), lấy tab đang thực sự phát nhạc
+  const playingTab = validTabs
     .filter(item => item.playing)
-    .sort((a, b) => b.receivedAt - a.receivedAt);
+    .sort((a, b) => b.receivedAt - a.receivedAt)[0];
 
-  if (playingTabs.length > 0) {
-    currentPlayingTabId = playingTabs[0].tabId;
-    return { ...playingTabs[0], playing: true, updatedAt: now };
+  if (playingTab) {
+    return {
+      ...playingTab,
+      updatedAt: now
+    };
   }
 
-  // 3. Nếu không có tab nào đang phát, lấy thông tin metadata của tab gần nhất với trạng thái playing: false
+  // 3. Nếu không có tab nào phát và tab đang xem không có media, lấy tab media được tương tác gần nhất
   const mostRecentTab = validTabs.sort((a, b) => (b.lastPlayingAt || b.receivedAt) - (a.lastPlayingAt || a.receivedAt))[0];
   if (mostRecentTab) {
-    return { ...mostRecentTab, playing: false, updatedAt: now };
+    return {
+      ...mostRecentTab,
+      playing: false,
+      updatedAt: now
+    };
   }
 
   return {
