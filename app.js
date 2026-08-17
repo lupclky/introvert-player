@@ -1137,7 +1137,7 @@ if (!state.localSyncKey) {
 }
 
 const REALTIME_RECONNECT_DELAY_MS = 500;
-const OVERLAY_PROGRESS_SYNC_INTERVAL_MS = 250;
+const OVERLAY_PROGRESS_SYNC_INTERVAL_MS = 500;
 const dashboardRealtimeService = new window.DashboardRealtimeService({
     getChannelId: () => state.localSyncKey,
     onMessage: data => handleMqttMessage(null, data),

@@ -5670,8 +5670,8 @@
         let lastCommandType = 'play';
         let destroyTimeout = null;
         let lastProgressPct = null;
-        const REALTIME_PROGRESS_INTERVAL_MS = 250;
-        const LYRICS_TIMING_INTERVAL_MS = 20;
+        const REALTIME_PROGRESS_INTERVAL_MS = 500;
+        const LYRICS_TIMING_INTERVAL_MS = 50;
         const REALTIME_RECONNECT_DELAY_MS = 500;
         const OVERLAY_COLLAPSED_HEIGHT = 160;
         const OVERLAY_UP_NEXT_HEIGHT = 280;
@@ -10612,8 +10612,8 @@
         // playback-state transport intentionally keep their existing cadence.
         setInterval(updateLyricsRealtimeSync, LYRICS_TIMING_INTERVAL_MS);
 
-        // Kiểm tra thay đổi liên tục bằng vòng lặp hoạt ảnh (200ms một lần là đủ mượt và nhẹ)
-        setInterval(updateOverlayUI, 200);
+        // Kiểm tra thay đổi liên tục bằng vòng lặp hoạt ảnh (500ms một lần là đủ mượt và nhẹ, tiết kiệm CPU)
+        setInterval(updateOverlayUI, 500);
 
         // Lắng nghe cả sự kiện Storage của trình duyệt (giúp phản ứng ngay lập tức)
 
