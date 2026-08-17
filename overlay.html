@@ -4717,6 +4717,26 @@
             opacity: 0 !important;
             pointer-events: none !important;
         }
+        /* Move playlist countdown & icon to top left for owner playlists */
+        #obs-player-widget.owner-promo-mode #obs-donor-container,
+        #obs-player-widget.is-owner-add #obs-donor-container {
+            position: relative;
+        }
+        #obs-player-widget.owner-promo-mode #obs-playlist-icon,
+        #obs-player-widget.is-owner-add #obs-playlist-icon {
+            position: absolute !important;
+            left: 10px;
+            top: 8px;
+            margin: 0 !important;
+        }
+        #obs-player-widget.owner-promo-mode #obs-playlist-remaining,
+        #obs-player-widget.is-owner-add #obs-playlist-remaining {
+            position: absolute !important;
+            left: 36px;
+            top: 8px;
+            margin: 0 !important;
+            font-size: 0.9rem;
+        }
     </style>
 </head>
 
@@ -9251,10 +9271,10 @@
 
             if (playerWidget) playerWidget.classList.toggle('is-playlist-playing', isPlaylist);
             if (donorPlaylistIcon) {
-                donorPlaylistIcon.style.display = (isPlaylist && !isOwner) ? 'inline-flex' : 'none';
+                donorPlaylistIcon.style.display = isPlaylist ? 'inline-flex' : 'none';
             }
             if (ownerPlaylistIcon) {
-                ownerPlaylistIcon.style.display = (isPlaylist && isOwner) ? 'inline-flex' : 'none';
+                ownerPlaylistIcon.style.display = 'none';
             }
             if (!isPlaylist) {
                 if (meta) { meta.hidden = true; meta.textContent = ''; }
