@@ -8064,16 +8064,13 @@
                 // tiếp tục áp dụng khi player sẵn sàng/chuyển sang PLAYING.
                 'vq': YOUTUBE_MAX_PLAYBACK_QUALITY
             };
-            // YouTube IFrame API cần biết origin thật của trang chủ để xác thực lệnh
-            // postMessage. Không truyền "null" khi Overlay được mở từ file://.
-            if (/^https?:\/\//i.test(String(window.location?.origin || ''))) {
-                playerVars.origin = window.location.origin;
-            }
+            // LƯU Ý: Tuyệt đối KHÔNG truyền tham số `origin` vào playerVars.
+            // Nếu truyền origin + khởi tạo player không có videoId, YouTube IFrame API 
+            // sẽ bị lỗi "Not attached to DOM" và mọi lệnh gọi loadVideoById ở onReady sẽ thất bại.
 
             overlayPlayer = new YT.Player('obs-youtube-placeholder', {
                 height: '100%',
                 width: '100%',
-                videoId: '',
                 playerVars,
                 'onReady': (event) => {
                     if (playerSongId !== activePlaybackSongId) {
