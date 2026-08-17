@@ -8477,12 +8477,13 @@ if (window.electronAPI && typeof window.electronAPI.onBrowserMediaState === 'fun
         latestBrowserMediaState = media;
         renderBrowserMediaMonitor(media);
         
-        if (browserJustStartedPlaying && state.isPlaying) {
-            logSystem("Trình duyệt bắt đầu phát nhạc. Ứng dụng tự động tạm dừng.", "system");
-            if (typeof togglePlayPause === 'function') {
-                togglePlayPause();
-            }
-        }
+        // Bỏ tính năng tự động tạm dừng app khi trình duyệt phát nhạc theo yêu cầu của user
+        // if (browserJustStartedPlaying && state.isPlaying) {
+        //     logSystem("Trình duyệt bắt đầu phát nhạc. Ứng dụng tự động tạm dừng.", "system");
+        //     if (typeof togglePlayPause === 'function') {
+        //         togglePlayPause();
+        //     }
+        // }
     });
     setInterval(() => renderBrowserMediaMonitor(latestBrowserMediaState), 2000);
 }
