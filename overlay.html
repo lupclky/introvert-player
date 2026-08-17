@@ -13,6 +13,13 @@
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
+    <!-- Network Prioritization (Cơ chế ưu tiên đường mạng cho OBS Iframe) -->
+    <link rel="preconnect" href="https://www.youtube.com" crossorigin>
+    <link rel="preconnect" href="https://i.ytimg.com" crossorigin>
+    <link rel="preconnect" href="https://googlevideo.com" crossorigin>
+    <link rel="dns-prefetch" href="https://www.youtube.com">
+    <link rel="dns-prefetch" href="https://googlevideo.com">
+
     <style>
         * {
             box-sizing: border-box;
@@ -1460,8 +1467,7 @@
             line-height: 1;
         }
 
-        #obs-player-widget.lyrics-visible .obs-song-message,
-        #obs-player-widget.lyrics-visible .obs-vote-skip-widget {
+        #obs-player-widget.lyrics-visible .obs-song-message {
             display: none !important;
         }
 
@@ -1684,7 +1690,7 @@
             color: var(--theme-highlight-color);
             font-family: var(--font-title);
             font-size: 1.36rem;
-            font-weight: 800;
+            font-weight: 900;
             opacity: 1;
             transform: scale(1);
         }
@@ -1911,42 +1917,17 @@
            animation or queue transition is attached to this widget. */
         .obs-vote-skip-widget {
             display: none;
-            flex-direction: column;
-            gap: 3px;
             width: 100%;
-            margin-top: 4px;
+            margin-top: 2px;
+            color: var(--theme-highlight-color);
+            font-family: var(--font-title);
+            font-size: 0.86rem;
+            font-weight: 800;
+            line-height: 1.1;
         }
 
         .obs-vote-skip-widget:not([hidden]) {
-            display: flex;
-        }
-
-        .obs-vote-skip-label {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 8px;
-            color: var(--theme-highlight-color);
-            font-family: var(--font-title);
-            font-size: 0.68rem;
-            font-weight: 800;
-            line-height: 1;
-        }
-
-        .obs-vote-skip-track {
-            width: 100%;
-            height: 5px;
-            overflow: hidden;
-            border-radius: 999px;
-            background: var(--theme-progress-bg);
-        }
-
-        .obs-vote-skip-fill {
-            width: 0%;
-            height: 100%;
-            border-radius: inherit;
-            background: var(--theme-progress-fill);
-            transition: width 0.25s ease;
+            display: block;
         }
 
         .obs-song-title.marquee,
@@ -4736,6 +4717,26 @@
             opacity: 0 !important;
             pointer-events: none !important;
         }
+        /* Move playlist countdown & icon to top left for owner playlists */
+        #obs-player-widget.owner-promo-mode #obs-donor-container,
+        #obs-player-widget.is-owner-add #obs-donor-container {
+            position: relative;
+        }
+        #obs-player-widget.owner-promo-mode #obs-playlist-icon,
+        #obs-player-widget.is-owner-add #obs-playlist-icon {
+            position: absolute !important;
+            left: 10px;
+            top: 8px;
+            margin: 0 !important;
+        }
+        #obs-player-widget.owner-promo-mode #obs-playlist-remaining,
+        #obs-player-widget.is-owner-add #obs-playlist-remaining {
+            position: absolute !important;
+            left: 36px;
+            top: 8px;
+            margin: 0 !important;
+            font-size: 0.9rem;
+        }
     </style>
 </head>
 
@@ -4859,6 +4860,7 @@
                                 <path d="M12 18H3"></path>
                             </svg>
                         </span>
+                        <span id="obs-playlist-remaining" style="display: none; font-variant-numeric: tabular-nums; min-width: 4.5ch; text-align: left; margin-right: 0.3rem;"></span>
                         <div id="obs-donor-name-container"
                             style="overflow: hidden; white-space: nowrap; flex: 1; min-width: 0; display: inline-block; margin-right: 0.5rem;">
                             <span id="obs-donor-name" class="obs-donor-name" style="display: inline-block;">Khách</span>
@@ -4888,13 +4890,7 @@
                                 <div id="obs-channel-name" class="obs-channel-name">Tên kênh</div>
                             </div>
                             <div id="obs-vote-skip-widget" class="obs-vote-skip-widget" hidden>
-                                <div class="obs-vote-skip-label">
-                                    <span>Vote Skip</span>
-                                    <span id="obs-vote-skip-progress-text">0đ / 20.000đ</span>
-                                </div>
-                                <div class="obs-vote-skip-track" aria-hidden="true">
-                                    <div id="obs-vote-skip-fill" class="obs-vote-skip-fill"></div>
-                                </div>
+                                <span id="obs-vote-skip-progress-text">Vote skip 0 / 20.000 đ</span>
                             </div>
                             <div id="obs-playlist-meta" class="obs-playlist-meta" hidden></div>
                             <!-- Extension panel đã được chuyển ra ngoài widget, không còn ở đây nữa -->
@@ -5694,8 +5690,8 @@
         let lastCommandType = 'play';
         let destroyTimeout = null;
         let lastProgressPct = null;
-        const REALTIME_PROGRESS_INTERVAL_MS = 250;
-        const LYRICS_TIMING_INTERVAL_MS = 20;
+        const REALTIME_PROGRESS_INTERVAL_MS = 500;
+        const LYRICS_TIMING_INTERVAL_MS = 50;
         const REALTIME_RECONNECT_DELAY_MS = 500;
         const OVERLAY_COLLAPSED_HEIGHT = 160;
         const OVERLAY_UP_NEXT_HEIGHT = 280;
@@ -6251,8 +6247,7 @@
         }
 
         function getUpcomingDonorLabel(song) {
-            const donor = song?.donorName || 'Khách';
-            return song?.playlistRequestId ? (song?.playlistTitle || 'YouTube Playlist') : donor;
+            return song?.donorName || 'Khách';
         }
 
         function getSongPlaybackStart(song) {
@@ -6788,7 +6783,7 @@
                     applyMarquee(containerEl, nextTextEl, currentSong.nextSongTitle || '', 40);
 
                     if (nextDonorInfo) {
-                        const donor = currentSong.nextSongDonorName || 'Khách';
+                        const donor = currentSong.nextSongDonor || 'Khách';
                         const amount = (currentSong.nextSongAmount && Number(currentSong.nextSongAmount) > 0)
                             ? ` · ${Number(currentSong.nextSongAmount).toLocaleString('vi-VN')} ₫`
                             : '';
@@ -6892,7 +6887,7 @@
                     applyMarquee(containerEl, nextTextEl, currentSong.nextSongTitle || '', 40);
 
                     if (nextDonorInfo) {
-                        const donor = currentSong.nextSongDonorName || 'Khách';
+                        const donor = currentSong.nextSongDonor || 'Khách';
                         const amount = (currentSong.nextSongAmount && Number(currentSong.nextSongAmount) > 0)
                             ? ` · ${Number(currentSong.nextSongAmount).toLocaleString('vi-VN')} ₫`
                             : '';
@@ -8085,6 +8080,12 @@
                     applyTargetVolume();
                     event.target.seekTo(startTime || 0, true);
 
+                    // Cơ chế ưu tiên đường mạng: Yêu cầu OBS tải luồng video ưu tiên cao nhất
+                    try {
+                        const iframe = event.target.getIframe();
+                        if (iframe) iframe.setAttribute('fetchpriority', 'high');
+                    } catch (e) { }
+
                     enforceIframePlaybackQuality(event.target);
                     setTimeout(() => {
                         if (event.target === overlayPlayer) logIframePlaybackQuality('ready', event.target);
@@ -9157,6 +9158,16 @@
             if (promoTitleEl) promoTitleEl.textContent = "Không Thời Gian - Dương Domic";
             updateLyricsOverlayDetails({ lyrics: { available: true, lines: [{ time: 0, text: 'Sample' }] } });
             if (donorContainer) donorContainer.style.display = 'flex';
+            const plRemainingEl = document.getElementById('obs-playlist-remaining');
+            if (plRemainingEl) {
+                plRemainingEl.style.display = 'none';
+                plRemainingEl.textContent = '';
+            }
+            const playlistMetaEl = document.getElementById('obs-playlist-meta');
+            if (playlistMetaEl) {
+                playlistMetaEl.hidden = true;
+                playlistMetaEl.textContent = '';
+            }
             if (donorName) {
                 donorName.textContent = "mèo 3k";
                 donorName.style.removeProperty('max-width');
@@ -9260,13 +9271,18 @@
 
             if (playerWidget) playerWidget.classList.toggle('is-playlist-playing', isPlaylist);
             if (donorPlaylistIcon) {
-                donorPlaylistIcon.style.display = (isPlaylist && !isOwner) ? 'inline-flex' : 'none';
+                donorPlaylistIcon.style.display = isPlaylist ? 'inline-flex' : 'none';
             }
             if (ownerPlaylistIcon) {
-                ownerPlaylistIcon.style.display = (isPlaylist && isOwner) ? 'inline-flex' : 'none';
+                ownerPlaylistIcon.style.display = 'none';
             }
             if (!isPlaylist) {
                 if (meta) { meta.hidden = true; meta.textContent = ''; }
+                const plRemainingEl = document.getElementById('obs-playlist-remaining');
+                if (plRemainingEl) {
+                    plRemainingEl.style.display = 'none';
+                    plRemainingEl.textContent = '';
+                }
                 return;
             }
 
@@ -9278,7 +9294,18 @@
             if (meta) {
                 const remaining = Number(activePlaylist.remainingPlaylistSec || 0);
                 const plTitle = songData.playlistTitle || activePlaylist.playlistTitle || 'YouTube Playlist';
-                meta.textContent = `${position}/${total} ${plTitle}${remaining > 0 ? ` · còn ${formatTime(remaining)}` : ''}`;
+                meta.textContent = `${position}/${total} ${plTitle}`;
+                
+                const plRemainingEl = document.getElementById('obs-playlist-remaining');
+                if (plRemainingEl) {
+                    if (remaining > 0) {
+                        plRemainingEl.textContent = formatTime(remaining);
+                        plRemainingEl.style.display = 'inline-block';
+                    } else {
+                        plRemainingEl.style.display = 'none';
+                        plRemainingEl.textContent = '';
+                    }
+                }
                 meta.hidden = false;
             }
         }
@@ -9286,23 +9313,17 @@
         function updateVoteSkipProgress(songData) {
             const voteSkipWidget = document.getElementById('obs-vote-skip-widget');
             const progressText = document.getElementById('obs-vote-skip-progress-text');
-            const progressFill = document.getElementById('obs-vote-skip-fill');
             if (!voteSkipWidget) return;
 
             const isActive = Boolean(songData?.voteSkipActive);
             voteSkipWidget.hidden = !isActive;
-            if (!isActive) {
-                if (progressFill) progressFill.style.width = '0%';
-                return;
-            }
+            if (!isActive) return;
 
             const target = Math.max(1, Number(songData.voteSkipTarget) || 20000);
             const amount = Math.max(0, Number(songData.voteAmount) || 0);
-            const percent = Math.min(100, (amount / target) * 100);
             if (progressText) {
-                progressText.textContent = `${amount.toLocaleString('vi-VN')}đ / ${target.toLocaleString('vi-VN')}đ`;
+                progressText.textContent = `Vote skip ${amount.toLocaleString('vi-VN')} / ${target.toLocaleString('vi-VN')} đ`;
             }
-            if (progressFill) progressFill.style.width = `${percent}%`;
         }
 
         function updateLyricsOverlayDetails(songData) {
@@ -9847,6 +9868,7 @@
 
                 // Định nghĩa hàm cập nhật nội dung chữ và marquee
                 const updateTextContent = (songData, skipMarquee = false) => {
+                    const isOwner = Boolean(songData?.isOwnerAdd);
                     title.textContent = songData.title || "Chưa có tên bài hát";
 
                     const channelNameEl = document.getElementById('obs-channel-name');
@@ -9883,20 +9905,40 @@
                     }
 
                     const playlistMetaEl = document.getElementById('obs-playlist-meta');
-                    if (playlistMetaEl) {
+                    const plRemainingEl = document.getElementById('obs-playlist-remaining');
+                    const isPlaylist = Boolean(songData.playlistRequestId || songData.isPlaylistTrack || songData.playlistTrackId);
+                    if (playlistMetaEl || plRemainingEl) {
                         let activePlaylist = {};
                         try { activePlaylist = JSON.parse(localStorage.getItem('dua_active_playlist') || '{}'); } catch (_) { }
-                        if (songData.playlistRequestId) {
+                        if (isPlaylist) {
                             const position = Number(songData.playlistPosition || activePlaylist.currentTrack || 1);
                             const total = Number(songData.playlistTotalTracks || activePlaylist.totalTracks || 1);
                             const remaining = Number(activePlaylist.remainingPlaylistSec || 0);
                             const donor = songData.donorName || activePlaylist.donorName || 'Khách';
                             const plTitle = songData.playlistTitle || activePlaylist.playlistTitle || 'YouTube Playlist';
-                            playlistMetaEl.textContent = `${position}/${total} ${plTitle}${remaining > 0 ? ` · còn ${formatTime(remaining)}` : ''}`;
-                            playlistMetaEl.hidden = false;
+                            if (playlistMetaEl) {
+                                playlistMetaEl.textContent = `${position}/${total} ${plTitle}`;
+                                playlistMetaEl.hidden = false;
+                            }
+                            
+                            if (plRemainingEl) {
+                                if (remaining > 0) {
+                                    plRemainingEl.textContent = formatTime(remaining);
+                                    plRemainingEl.style.display = 'inline-block';
+                                } else {
+                                    plRemainingEl.style.display = 'none';
+                                    plRemainingEl.textContent = '';
+                                }
+                            }
                         } else {
-                            playlistMetaEl.hidden = true;
-                            playlistMetaEl.textContent = '';
+                            if (playlistMetaEl) {
+                                playlistMetaEl.hidden = true;
+                                playlistMetaEl.textContent = '';
+                            }
+                            if (plRemainingEl) {
+                                plRemainingEl.style.display = 'none';
+                                plRemainingEl.textContent = '';
+                            }
                         }
                     }
 
@@ -10590,8 +10632,8 @@
         // playback-state transport intentionally keep their existing cadence.
         setInterval(updateLyricsRealtimeSync, LYRICS_TIMING_INTERVAL_MS);
 
-        // Kiểm tra thay đổi liên tục bằng vòng lặp hoạt ảnh (200ms một lần là đủ mượt và nhẹ)
-        setInterval(updateOverlayUI, 200);
+        // Kiểm tra thay đổi liên tục bằng vòng lặp hoạt ảnh (500ms một lần là đủ mượt và nhẹ, tiết kiệm CPU)
+        setInterval(updateOverlayUI, 500);
 
         // Lắng nghe cả sự kiện Storage của trình duyệt (giúp phản ứng ngay lập tức)
 
@@ -10762,9 +10804,29 @@
                 updateOverlayUI();
             } else if (payload.type === 'playlist.track_progress') {
                 const previous = JSON.parse(localStorage.getItem('dua_active_playlist') || '{}');
-                localStorage.setItem('dua_active_playlist', JSON.stringify({ ...previous, ...eventData }));
+                const nextPlaylist = { ...previous, ...eventData };
+                localStorage.setItem('dua_active_playlist', JSON.stringify(nextPlaylist));
+                const plRemainingEl = document.getElementById('obs-playlist-remaining');
+                if (plRemainingEl) {
+                    let currentSong = null;
+                    try { currentSong = JSON.parse(localStorage.getItem('dua_current_song') || '{}'); } catch (_) { }
+                    const isPlaylistPlaying = Boolean(currentSong?.playlistRequestId || currentSong?.isPlaylistTrack || currentSong?.playlistTrackId);
+                    const remaining = Number(nextPlaylist.remainingPlaylistSec || 0);
+                    if (isPlaylistPlaying && remaining > 0) {
+                        plRemainingEl.textContent = formatTime(remaining);
+                        plRemainingEl.style.display = 'inline-block';
+                    } else {
+                        plRemainingEl.style.display = 'none';
+                        plRemainingEl.textContent = '';
+                    }
+                }
             } else if (payload.type === 'playlist.completed') {
                 localStorage.removeItem('dua_active_playlist');
+                const plRemainingEl = document.getElementById('obs-playlist-remaining');
+                if (plRemainingEl) {
+                    plRemainingEl.style.display = 'none';
+                    plRemainingEl.textContent = '';
+                }
                 updateOverlayUI();
             }
         }

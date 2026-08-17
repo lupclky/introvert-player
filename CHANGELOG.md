@@ -1,5 +1,9 @@
 # Nhật ký thay đổi (Changelog) - Introvert Player
 
+## [26.8.19] - 2026-08-16
+### Đảo ngược cập nhật (Rollback)
+- Khôi phục mã nguồn về nguyên bản phiên bản `26.8.18` gốc (trước các thay đổi thử nghiệm liên quan đến xử lý tự động phát âm lượng, đồng bộ lời, lỗi hiển thị `- Topic` và lỗi phát đè).
+
 ## [26.8.12] - 2026-08-12
 ### Lyrics realtime
 - Sửa nhận diện lyrics cho bài Topic có danh sách cộng tác viên dài như `CLSUxac0F9Q`: đối chiếu tên lõi, credit YouTube và tên nghệ danh viết liền/cách (`CODYNAMVO`/`CODY NAM VÕ`), dùng thời lượng bản phát hành Apple 221,8 giây để khớp chính xác LRCLIB 222 giây.

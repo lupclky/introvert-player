@@ -125,7 +125,7 @@ function extractPlaylistMetadata(data, playlistId) {
   };
 }
 
-function extractPlaylistTracks(data, maxItems = 50, onProgress = null, totalItems = 0) {
+function extractPlaylistTracks(data, maxItems = 200, onProgress = null, totalItems = 0) {
   const tracks = [];
   const seenRendererObjects = new Set();
   walk(data, node => {
@@ -163,7 +163,7 @@ class YouTubePlaylistProvider {
     if (!/^[A-Za-z0-9_-]{10,64}$/.test(String(playlistId || ''))) {
       throw new Error('invalid_playlist_id');
     }
-    const maxItems = Math.min(100, Math.max(1, Number(options.maxItems) || 50));
+    const maxItems = Math.min(500, Math.max(1, Number(options.maxItems) || 200));
     const data = await this.fetchPlaylistData(String(playlistId));
     const metadata = extractPlaylistMetadata(data, String(playlistId));
     let tracks = extractPlaylistTracks(data, maxItems, options.onProgress, Math.min(metadata.sourceItemCount || maxItems, maxItems));

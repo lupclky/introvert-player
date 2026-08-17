@@ -752,9 +752,17 @@ async function loadSyncedLyricsForSong(song) {
             state.currentSong = state.currentSong;
         }
         updateDashboardLyrics(lyricsState, state.lastReportedTime || 0);
-        const lyricsIconEl = document.getElementById('current-song-lyrics-icon');
+        const lyricsIconEl = document.getElementById('btn-toggle-lyrics-visibility');
         if (lyricsIconEl) {
             lyricsIconEl.style.display = Boolean(lyricsState.available && lyricsState.lines?.length) ? 'inline-flex' : 'none';
+            const isEnabled = localStorage.getItem('dua_lyrics_enabled') !== 'false';
+            if (isEnabled) {
+                lyricsIconEl.classList.add('dua-btn-primary');
+                lyricsIconEl.classList.remove('dua-btn-secondary');
+            } else {
+                lyricsIconEl.classList.add('dua-btn-secondary');
+                lyricsIconEl.classList.remove('dua-btn-primary');
+            }
         }
 
         const payloadRaw = localStorage.getItem('dua_current_song');
@@ -1135,7 +1143,7 @@ if (!state.localSyncKey) {
 }
 
 const REALTIME_RECONNECT_DELAY_MS = 500;
-const OVERLAY_PROGRESS_SYNC_INTERVAL_MS = 250;
+const OVERLAY_PROGRESS_SYNC_INTERVAL_MS = 500;
 const dashboardRealtimeService = new window.DashboardRealtimeService({
     getChannelId: () => state.localSyncKey,
     onMessage: data => handleMqttMessage(null, data),
@@ -3622,7 +3630,14 @@ function renderQueueSongCardV2Legacy(song, options = {}) {
         ? `<a href="${escapeDashboardHtml(songUrl)}" onclick="openExternalLink(event, '${escapeDashboardHtml(songUrl)}')" title="Mở trên trình duyệt">${title}</a>`
         : title;
     const playlistChip = song.playlistRequestId
-        ? `<span class="queue-playlist-chip"><i class="fa-solid fa-layer-group"></i> Playlist · Video ${song.playlistPosition}/${song.playlistTotalTracks}</span>`
+        ? (() => {
+            const sameGroup = state.queue.filter(s => s && s.playlistRequestId === song.playlistRequestId);
+            const total = Number(song.playlistTotalTracks || sameGroup.length || 1);
+            const completed = Math.max(0, total - sameGroup.length);
+            const idx = sameGroup.findIndex(s => String(s.id) === String(song.id));
+            const pos = completed + 1 + (idx !== -1 ? idx : 0);
+            return `<span class="queue-playlist-chip"><i class="fa-solid fa-layer-group"></i> Playlist · Video ${pos}/${total}</span>`;
+        })()
         : '';
     const ownerLabel = song.isOwnerAdd ? 'Chủ kênh' : donor;
     const statusLabel = isCurrent ? (state.isPlaying ? 'Đang phát' : 'Đã tạm dừng') : '';
@@ -3766,9 +3781,9 @@ function renderPlaylistTrackRowLegacy(song, index, total) {
 }
 
 function renderPlaylistTrackRow(song, index, total, options = {}) {
-    const songUrl = getQueueSongUrl(song);
     const isCurrent = Boolean(state.currentSong && String(state.currentSong.id) === String(song.id));
     const title = escapeDashboardHtml(song.title || 'Chưa có tên bài hát');
+    const songUrl = getQueueSongUrl(song);
     const linkedTitle = songUrl !== '#'
         ? `<a href="${escapeDashboardHtml(songUrl)}" onclick="openExternalLink(event, '${escapeDashboardHtml(songUrl)}')">${title}</a>`
         : title;
@@ -3776,11 +3791,13 @@ function renderPlaylistTrackRow(song, index, total, options = {}) {
     const duration = Number(song.duration || 0);
     const movableIndex = Number.isInteger(options.movableIndex) ? options.movableIndex : index;
     const movableTotal = Number.isInteger(options.movableTotal) ? options.movableTotal : total;
+    const completedOffset = Number.isInteger(options.completedOffset) ? options.completedOffset : 0;
+    const displayIndex = completedOffset + 1 + index;
     const newBadge = renderQueueNewBadge(song);
     const lyricsBadge = renderQueueLyricsBadge(song);
     return `
         <article class="playlist-track-row ${song.isPinned ? 'is-pinned' : ''} ${isCurrent ? 'is-playing' : ''}" data-song-id="${escapeDashboardHtml(String(song.id))}" ${isCurrent ? 'aria-current="true"' : ''}>
-            <span class="playlist-track-number">${Number(song.playlistPosition || index + 1)}</span>
+            <span class="playlist-track-number">${displayIndex}</span>
             <img class="playlist-track-thumb" src="${thumbnail}" alt="" loading="lazy">
             <div class="playlist-track-title" title="${title}">
                 ${lyricsBadge}${linkedTitle}
@@ -3810,13 +3827,17 @@ function renderPlaylistGroupV2(group, groupIndex = 0, groupCount = 1, options = 
     const movableSongs = songs.filter(song => !activeSong || String(song.id) !== String(activeSong.id));
     const donorName = escapeDashboardHtml(first.donorName || 'Khách');
     const playlistTotal = Number(first.playlistTotalTracks || songs.length);
+    const completedCount = Math.max(0, playlistTotal - songs.length);
     const ownerText = first.isOwnerAdd
         ? 'Chủ kênh thêm'
         : `${donorName} <b>${Number(first.amount || 0).toLocaleString('vi-VN')}đ</b>`;
+    const activeIndex = activeSong ? songs.findIndex(s => String(s.id) === String(activeSong.id)) : -1;
+    const currentPos = completedCount + 1 + (activeIndex !== -1 ? activeIndex : 0);
     const statusText = activeSong
-        ? `Đang phát ${Number(activeSong.playlistPosition || 1)}/${playlistTotal}`
+        ? `Đang phát ${currentPos}/${playlistTotal}`
         : `${songs.length} video · ${formatTime(duration)}`;
     const newBadge = renderQueueNewBadge(songs);
+    const remainingTimeHtml = activeSong ? `<span id="dashboard-playlist-remaining-${requestId}" style="font-variant-numeric: tabular-nums; min-width: 4.5ch; display: inline-block; text-align: right; margin-right: 0.5rem; font-size: 0.9em; opacity: 0.9; font-weight: 600;"></span>` : '';
 
     return `
         <section class="playlist-group-card ${expanded ? 'is-expanded' : ''} ${activeSong ? 'is-active-playlist' : ''}" data-playlist-request-id="${requestId}">
@@ -3828,6 +3849,7 @@ function renderPlaylistGroupV2(group, groupIndex = 0, groupCount = 1, options = 
                     <span class="playlist-group-status"><i class="fa-solid fa-volume-high"></i> ${statusText}</span>
                 </div>
                 <div class="playlist-group-header-actions">
+                    ${remainingTimeHtml}
                     <button class="primary" title="${activeSong ? (state.isPlaying ? 'Tạm dừng playlist' : 'Tiếp tục playlist') : 'Phát playlist ngay'}" onclick="${activeSong ? 'toggleCurrentPlaylistPause()' : `userForcePlaySong('${first.id}')`}"><i class="fa-solid fa-${activeSong && state.isPlaying ? 'pause' : 'play'}"></i></button>
                     <button title="Di chuyển playlist lên" ${groupIndex <= 0 || activeSong ? 'disabled' : ''} onclick="movePlaylistGroup('${requestId}', 'up')"><i class="fa-solid fa-arrow-up"></i></button>
                     <button title="Di chuyển playlist xuống" ${groupIndex >= groupCount - 1 || activeSong ? 'disabled' : ''} onclick="movePlaylistGroup('${requestId}', 'down')"><i class="fa-solid fa-arrow-down"></i></button>
@@ -3841,7 +3863,8 @@ function renderPlaylistGroupV2(group, groupIndex = 0, groupCount = 1, options = 
             <div class="playlist-group-tracks">
                 ${expanded ? songs.map((song, index) => renderPlaylistTrackRow(song, index, songs.length, {
                     movableIndex: movableSongs.findIndex(item => String(item.id) === String(song.id)),
-                    movableTotal: movableSongs.length
+                    movableTotal: movableSongs.length,
+                    completedOffset: completedCount
                 })).join('') : ''}
             </div>
         </section>
@@ -4548,30 +4571,49 @@ function forcePlaySong(songId) {
     const songIndex = state.queue.findIndex(s => String(s.id) === String(songId));
     if (songIndex === -1) return;
 
-    // Lưu tiến trình bài đang phát trước khi chuyển bài ưu tiên
+    const targetSong = state.queue[songIndex];
+    const targetPlaylistId = targetSong.playlistRequestId;
+    const currentPlaylistId = state.currentSong?.playlistRequestId;
+
+    // Lưu tiến trình bài đang phát nếu chuyển sang bài/playlist khác
     if (state.currentSong) {
         const currentSongInQueue = state.queue.find(s => String(s.id) === String(state.currentSong.id));
         if (currentSongInQueue) {
-            const duration = currentSongInQueue.duration || 0;
-            const currentTime = state.lastReportedTime || 0;
-            // Chỉ lưu tiến trình nếu bài hát đã phát được trên 2 giây và còn cách kết thúc trên 5 giây (nếu có duration)
-            if (currentTime > 2 && (duration === 0 || currentTime < duration - 5)) {
-                currentSongInQueue.savedProgress = currentTime;
-                logSystem(`Đã lưu tiến trình bài hát "${currentSongInQueue.title}" tại ${formatTime(currentTime)}`, 'system');
-            }
-            const target = state.queue[songIndex];
-            if (currentSongInQueue.playlistRequestId && target?.playlistRequestId !== currentSongInQueue.playlistRequestId) {
-                currentSongInQueue.playlistInterrupted = true;
-                window.electronAPI?.pausePlaylist?.(currentSongInQueue.playlistRequestId).catch(() => {});
+            const isSamePlaylist = targetPlaylistId && currentPlaylistId && targetPlaylistId === currentPlaylistId;
+            if (!isSamePlaylist) {
+                const duration = currentSongInQueue.duration || 0;
+                const currentTime = state.lastReportedTime || 0;
+                if (currentTime > 2 && (duration === 0 || currentTime < duration - 5)) {
+                    currentSongInQueue.savedProgress = currentTime;
+                    logSystem(`Đã lưu tiến trình bài hát "${currentSongInQueue.title}" tại ${formatTime(currentTime)}`, 'system');
+                }
+                if (currentSongInQueue.playlistRequestId) {
+                    currentSongInQueue.playlistInterrupted = true;
+                    window.electronAPI?.pausePlaylist?.(currentSongInQueue.playlistRequestId).catch(() => {});
+                }
             }
         }
     }
 
-    const targetSong = state.queue[songIndex];
-    
-    state.queue.splice(songIndex, 1);
-    state.queue.unshift(targetSong);
-    
+    if (targetPlaylistId) {
+        // Đưa toàn bộ playlist này lên đầu hàng đợi để các bài cùng nhóm nằm cạnh nhau
+        if (window.PlaylistQueueService?.prioritizeActivePlaylist) {
+            state.queue = window.PlaylistQueueService.prioritizeActivePlaylist(state.queue, targetSong);
+        }
+    } else {
+        // Bài đơn lẻ (Standalone): đưa lên đầu hàng đợi
+        const currentTargetIndex = state.queue.findIndex(s => String(s.id) === String(songId));
+        if (currentTargetIndex !== -1) {
+            const target = state.queue.splice(currentTargetIndex, 1)[0];
+            state.queue.unshift(target);
+        }
+    }
+
+    // Reset savedProgress cho targetSong nếu có (để tránh bị hỏi "Phát tiếp tục?")
+    if (targetSong.savedProgress) {
+        delete targetSong.savedProgress;
+    }
+
     saveQueue();
     renderQueue();
     playNextInQueue(false, targetSong);
@@ -4809,7 +4851,7 @@ function updatePlayerUI(song) {
         title.textContent = "Chưa có bài hát nào";
         const playlistIconEl = document.getElementById('current-song-playlist-icon');
         if (playlistIconEl) playlistIconEl.style.display = 'none';
-        const lyricsIconEl = document.getElementById('current-song-lyrics-icon');
+        const lyricsIconEl = document.getElementById('btn-toggle-lyrics-visibility');
         if (lyricsIconEl) lyricsIconEl.style.display = 'none';
         donorSection.style.display = 'none';
         getWindowsMediaService()?.updateMetadata?.(null, false);
@@ -4869,8 +4911,18 @@ function updatePlayerUI(song) {
     const isPlaylist = Boolean(song.playlistRequestId || song.isPlaylistTrack || song.playlistTrackId);
     const playlistIconEl = document.getElementById('current-song-playlist-icon');
     if (playlistIconEl) playlistIconEl.style.display = isPlaylist ? 'inline-flex' : 'none';
-    const lyricsIconEl = document.getElementById('current-song-lyrics-icon');
-    if (lyricsIconEl) lyricsIconEl.style.display = Boolean(song.lyrics?.available && song.lyrics.lines?.length) ? 'inline-flex' : 'none';
+    const lyricsIconEl = document.getElementById('btn-toggle-lyrics-visibility');
+    if (lyricsIconEl) {
+        lyricsIconEl.style.display = Boolean(song.lyrics?.available && song.lyrics.lines?.length) ? 'inline-flex' : 'none';
+        const isEnabled = localStorage.getItem('dua_lyrics_enabled') !== 'false';
+        if (isEnabled) {
+            lyricsIconEl.classList.add('dua-btn-primary');
+            lyricsIconEl.classList.remove('dua-btn-secondary');
+        } else {
+            lyricsIconEl.classList.add('dua-btn-secondary');
+            lyricsIconEl.classList.remove('dua-btn-primary');
+        }
+    }
     getWindowsMediaService()?.updateMetadata?.(song, state.isPlaying);
 
     if (currentSongUrl && currentSongUrl !== '#') {
@@ -5192,6 +5244,42 @@ function toggleFocusMode(enabled) {
         }
     }
 }
+
+function toggleDashboardLyricsVisibility() {
+    const isCurrentlyEnabled = localStorage.getItem('dua_lyrics_enabled') !== 'false';
+    const newState = !isCurrentlyEnabled;
+    localStorage.setItem('dua_lyrics_enabled', newState ? 'true' : 'false');
+    publishMqtt('lyrics_config', { enabled: newState });
+    logSystem(`🔧 <strong>[Lời bài hát]</strong> Đã ${newState ? 'BẬT' : 'TẮT'} lời bài hát đồng bộ (Synced Lyrics).`, 'system');
+    showDashboardSystemAlert("Lời bài hát", `Đã ${newState ? 'bật' : 'tắt'} hiển thị lời bài hát.`);
+
+    const btn = document.getElementById('btn-toggle-lyrics-visibility');
+    if (btn) {
+        if (newState) {
+            btn.classList.add('dua-btn-primary');
+            btn.classList.remove('dua-btn-secondary');
+        } else {
+            btn.classList.add('dua-btn-secondary');
+            btn.classList.remove('dua-btn-primary');
+        }
+    }
+
+    const settingsToggle = document.getElementById('lyrics-enabled-toggle');
+    if (settingsToggle) {
+        settingsToggle.checked = newState;
+    }
+
+    if (!newState) {
+        clearDashboardLyrics();
+    } else if (state?.currentSong) {
+        if (state.currentSong.lyrics?.available) {
+            updateDashboardLyrics(state.currentSong.lyrics, state.lastReportedTime || 0);
+        } else {
+            loadSyncedLyricsForSong(state.currentSong);
+        }
+    }
+}
+window.toggleDashboardLyricsVisibility = toggleDashboardLyricsVisibility;
 
 // --- BẬT / TẮT CHẾ ĐỘ LUCKY (QUAY NHẠC NGẪU NHIÊN) ---
 function toggleLuckyMode(enabled) {
@@ -7296,11 +7384,23 @@ function handleMqttMessage(topic, messageStrOrObj) {
                     }
                     return total + Math.max(0, Number(song.duration || 0));
                 }, 0);
+                
+                const dashboardRemainingEl = document.getElementById(`dashboard-playlist-remaining-${state.currentSong.playlistRequestId}`);
+                if (dashboardRemainingEl) {
+                    dashboardRemainingEl.textContent = formatTime(remainingPlaylistSec);
+                }
+                
+                const samePlaylistTracks = state.queue.filter(s => s && s.playlistRequestId === state.currentSong.playlistRequestId);
+                const playlistTotal = Number(state.currentSong.playlistTotalTracks || samePlaylistTracks.length || 1);
+                const completedCount = Math.max(0, playlistTotal - samePlaylistTracks.length);
+                const currentTrackIdx = samePlaylistTracks.findIndex(s => String(s.id) === String(state.currentSong.id));
+                const currentTrackPos = completedCount + 1 + (currentTrackIdx !== -1 ? currentTrackIdx : 0);
+
                 publishMqtt('playlist.track_progress', {
                     playlistRequestId: state.currentSong.playlistRequestId,
                     trackId: state.currentSong.playlistTrackId,
-                    currentTrack: state.currentSong.playlistPosition,
-                    totalTracks: state.currentSong.playlistTotalTracks,
+                    currentTrack: currentTrackPos,
+                    totalTracks: playlistTotal,
                     currentTimeSec: Number(data.currentTime || 0),
                     durationSec: Number(data.duration || state.currentSong.duration || 0),
                     remainingPlaylistSec

@@ -6871,7 +6871,7 @@ body.app-dashboard .playlist-group-toggle {
 .dashboard-lyric-line.is-active {
     color: var(--pineapple-orange-dark);
     font-size: 1.1rem;
-    font-weight: 700;
+    font-weight: 800;
     opacity: 1;
     transform: scale(1.01);
     background: color-mix(in srgb, var(--pineapple-orange) 7%, transparent);

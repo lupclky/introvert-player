@@ -63,11 +63,8 @@ class PlaylistQueueService {
     const pending = source.filter(song => song && (currentId === null || String(song.id) !== currentId));
     if (!currentSong?.playlistRequestId) return pending[0] || null;
 
-    // Playlist đang phát là một thực thể liên tục. Mọi bài đơn hoặc playlist
-    // khác, kể cả có số tiền cao hơn, chỉ được xét sau khi nhóm này kết thúc.
-    return pending.find(song => song.playlistRequestId === currentSong.playlistRequestId)
-      || pending[0]
-      || null;
+    const samePlaylist = pending.filter(song => song.playlistRequestId === currentSong.playlistRequestId);
+    return samePlaylist[0] || pending[0] || null;
   }
 
   static prioritizeActivePlaylist(queue, currentSong = null) {
