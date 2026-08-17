@@ -6935,10 +6935,5 @@ body.app-dashboard .playlist-group-toggle {
     35% { opacity: 1; transform: translateY(-3px) scale(1); }
 }
 
-/* Ẩn các nút Vote Skip và tab Lịch sử */
-#btn-vote-skip,
-#btn-vote-skip-playlist,
-#menu-btn-donations {
-    display: none !important;
-}
+
 
