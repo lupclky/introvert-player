@@ -75,3 +75,29 @@ test('không fallback khi playback đang bị chủ động chặn', () => {
     });
     assert.equal(result.action, 'wait');
 });
+
+test('tắt autoplay YouTube trước khi iframe bắt đầu phát', () => {
+    const guarded = YouTubePlaybackFallbackPolicy.sanitizeStartupMediaUrl(
+        'https://www.youtube.com/embed/abc123?enablejsapi=1&autoplay=1&start=10'
+    );
+    const url = new URL(guarded);
+    assert.equal(url.searchParams.get('autoplay'), '0');
+    assert.equal(url.searchParams.get('start'), '10');
+});
+
+test('tắt auto_play SoundCloud trước READY', () => {
+    const guarded = YouTubePlaybackFallbackPolicy.sanitizeStartupMediaUrl(
+        'https://w.soundcloud.com/player/?url=https%3A%2F%2Fsoundcloud.com%2Fa%2Fb&auto_play=true'
+    );
+    const url = new URL(guarded);
+    assert.equal(url.searchParams.get('auto_play'), 'false');
+});
+
+test('SoundCloud widget.load không được tự phát trước khi setVolume', () => {
+    const options = YouTubePlaybackFallbackPolicy.safeSoundCloudLoadOptions({
+        auto_play: true,
+        show_artwork: false
+    });
+    assert.equal(options.auto_play, false);
+    assert.equal(options.show_artwork, false);
+});
