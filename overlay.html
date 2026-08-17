@@ -9278,7 +9278,7 @@
                 
                 const plRemainingEl = document.getElementById('obs-playlist-remaining');
                 if (plRemainingEl) {
-                    if (remaining > 0 && !isOwner) {
+                    if (remaining > 0) {
                         plRemainingEl.textContent = formatTime(remaining);
                         plRemainingEl.style.display = 'inline-block';
                     } else {
@@ -9902,7 +9902,7 @@
                             }
                             
                             if (plRemainingEl) {
-                                if (remaining > 0 && !isOwner) {
+                                if (remaining > 0) {
                                     plRemainingEl.textContent = formatTime(remaining);
                                     plRemainingEl.style.display = 'inline-block';
                                 } else {
@@ -10792,7 +10792,7 @@
                     try { currentSong = JSON.parse(localStorage.getItem('dua_current_song') || '{}'); } catch (_) { }
                     const isPlaylistPlaying = Boolean(currentSong?.playlistRequestId || currentSong?.isPlaylistTrack || currentSong?.playlistTrackId);
                     const remaining = Number(nextPlaylist.remainingPlaylistSec || 0);
-                    if (isPlaylistPlaying && remaining > 0 && !currentSong?.isOwnerAdd) {
+                    if (isPlaylistPlaying && remaining > 0) {
                         plRemainingEl.textContent = formatTime(remaining);
                         plRemainingEl.style.display = 'inline-block';
                     } else {
