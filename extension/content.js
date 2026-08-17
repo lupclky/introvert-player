@@ -958,8 +958,20 @@ function sendVideoFromSearch(videoUrl, videoTitle, btn) {
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'pause-video') {
-    const video = document.querySelector('video');
-    if (video) video.pause();
-    sendResponse({ success: true });
+    const mediaElements = document.querySelectorAll('video, audio');
+    let pausedAny = false;
+    mediaElements.forEach(m => {
+      if (m && !m.paused) {
+        try {
+          m.pause();
+          pausedAny = true;
+        } catch (_) {}
+      }
+    });
+    if (pausedAny) {
+      publishBrowserMediaState(true);
+    }
+    sendResponse({ success: true, paused: pausedAny });
+    return true;
   }
 });

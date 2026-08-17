@@ -1,9 +1,26 @@
 let cachedPort = null;
 const mediaByTab = new Map();
+let currentPlayingTabId = null;
 let appWs = null;
 let wsReconnectTimer = null;
 
+async function pauseOtherBrowserMedia(exceptTabId) {
+  try {
+    const tabs = await chrome.tabs.query({ url: ['*://*.youtube.com/*', '*://music.youtube.com/*', '*://soundcloud.com/*'] });
+    for (const tab of tabs) {
+      if (tab.id !== exceptTabId) {
+        try {
+          await chrome.tabs.sendMessage(tab.id, { action: 'pause-video' });
+        } catch (err) {}
+      }
+    }
+  } catch (err) {
+    console.error('Lỗi khi tạm dừng media tab khác:', err);
+  }
+}
+
 async function pauseAllBrowserMedia() {
+  currentPlayingTabId = null;
   try {
     const tabs = await chrome.tabs.query({ url: ['*://*.youtube.com/*', '*://music.youtube.com/*', '*://soundcloud.com/*'] });
     for (const tab of tabs) {
@@ -81,13 +98,27 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     const tabId = sender.tab?.id;
     if (Number.isInteger(tabId)) {
       const now = Date.now();
+      const isPlaying = Boolean(request.data?.playing);
       const previous = mediaByTab.get(tabId);
+      const justStarted = isPlaying && (!previous || !previous.playing);
+
       mediaByTab.set(tabId, {
         ...request.data,
         tabId,
+        playing: isPlaying,
         receivedAt: now,
-        lastPlayingAt: request.data?.playing ? now : previous?.lastPlayingAt || 0
+        lastPlayingAt: isPlaying ? now : (previous?.lastPlayingAt || 0)
       });
+
+      if (justStarted) {
+        currentPlayingTabId = tabId;
+        // Khi 1 tab YouTube bắt đầu phát, tự động tạm dừng tất cả tab YouTube khác
+        pauseOtherBrowserMedia(tabId);
+      } else if (!isPlaying && currentPlayingTabId === tabId) {
+        // Tab đang phát vừa tạm dừng -> kiểm tra xem có tab nào khác đang phát không
+        const otherPlaying = [...mediaByTab.values()].find(t => t.tabId !== tabId && t.playing && (now - t.receivedAt < 15000));
+        currentPlayingTabId = otherPlaying ? otherPlaying.tabId : null;
+      }
     }
     publishSelectedMedia().then(sendResponse).catch(err => {
       sendResponse({ success: false, error: err.message });
@@ -97,27 +128,51 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 });
 
 chrome.tabs.onRemoved.addListener(tabId => {
+  if (currentPlayingTabId === tabId) {
+    currentPlayingTabId = null;
+  }
   if (!mediaByTab.delete(tabId)) return;
   publishSelectedMedia().catch(() => {});
 });
 
 function selectActiveMedia() {
   const now = Date.now();
-  const selected = [...mediaByTab.values()]
-    .filter(item => now - item.receivedAt < 10000
-      && (item.playing || now - Number(item.lastPlayingAt || 0) < 3000))
-    .sort((a, b) => Number(b.playing) - Number(a.playing) || b.receivedAt - a.receivedAt)[0];
+  const validTabs = [...mediaByTab.values()].filter(item => now - item.receivedAt < 15000);
 
-  return selected ? {
-    ...selected,
-    // YouTube thường phát pause/play ngắn trong lúc đổi buffer/chất lượng.
-    // Giữ trạng thái qua khoảng rung này để Overlay không tắt-bật liên tục.
-    playing: true
-  } : {
-      playing: false,
-      provider: null,
-      url: '',
-      updatedAt: now
+  // 1. Ưu tiên tab đang được xác định là active và đang phát
+  if (currentPlayingTabId) {
+    const activeItem = validTabs.find(item => item.tabId === currentPlayingTabId && item.playing);
+    if (activeItem) {
+      return { ...activeItem, playing: true, updatedAt: now };
+    }
+  }
+
+  // 2. Tìm bất kỳ tab nào đang phát nhạc thực sự (sắp xếp theo thời gian nhận mới nhất)
+  const playingTabs = validTabs
+    .filter(item => item.playing)
+    .sort((a, b) => b.receivedAt - a.receivedAt);
+
+  if (playingTabs.length > 0) {
+    currentPlayingTabId = playingTabs[0].tabId;
+    return { ...playingTabs[0], playing: true, updatedAt: now };
+  }
+
+  // 3. Nếu không có tab nào đang phát, lấy thông tin metadata của tab gần nhất với trạng thái playing: false
+  const mostRecentTab = validTabs.sort((a, b) => (b.lastPlayingAt || b.receivedAt) - (a.lastPlayingAt || a.receivedAt))[0];
+  if (mostRecentTab) {
+    return { ...mostRecentTab, playing: false, updatedAt: now };
+  }
+
+  return {
+    playing: false,
+    provider: null,
+    url: '',
+    title: '',
+    artist: '',
+    thumbnail: '',
+    currentTime: 0,
+    duration: 0,
+    updatedAt: now
   };
 }
 
