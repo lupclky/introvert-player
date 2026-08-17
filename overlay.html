@@ -10585,7 +10585,11 @@
             }
         }
 
+        let lastLyricsMqttPublish = 0;
         function updateLyricsRealtimeSync() {
+            // Luôn đặt lịch trình trước để loop hoạt ảnh 60fps không bị đứt
+            requestAnimationFrame(updateLyricsRealtimeSync);
+
             if (localStorage.getItem('dua_lyrics_enabled') === 'false') {
                 if (overlayLyrics && !overlayLyrics.hidden) overlayLyrics.hidden = true;
                 return;
@@ -10593,7 +10597,7 @@
             if (isPreview || isLuckyRolling) return;
             // Khi app đang pause/stop và browser media đang phát, loop 200ms của
             // updateOverlayUI đã gọi updateOverlayLyrics(null) để tắt lyrics.
-            // Không để loop 5ms này override ngược lại — tránh giật do xung đột.
+            // Không để loop này override ngược lại — tránh giật do xung đột.
             if (lastCommandType === 'pause' || lastCommandType === 'stop') {
                 if (getBrowserMediaOwnerSong()) return;
             }
@@ -10622,15 +10626,19 @@
 
             updateOverlayLyrics(song, currentTime);
             if (!isPlaying) return;
-            publishMqtt('lyrics_timing', {
-                songId: song.id ?? null,
-                currentTime
-            });
+            
+            const now = Date.now();
+            if (now - lastLyricsMqttPublish >= 100) {
+                publishMqtt('lyrics_timing', {
+                    songId: song.id ?? null,
+                    currentTime
+                });
+                lastLyricsMqttPublish = now;
+            }
         }
 
-        // Lyrics have an isolated 5ms clock. The full player UI and normal
-        // playback-state transport intentionally keep their existing cadence.
-        setInterval(updateLyricsRealtimeSync, LYRICS_TIMING_INTERVAL_MS);
+        // Sử dụng requestAnimationFrame để lyrics overlay render mượt mà ở 60 FPS
+        requestAnimationFrame(updateLyricsRealtimeSync);
 
         // Kiểm tra thay đổi liên tục bằng vòng lặp hoạt ảnh (500ms một lần là đủ mượt và nhẹ, tiết kiệm CPU)
         setInterval(updateOverlayUI, 500);

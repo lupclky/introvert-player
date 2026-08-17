@@ -20,3 +20,4 @@ Bất cứ khi nào bạn (Agent) vừa hoàn thành một tính năng (feature)
 3. Khi thực hiện merge:
    - Hãy chắc chắn xử lý xung đột (conflict) nếu có.
    - Chú ý giữ nguyên các cấu hình định danh/branding riêng biệt của từng nhánh (VD: placeholder tên người gửi "mèo 3k", "Dương Thiếu Ngủ", "Em Dứa") nếu có merge nhầm.
+   - Đảm bảo chắc chắn rồi commit cho cả 2 branch còn lại.
