@@ -955,3 +955,11 @@ function sendVideoFromSearch(videoUrl, videoTitle, btn) {
     }
   });
 }
+
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === 'pause-video') {
+    const video = document.querySelector('video');
+    if (video) video.pause();
+    sendResponse({ success: true });
+  }
+});

@@ -4057,10 +4057,8 @@ function promptResumePlayback(song, onResolve) {
 async function playSong(song) {
     if (!song) return;
 
-    // Thông báo cho Main process / Extension tạm dừng nhạc trên web ngay khi chuẩn bị phát
-    if (window.electronAPI && typeof window.electronAPI.notifyPlaybackState === 'function') {
-        window.electronAPI.notifyPlaybackState({ isPlaying: true, song });
-    }
+    // Chúng ta sẽ gọi notifyPlaybackState sau khi quyết định trạng thái (play/pause)
+
 
     const requestSequence = ++playSongRequestSequence;
     const requestedSongId = String(song.id);
@@ -4192,20 +4190,36 @@ async function playSong(song) {
         });
     }
 
-    // Phát lệnh chạy nhạc
-    sendControlCommand('play');
-    state.isPlaying = true;
-    updatePlayPauseButtonUI(true);
+    // Phát lệnh chạy nhạc hoặc tạm dừng nếu trình duyệt đang phát nhạc
+    if (latestBrowserMediaState?.playing) {
+        logSystem("Đã tải bài hát nhưng tạm dừng vì đang có nhạc trên trình duyệt. Nhấn Phát để tiếp tục.", "system");
+        sendControlCommand('pause');
+        state.isPlaying = false;
+        updatePlayPauseButtonUI(false);
+    } else {
+        sendControlCommand('play');
+        state.isPlaying = true;
+        updatePlayPauseButtonUI(true);
+    }
 
     // Cập nhật lại hàng đợi để đồng bộ hiển thị bài đang phát
     renderQueue();
 }
 
+let lastNotifiedPlaybackState = null;
+let lastNotifiedSongId = null;
+
 // Cập nhật trạng thái nút Tạm dừng/Tiếp tục của Dashboard
 function updatePlayPauseButtonUI(isPlaying) {
     getWindowsMediaService()?.updateMetadata?.(state.currentSong, isPlaying);
-    if (window.electronAPI && typeof window.electronAPI.notifyPlaybackState === 'function') {
-        window.electronAPI.notifyPlaybackState({ isPlaying: Boolean(isPlaying), song: state.currentSong });
+    
+    const currentSongId = state.currentSong?.id || null;
+    if (lastNotifiedPlaybackState !== isPlaying || lastNotifiedSongId !== currentSongId) {
+        lastNotifiedPlaybackState = isPlaying;
+        lastNotifiedSongId = currentSongId;
+        if (window.electronAPI && typeof window.electronAPI.notifyPlaybackState === 'function') {
+            window.electronAPI.notifyPlaybackState({ isPlaying: Boolean(isPlaying), song: state.currentSong });
+        }
     }
     const waves = document.getElementById('music-waves');
     const playBtn = document.getElementById('btn-play-pause');
@@ -8433,10 +8447,22 @@ function renderBrowserMediaMonitor(media) {
     }
 }
 
+let lastBrowserMediaPlayingState = false;
 if (window.electronAPI && typeof window.electronAPI.onBrowserMediaState === 'function') {
     window.electronAPI.onBrowserMediaState(media => {
+        const isPlayingNow = media?.active && media?.playing;
+        const browserJustStartedPlaying = !lastBrowserMediaPlayingState && isPlayingNow;
+        lastBrowserMediaPlayingState = isPlayingNow;
+        
         latestBrowserMediaState = media;
         renderBrowserMediaMonitor(media);
+        
+        if (browserJustStartedPlaying && state.isPlaying) {
+            logSystem("Trình duyệt bắt đầu phát nhạc. Ứng dụng tự động tạm dừng.", "system");
+            if (typeof togglePlayPause === 'function') {
+                togglePlayPause();
+            }
+        }
     });
     setInterval(() => renderBrowserMediaMonitor(latestBrowserMediaState), 2000);
 }

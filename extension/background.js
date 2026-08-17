@@ -4,8 +4,16 @@ let appWs = null;
 let wsReconnectTimer = null;
 
 async function pauseAllBrowserMedia() {
-  // Đã bỏ tính năng tự động dừng media trên trình duyệt khi app phát nhạc
-  return;
+  try {
+    const tabs = await chrome.tabs.query({ url: ['*://*.youtube.com/*', '*://music.youtube.com/*', '*://soundcloud.com/*'] });
+    for (const tab of tabs) {
+      try {
+        await chrome.tabs.sendMessage(tab.id, { action: 'pause-video' });
+      } catch (err) {}
+    }
+  } catch (err) {
+    console.error('Lỗi khi tạm dừng media:', err);
+  }
 }
 
 async function connectAppWebSocket() {
@@ -21,7 +29,12 @@ async function connectAppWebSocket() {
     };
 
     appWs.onmessage = (event) => {
-      // Không tự động tạm dừng media trên trình duyệt khi app phát nhạc
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'app_playback_started' && data.isPlaying) {
+          pauseAllBrowserMedia();
+        }
+      } catch (err) {}
     };
 
     appWs.onclose = () => {
@@ -205,3 +218,21 @@ async function resolveYouTubeMusicReleaseUrl(rawUrl) {
   return rawUrl;
 }
 
+chrome.runtime.onInstalled.addListener(() => {
+  chrome.contextMenus.create({
+    id: "add-to-pineapple-queue",
+    title: "Thêm nhạc vào Pineapple Studio",
+    contexts: ["link", "page"]
+  });
+});
+
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+  if (info.menuItemId === "add-to-pineapple-queue") {
+    const url = info.linkUrl || info.pageUrl;
+    if (url) {
+      handleSendToPineapple(url, tab?.title || "Nhạc từ menu chuột phải", false)
+        .then(() => console.log("[Extension] Đã thêm vào hàng đợi:", url))
+        .catch(err => console.error("[Extension] Lỗi khi thêm qua context menu:", err));
+    }
+  }
+});
