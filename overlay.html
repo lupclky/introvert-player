@@ -8072,7 +8072,8 @@
                 height: '100%',
                 width: '100%',
                 playerVars,
-                'onReady': (event) => {
+                events: {
+                    'onReady': (event) => {
                     if (playerSongId !== activePlaybackSongId) {
                         try { event.target.destroy(); } catch (_) { }
                         return;
@@ -8138,6 +8139,7 @@
                         code: event.data,
                         videoId: currentVideoId || videoId,
                         origin: playerVars.origin || '(không có origin HTTP)'
+                }
                     });
 
                     if (event.data === 150 || event.data === 101 || event.data === 153 || event.data === 2 || event.data === 5 || event.data === 100) {
