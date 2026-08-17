@@ -8064,11 +8064,14 @@
                 // tiếp tục áp dụng khi player sẵn sàng/chuyển sang PLAYING.
                 'vq': YOUTUBE_MAX_PLAYBACK_QUALITY
             };
-            // LƯU Ý: Tuyệt đối KHÔNG truyền tham số `origin` vào playerVars.
-            // Nếu truyền origin + khởi tạo player không có videoId, YouTube IFrame API 
-            // sẽ bị lỗi "Not attached to DOM" và mọi lệnh gọi loadVideoById ở onReady sẽ thất bại.
+            // Bắt buộc phải có origin khi chạy trên HTTP/HTTPS để YouTube API cấp quyền play video.
+            // Nếu thiếu origin trên localhost hoặc domain thực tế, YouTube API sẽ báo lỗi 2 (Invalid parameters).
+            if (/^https?:\/\//i.test(String(window.location?.origin || ''))) {
+                playerVars.origin = window.location.origin;
+            }
 
             overlayPlayer = new YT.Player('obs-youtube-placeholder', {
+                videoId: currentVideoId || videoId,
                 height: '100%',
                 width: '100%',
                 playerVars,
@@ -8111,13 +8114,9 @@
                     lastSongLoadStartTimestamp = Date.now();
 
                     if (warningCountdownInterval) {
-                        try { 
-                            event.target.cueVideoById({ videoId: videoId, startSeconds: startTime || 0 }); 
-                        } catch (e) { }
+                        
                     } else {
-                        try {
-                            event.target.loadVideoById({ videoId: videoId, startSeconds: startTime || 0 });
-                        } catch (e) { }
+                        try { event.target.playVideo(); } catch (e) { }
                         seekActivePlayerToResumeTarget(true);
                         startVolumeEnforcer(); // Bắt đầu ép volume liên tục
                         startPlaybackMonitor();
