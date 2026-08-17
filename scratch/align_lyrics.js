@@ -1,0 +1,130 @@
+const fs = require('fs');
+const path = require('path');
+
+function getCleanWordList(filename) {
+  const content = fs.readFileSync(path.join(__dirname, filename), 'utf8');
+  const lines = content.split('\n');
+  const words = [];
+  let currentTime = 0;
+
+  for (let line of lines) {
+    line = line.trim();
+    const cueMatch = line.match(/^(\d{2}):(\d{2}):(\d{2}\.\d{3})\s+-->/);
+    if (cueMatch) {
+      currentTime = parseInt(cueMatch[1]) * 3600 + parseInt(cueMatch[2]) * 60 + parseFloat(cueMatch[3]);
+      continue;
+    }
+    if (line.startsWith('WEBVTT') || line.startsWith('Kind:') || line.startsWith('Language:')) continue;
+
+    // Tokens
+    const tokens = line.split(/(<[0-9:.]+>|<\/?c>)/);
+    for (let t of tokens) {
+      t = t.trim();
+      if (!t) continue;
+      const tMatch = t.match(/^<(\d{2}):(\d{2}):(\d{2}\.\d{3})>$/);
+      if (tMatch) {
+        currentTime = parseInt(tMatch[1]) * 3600 + parseInt(tMatch[2]) * 60 + parseFloat(tMatch[3]);
+      } else if (!t.startsWith('<') && !t.endsWith('>')) {
+        const clean = t.replace(/\[âm nhạc\]/g, '').replace(/^>>\s*/, '').trim().toLowerCase();
+        if (clean && !clean.includes('>>') && clean.length < 30) {
+          // split individual words
+          for (const w of clean.split(/\s+/)) {
+            if (w) words.push({ time: currentTime, word: w });
+          }
+        }
+      }
+    }
+  }
+  return words;
+}
+
+const officialLyrics = [
+  "Anh không nhớ nổi lần cuối cùng anh nhìn vào mắt em đó là từ bao giờ",
+  "Em từng trách anh chỉ ôm ước mơ, còn không sợ mất em thì làm sao chờ?",
+  "Lúc đó anh có xin lỗi hay không thì kết quả nó cũng như nhau mà",
+  "Cuối cùng thì hai ta đều ích kỷ, nông nổi, tự trọng cao mà",
+  "Ta từng bắt gặp nhau ở khắp Sài Gòn, chắc là lúc còn yêu thì muốn tránh cũng khó",
+  "Không thể tin là mình chưa từng gặp lại sau khi mà anh bước qua cánh cửa đó",
+  "Tình yêu mình từng là ánh lửa đỏ, từng là chim sẻ cố đập cánh giữa gió",
+  "Cố gắng sống hai cuộc đời, chắc là thằng nhóc này muốn làm thần thánh nữa đó",
+  "Sao giờ em xuất hiện tại đây vậy? Cuối hàng khán giả với cánh tay vẫy",
+  "Em từng cùng anh đứng ở hậu trường và cùng anh về nhà sau khi mà bay nhảy",
+  "Cũng từng nói, \"Em không có gạt anh, em thích nhạc anh\", and you know the vision",
+  "Anh từng hứa là mình không nhạt đâu, sẽ không lạc nhau, cùng bên nhau vào khi cần",
+  "Ngay lúc đó anh chỉ muốn lao xuống, anh thật sự tò mò, em dạo này khỏe không?",
+  "Nhưng mà sao hôm nay em đi khuya vậy? Ba mẹ em biết là ba mẹ sẽ trông",
+  "Anh từng mong em hạnh phúc, tới khi em nở nụ cười, anh như bị đâm mười nhát",
+  "Khi anh đứng trên sân khấu một mình, còn em đứng cạnh cùng với một người khác",
+  "Em hiểu rằng chúng ta không ai là sai",
+  "Chỉ là em không muốn em mãi sẽ là lựa chọn thứ hai",
+  "Mãi sau những điều anh cho là lý do để anh tồn tại",
+  "Vậy đâu còn lý do để em ở lại?",
+  "Đây sẽ là lý do em sẽ thôi đắn đo, cứ ôm mộng hoài",
+  "So thanks for showing me the exit sign",
+  "Chưa nói tới đúng sai nhưng chuyến xe dừng lại là do chân anh đặt trên phanh",
+  "Anh đã không ngần ngại chia con đường làm hai vì anh nghĩ là anh quên nhanh",
+  "Gặp một cô gái mới coi là cả thế giới, viết tên cả hai lên tranh",
+  "Không dễ nhiều đêm trắng để chờ lên nắng, giờ thì ký ức gọi tên anh",
+  "Nên là cứ rót đi, bàn vẫn ướt mặc dù có lót ly",
+  "Ước gì có thể paste nỗi đau này qua chỗ khác, nhưng không, nó nhân lên, nó chỉ copy",
+  "Thật khó để nhìn xung quanh khi chỉ trông ngóng vì sao như Tsiolkovsky",
+  "Để bây giờ em đi mất, liên kết còn lại tồn tại giữa anh và em là chung một tài khoản Shopee",
+  "Gom hết tất cả về em xong rồi thiêu nhanh",
+  "Giọng em vang lên trước khi môi em mở, găm thẳng vào anh như là siêu thanh",
+  "Không cần phải là người giỏi toán, đủ biết đây không phải đổi ngang",
+  "Em chỉ mất đi một thằng thất bại, anh mất đi một người yêu anh",
+  "8515 lần nói anh yêu em ở trong Mess nếu mà em search",
+  "Cũng tới lúc mình phải quên đi thôi dù từng có với nhau là rất nhiều cam kết",
+  "Tiếc nhất không phải chia tay mà là không yêu em nhiều hơn trước lúc tình yêu chết",
+  "Có lẽ phải ghi tên em vào credit vì bài nhạc nào anh cũng viết về em hết",
+  "Em hiểu rằng chúng ta không ai là sai",
+  "Chỉ là em không muốn em mãi sẽ là lựa chọn thứ hai",
+  "Mãi sau những điều anh cho là lý do để anh tồn tại",
+  "Vậy đâu còn lý do để em ở lại?",
+  "Đây sẽ là lý do em sẽ thôi đắn đo, cứ ôm mộng hoài",
+  "So thanks for showing me the exit sign",
+  "Hah-ah-ah-whoo",
+  "Hãy gìn giữ nhau trong những kỷ niệm",
+  "Hãy gìn giữ nhau trong những kỷ niệm",
+  "I thank you for finally showing me the exit sign",
+  "Thanks for showing me the exit sign"
+];
+
+function align(vttFile) {
+  const words = getCleanWordList(vttFile);
+  console.log(`\n=== ALIGNING ${vttFile} ===`);
+
+  // Let's find each line's first match
+  let wordIdx = 0;
+  const matched = [];
+
+  for (let l = 0; l < officialLyrics.length; l++) {
+    const rawLine = officialLyrics[l];
+    const lineWords = rawLine.toLowerCase().replace(/[^a-z0-9à-ỹ\s]/gi, '').split(/\s+/).filter(Boolean);
+    const firstWord = lineWords[0];
+    const secondWord = lineWords[1] || '';
+
+    // Search forward from wordIdx
+    let foundTime = null;
+    for (let i = wordIdx; i < Math.min(wordIdx + 40, words.length); i++) {
+      if (words[i].word.includes(firstWord) || (secondWord && words[i].word.includes(secondWord))) {
+        foundTime = words[i].time;
+        wordIdx = i + 1;
+        break;
+      }
+    }
+
+    if (foundTime !== null) {
+      const m = Math.floor(foundTime / 60);
+      const s = (foundTime % 60).toFixed(2).padStart(5, '0');
+      matched.push(`[${String(m).padStart(2, '0')}:${s}] ${rawLine}`);
+    } else {
+      matched.push(`[NOT_FOUND] ${rawLine}`);
+    }
+  }
+
+  console.log(matched.join('\n'));
+}
+
+align('exit_sign_song26.vi-orig.vtt');
+align('exit_sign_liveband.vi-orig.vtt');
